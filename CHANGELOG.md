@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.9.1 - 2026-11-26
+
+- Adds a set of Bootstrap Icons gaming and device symbols to the TEST-only
+  emoji catalog, including controller, joystick, headset, VR, console-brand,
+  and hardware icons.
+
 ## 1.9.0 - 2026-11-26
 
 - Uses white as the default device color again.

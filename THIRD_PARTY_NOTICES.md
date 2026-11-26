@@ -25,14 +25,15 @@ They are included as an optional source; they are not installed by default.
 
 ## MIT license
 
-The steam-devices and game-devices-udev rule files are distributed under the
-MIT license:
+The steam-devices and game-devices-udev rule files and the Bootstrap Icons
+SVG files are distributed under the MIT license:
 
 ```text
 MIT License
 
 Copyright (c) 2018 Valve Software
 Copyright (c) 2017-2026 Fabian Bornschein
+Copyright (c) 2019-2024 The Bootstrap Authors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -52,6 +53,18 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
+
+## Bootstrap Icons
+
+The TEST-only emoji catalog includes gamepad, joystick, headset, VR,
+controller-brand, and device icons from **Bootstrap Icons**:
+
+- GitHub: https://github.com/twbs/icons
+- Website: https://icons.getbootstrap.com/
+- License: MIT
+- Copyright: 2019-2024 The Bootstrap Authors
+
+These SVG files are redistributed under the MIT license.
 
 ## GTK, libadwaita, and PyGObject
 
