@@ -317,14 +317,22 @@ class DeviceManager(Gtk.Box):
             title=device.name,
             subtitle=" · ".join(details),
         )
-        row.set_activatable(True)
-        row.set_tooltip_text(
-            tr("Abrir {filename}", filename=device.filename)
-        )
-        row.connect(
-            "activated",
-            lambda _row, selected=device: self._open_known_rule(selected),
-        )
+        can_open = bool(device.active and device.filename)
+        row.set_activatable(can_open)
+        if can_open:
+            row.set_tooltip_text(
+                tr("Abrir {filename}", filename=device.filename)
+            )
+            row.connect(
+                "activated",
+                lambda _row, selected=device: self._open_known_rule(
+                    selected
+                ),
+            )
+        else:
+            row.set_tooltip_text(
+                tr("Activá el dispositivo para ver su regla.")
+            )
 
         if connected_device is not None:
             row.add_suffix(self._connected_badge())

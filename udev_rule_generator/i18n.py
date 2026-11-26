@@ -309,6 +309,9 @@ _EN.update(
         "La regla no está instalada. Activá el dispositivo para crearla.": (
             "The rule is not installed. Enable the device to create it."
         ),
+        "Activá el dispositivo para ver su regla.": (
+            "Enable the device to view its rule."
+        ),
         "xdg-open no pudo abrir el archivo.": (
             "xdg-open could not open the file."
         ),

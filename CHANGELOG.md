@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.8 - 2026-11-26
+
+- Disables the rule-opening action for devices whose rule is not installed.
+  Disabled devices are no longer clickable and show an explanatory tooltip.
+
 ## 1.1.7 - 2026-11-26
 
 - Clicking a saved device opens its installed rule with the default system
