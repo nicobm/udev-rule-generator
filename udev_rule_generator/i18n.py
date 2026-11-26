@@ -131,6 +131,7 @@ _EN.update(
         "liberado": "released",
         "presionado": "pressed",
         "repetido": "repeated",
+        "Ejes: {values}": "Axes: {values}",
         "No se pudo activar el dispositivo": (
             "Could not enable the device"
         ),

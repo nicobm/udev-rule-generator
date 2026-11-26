@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.2 - 2026-11-26
+
+- Stops axis jitter from filling the interactive test log. Buttons are logged
+  as transitions; axis values are updated in a separate compact line at a
+  throttled rate.
+
 ## 1.3.1 - 2026-11-26
 
 - Includes the device name in the "Rule not installed" prompt shown when

@@ -6,6 +6,7 @@ import os
 import select
 import struct
 import threading
+import time
 
 from udev_rule_generator.devices import Joystick
 from udev_rule_generator.i18n import tr
@@ -97,6 +98,9 @@ class DeviceTestDialog(Adw.Window):
         self._stop = False
         self._closed = False
         self._line_count = 0
+        self._axes: dict[int, int] = {}
+        self._button_states: dict[int, int] = {}
+        self._last_axes_update = 0.0
 
         toolbar = Adw.ToolbarView()
         header = Adw.HeaderBar()
@@ -128,6 +132,9 @@ class DeviceTestDialog(Adw.Window):
             wrap=True,
         )
         content.append(self.status)
+        self.axis_label = Gtk.Label(label="", xalign=0, wrap=True)
+        self.axis_label.add_css_class("dim-label")
+        content.append(self.axis_label)
 
         self.buffer = Gtk.TextBuffer()
         self.view = Gtk.TextView(buffer=self.buffer)
@@ -202,15 +209,33 @@ class DeviceTestDialog(Adw.Window):
 
     def _format_event(self, event_type: int, code: int, value: int) -> str:
         if event_type == _EV_KEY:
-            state = {
-                0: tr("liberado"),
-                1: tr("presionado"),
-                2: tr("repetido"),
-            }.get(value, str(value))
+            if value == 2:
+                return ""
+            if self._button_states.get(code) == value:
+                return ""
+            self._button_states[code] = value
+            state = tr("presionado") if value == 1 else tr("liberado")
             return f"{_button_name(code)}: {state}"
         if event_type == _EV_ABS:
-            return f"{_axis_name(code)}: {value}"
+            self._axes[code] = value
+            now = time.monotonic()
+            if now - self._last_axes_update >= 0.1:
+                self._last_axes_update = now
+                GLib.idle_add(self._update_axes)
+            return ""
         return ""
+
+    def _update_axes(self) -> bool:
+        if self._closed:
+            return False
+        values = " · ".join(
+            f"{_axis_name(code)}: {value}"
+            for code, value in sorted(self._axes.items())
+        )
+        self.axis_label.set_text(
+            tr("Ejes: {values}", values=values) if values else ""
+        )
+        return False
 
     def _append_event(self, line: str) -> bool:
         if self._closed:
