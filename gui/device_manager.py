@@ -832,10 +832,10 @@ class DeviceManager(Gtk.Box):
         """Añade el tirador de tres puntos para reordenar la fila."""
         handle = Gtk.Box()
         handle.add_css_class("device-drag-handle")
-        handle.set_size_request(24, 34)
+        handle.set_size_request(40, 44)
         handle.set_valign(Gtk.Align.CENTER)
         image = Gtk.Image.new_from_icon_name("view-more-symbolic")
-        image.set_pixel_size(16)
+        image.set_pixel_size(18)
         image.set_halign(Gtk.Align.CENTER)
         image.set_valign(Gtk.Align.CENTER)
         handle.append(image)
@@ -847,6 +847,14 @@ class DeviceManager(Gtk.Box):
             "prepare",
             lambda _source, _x, _y: Gdk.ContentProvider.new_for_value(
                 device_id
+            ),
+        )
+        source.connect(
+            "drag-begin",
+            lambda drag_source, _drag: drag_source.set_icon(
+                Gtk.WidgetPaintable.new(row),
+                0,
+                0,
             ),
         )
         handle.add_controller(source)
@@ -867,7 +875,12 @@ class DeviceManager(Gtk.Box):
         row.add_prefix(handle)
         self._add_hover_opacity(row, handle, 0.25, 0.85)
 
-    def _drop_row(self, dragged_id: object, target_row: Adw.ActionRow, y: float) -> bool:
+    def _drop_row(
+        self,
+        dragged_id: object,
+        target_row: Adw.ActionRow,
+        y: float,
+    ) -> bool:
         if not isinstance(dragged_id, str):
             return False
         target_id = self._row_identities.get(target_row)

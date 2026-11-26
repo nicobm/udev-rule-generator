@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.11.1 - 2026-11-26
+
+- Shows the complete device card as the drag preview instead of a transparent
+  text-only ghost.
+- Enlarges the three-dot drag handle hit area for easier grab and drop.
+
 ## 1.11.0 - 2026-11-26
 
 - Adds a three-dot drag handle to every device row. Drag it to reorder
