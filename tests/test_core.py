@@ -7,6 +7,7 @@ from pathlib import Path
 
 from udev_rule_generator.devices import (
     Joystick,
+    is_auxiliary_input,
     joysticks_from_export_db,
     joysticks_from_proc,
     parse_export_db,
@@ -58,6 +59,7 @@ def _device(
     vendor_id: str = "045e",
     product_id: str = "0b12",
     bus: str = "usb",
+    properties: dict[str, str] | None = None,
 ) -> Joystick:
     return Joystick(
         key="test-key",
@@ -72,7 +74,7 @@ def _device(
         event_devices=("/dev/input/event30",),
         js_devices=("/dev/input/js0",),
         input_names=(name,),
-        properties={},
+        properties=properties or {},
     )
 
 
@@ -130,6 +132,22 @@ class DetectionTests(unittest.TestCase):
         devices = joysticks_from_proc(FakeHost(self.proc_text))
         self.assertEqual(len(devices), 2)
         self.assertTrue(all(device.js_devices for device in devices))
+
+
+class AuxiliaryInputTests(unittest.TestCase):
+    def test_motion_sensors_are_auxiliary(self) -> None:
+        device = _device(name="Sony Motion Sensors")
+        self.assertTrue(is_auxiliary_input(device))
+
+    def test_sensor_property_is_auxiliary(self) -> None:
+        device = _device(
+            name="Generic HID",
+            properties={"ID_INPUT_ACCELEROMETER": "1"},
+        )
+        self.assertTrue(is_auxiliary_input(device))
+
+    def test_gamepad_is_not_auxiliary(self) -> None:
+        self.assertFalse(is_auxiliary_input(_device(name="Xbox Controller")))
 
 
 class RuleTests(unittest.TestCase):

@@ -246,6 +246,44 @@ def parse_proc_input(text: str) -> dict[str, ProcInput]:
     return index
 
 
+_AUXILIARY_INPUT_PROPERTIES = (
+    "ID_INPUT_ACCELEROMETER",
+    "ID_INPUT_GYROSCOPE",
+    "ID_INPUT_MAGNETOMETER",
+    "ID_INPUT_TOUCHPAD",
+    "ID_INPUT_TOUCHSCREEN",
+    "ID_INPUT_TABLET",
+)
+_AUXILIARY_NAME_HINTS = (
+    "motion sensors",
+    "motion sensor",
+    "touchpad",
+    "touch pad",
+    "accelerometer",
+    "gyroscope",
+    "magnetometer",
+)
+
+
+def _truthy_property(value: str | None) -> bool:
+    return (value or "").strip().lower() in {"1", "true", "yes"}
+
+
+def is_auxiliary_input(device: Joystick) -> bool:
+    """Detecta interfaces auxiliares que no son el gamepad principal.
+
+    Sony y otros mandos modernos exponen sensores de movimiento o touchpad
+    como dispositivos de entrada separados.  Algunos incluso reciben un nodo
+    ``js``.  Se filtran por propiedades udev y, como respaldo, por nombres
+    genéricos de categoría; no por VID:PID ni por modelo concreto.
+    """
+    for key in _AUXILIARY_INPUT_PROPERTIES:
+        if _truthy_property(device.properties.get(key)):
+            return True
+    text = " ".join((device.name, device.model)).casefold()
+    return any(hint in text for hint in _AUXILIARY_NAME_HINTS)
+
+
 def _is_joystick(properties: Mapping[str, str]) -> bool:
     value = (properties.get("ID_INPUT_JOYSTICK") or "").strip().lower()
     if value in {"1", "true", "yes"}:
@@ -517,9 +555,17 @@ def detect_joysticks(host: Host | None = None) -> list[Joystick]:
     if result is not None and result.ok:
         joysticks = joysticks_from_export_db(result.stdout, host)
         if joysticks:
-            return joysticks
+            return [
+                device
+                for device in joysticks
+                if not is_auxiliary_input(device)
+            ]
 
-    return joysticks_from_proc(host)
+    return [
+        device
+        for device in joysticks_from_proc(host)
+        if not is_auxiliary_input(device)
+    ]
 
 
 def find_joystick(joysticks: Iterable[Joystick], selector: str) -> Joystick | None:

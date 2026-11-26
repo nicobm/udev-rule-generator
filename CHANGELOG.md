@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.5 - 2026-11-26
+
+- Filters auxiliary input interfaces such as motion sensors, touchpads,
+  accelerometers, gyroscopes, and magnetometers from the detected-controller
+  list.
+
 ## 1.3.4 - 2026-11-26
 
 - Escapes device names before passing them to libadwaita rows. Names containing
