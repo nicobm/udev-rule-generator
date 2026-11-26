@@ -15,8 +15,14 @@ def _bootstrap() -> None:
         sys.path.insert(0, root)
 
 
+def _log(message: str) -> None:
+    """Mensaje breve para la terminal; se ve también dentro del Flatpak."""
+    print(message, file=sys.stderr, flush=True)
+
+
 def main(argv=None) -> int:
     _bootstrap()
+    from udev_rule_generator import __version__
     from udev_rule_generator.i18n import tr
 
     arguments = list(sys.argv if argv is None else argv)
@@ -46,11 +52,20 @@ def main(argv=None) -> int:
     from gui.application import Application
 
     application = Application()
+    _log(
+        tr(
+            "Iniciando udev-rule-generator {version}…",
+            version=__version__,
+        )
+    )
     try:
-        return application.run(arguments)
+        result = application.run(arguments)
     except KeyboardInterrupt:
         application.shutdown()
-        return 130
+        result = 130
+    finally:
+        _log(tr("Cerrando…"))
+    return result
 
 
 if __name__ == "__main__":

@@ -66,6 +66,15 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.12.4" date="2026-11-26">
+      <description>
+        <p>
+          Prints a short startup message with the app version and a final
+          Closing message, so running from the terminal or Flatpak is not
+          silent.
+        </p>
+      </description>
+    </release>
     <release version="0.12.3" date="2026-11-26">
       <description>
         <p>

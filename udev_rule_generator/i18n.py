@@ -488,6 +488,10 @@ _EN.update(
         ),
         "Eliminar {filename}": "Remove {filename}",
         "No hay dispositivos ocultos": "No hidden devices",
+        "Iniciando udev-rule-generator {version}…": (
+            "Starting udev-rule-generator {version}…"
+        ),
+        "Cerrando…": "Closing…",
         "No se pudo cargar GTK4/libadwaita.\n"
         "En Fedora instalá:\n"
         "  sudo dnf install python3-gobject gtk4 libadwaita\n\n"

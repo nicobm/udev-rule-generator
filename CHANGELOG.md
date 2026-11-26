@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.12.4 - 2026-11-26
+
+- Prints a short startup line with the app version and a final `Closing…`
+  line when the GUI exits, so `flatpak run` is not silent.
+- Keeps the messages on stderr and flushes them immediately.
+
 ## 0.12.3 - 2026-11-26
 
 - Adds `--device=dri` to the Flatpak manifest. GTK can use the GPU inside the
