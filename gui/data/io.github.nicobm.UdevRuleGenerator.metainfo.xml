@@ -65,6 +65,14 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="1.10.0" date="2026-11-26">
+      <description>
+        <p>
+          Adds the selected controller, joystick, console, and gaming icon
+          choices to the device icon selector.
+        </p>
+      </description>
+    </release>
     <release version="1.9.1" date="2026-11-26">
       <description>
         <p>

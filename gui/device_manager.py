@@ -27,8 +27,15 @@ from udev_rule_generator.userconfig import device_identity
 from .gi_compat import Adw, Gdk, GLib, Gtk, markup_escape
 
 _DEVICE_ICON_CHOICES = (
-    ("gamepad", "input-gaming-symbolic", "Mando"),
-    ("joystick", "applications-games-symbolic", "Joystick"),
+    ("controller", "controller-symbolic", "Controller"),
+    ("joystick", "joystick-symbolic", "Joystick"),
+    ("gamepad", "input-gaming-symbolic", "Input gaming"),
+    ("nintendo-switch", "nintendo-switch-symbolic", "Nintendo Switch"),
+    ("playstation", "playstation-symbolic", "PlayStation"),
+    ("xbox", "xbox-symbolic", "Xbox"),
+    ("steam", "steam-symbolic", "Steam"),
+    ("face-cool", "face-cool-symbolic", "Cara cool"),
+    ("dpad", "dpad-symbolic", "D-pad"),
 )
 _DEVICE_ICONS = {
     icon_id: icon_name
@@ -407,7 +414,9 @@ class DeviceManager(Gtk.Box):
 
         grid = Gtk.FlowBox()
         grid.set_selection_mode(Gtk.SelectionMode.NONE)
-        grid.set_max_children_per_line(4)
+        grid.set_homogeneous(True)
+        grid.set_min_children_per_line(5)
+        grid.set_max_children_per_line(5)
         grid.set_column_spacing(4)
         grid.set_row_spacing(4)
         choices: dict[str, Gtk.Button] = {}
