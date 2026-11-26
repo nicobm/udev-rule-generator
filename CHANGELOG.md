@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.8.0 - 2026-11-26
+
+- Adds the 16-color GNOME Terminal palette to the device icon selector. The
+  chosen color fills the icon square, with the symbolic icon inside.
+- Stores icon colors per device and includes them in `.tar.gz` backups.
+- Moves the active `js` node from the subtitle into the **Connected** tag,
+  for example `Connected · js0`.
+
 ## 1.7.0 - 2026-11-26
 
 - Adds a square icon selector to every device row. It offers monochrome

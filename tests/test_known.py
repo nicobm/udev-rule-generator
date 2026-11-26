@@ -94,6 +94,19 @@ class KnownDevicesTests(unittest.TestCase):
             self.assertEqual(store.icon_for(key), "joystick")
             self.assertEqual(KnownDevices(path).icon_for(key), "joystick")
 
+    def test_color_persists_without_a_saved_rule(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "devices.json"
+            store = KnownDevices(path)
+            key = device_identity(_device())
+
+            store.set_color(key, "bright-cyan")
+            self.assertEqual(store.color_for(key), "bright-cyan")
+            self.assertEqual(
+                KnownDevices(path).color_for(key),
+                "bright-cyan",
+            )
+
     def test_clear_all_removes_devices_and_aliases(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "devices.json"
@@ -106,12 +119,14 @@ class KnownDevicesTests(unittest.TestCase):
             )
             store.set_alias(key, "Temporal")
             store.set_icon(key, "joystick")
+            store.set_color(key, "bright-cyan")
             store.clear_all()
 
             reloaded = KnownDevices(path)
             self.assertEqual(reloaded.devices(), [])
             self.assertEqual(reloaded.alias_for(key), "")
             self.assertEqual(reloaded.icon_for(key), "")
+            self.assertEqual(reloaded.color_for(key), "")
 
     def test_hidden_state_persists(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

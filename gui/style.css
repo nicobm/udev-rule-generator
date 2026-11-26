@@ -35,7 +35,90 @@
   border-radius: 9px;
 }
 
+.device-icon-color {
+  min-width: 34px;
+  min-height: 34px;
+  border-radius: 9px;
+}
+
 .device-icon-selected {
   background-color: alpha(@accent_bg_color, 0.18);
   color: @accent_color;
+}
+
+.device-color-swatch {
+  min-width: 26px;
+  min-height: 26px;
+  padding: 0;
+  border-radius: 7px;
+}
+
+.device-color-selected {
+  border: 2px solid @accent_color;
+}
+
+/* GNOME Terminal / Tango palette. */
+.device-color-black {
+  background-color: #2e3436;
+  color: #ffffff;
+}
+.device-color-red {
+  background-color: #cc0000;
+  color: #ffffff;
+}
+.device-color-green {
+  background-color: #4e9a06;
+  color: #ffffff;
+}
+.device-color-yellow {
+  background-color: #c4a000;
+  color: #1c1c1c;
+}
+.device-color-blue {
+  background-color: #3465a4;
+  color: #ffffff;
+}
+.device-color-magenta {
+  background-color: #75507b;
+  color: #ffffff;
+}
+.device-color-cyan {
+  background-color: #06989a;
+  color: #ffffff;
+}
+.device-color-white {
+  background-color: #d3d7cf;
+  color: #1c1c1c;
+}
+.device-color-bright-black {
+  background-color: #555753;
+  color: #ffffff;
+}
+.device-color-bright-red {
+  background-color: #ef2929;
+  color: #1c1c1c;
+}
+.device-color-bright-green {
+  background-color: #8ae234;
+  color: #1c1c1c;
+}
+.device-color-bright-yellow {
+  background-color: #fce94f;
+  color: #1c1c1c;
+}
+.device-color-bright-blue {
+  background-color: #729fcf;
+  color: #1c1c1c;
+}
+.device-color-bright-magenta {
+  background-color: #ad7fa8;
+  color: #1c1c1c;
+}
+.device-color-bright-cyan {
+  background-color: #34e2e2;
+  color: #1c1c1c;
+}
+.device-color-bright-white {
+  background-color: #eeeeec;
+  color: #1c1c1c;
 }

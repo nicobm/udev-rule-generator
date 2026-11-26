@@ -49,6 +49,7 @@ class BackupTests(unittest.TestCase):
             store.record_rule(device, spec)
             store.set_alias(device_identity(device), "Backup rojo")
             store.set_icon(device_identity(device), "joystick")
+            store.set_color(device_identity(device), "cyan")
             generated = InstalledRule(
                 filename=spec.filename,
                 kind="generated",
@@ -91,6 +92,10 @@ class BackupTests(unittest.TestCase):
                 payload["icons"][device_identity(device)],
                 "joystick",
             )
+            self.assertEqual(
+                payload["colors"][device_identity(device)],
+                "cyan",
+            )
 
     def test_import_restores_data_without_installing_rules(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -100,6 +105,7 @@ class BackupTests(unittest.TestCase):
             source_store.record_rule(device, spec)
             source_store.set_alias(device_identity(device), "Backup rojo")
             source_store.set_icon(device_identity(device), "joystick")
+            source_store.set_color(device_identity(device), "cyan")
             generated = InstalledRule(
                 filename=spec.filename,
                 kind="generated",
@@ -141,6 +147,10 @@ class BackupTests(unittest.TestCase):
             self.assertEqual(
                 target_store.icon_for(device_identity(device)),
                 "joystick",
+            )
+            self.assertEqual(
+                target_store.color_for(device_identity(device)),
+                "cyan",
             )
             imported = target_store.get(device_identity(device))
             self.assertIsNotNone(imported)

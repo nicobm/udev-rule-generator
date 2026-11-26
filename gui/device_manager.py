@@ -35,6 +35,26 @@ _DEVICE_ICONS = {
     for icon_id, icon_name, _label in _DEVICE_ICON_CHOICES
 }
 _DEFAULT_DEVICE_ICON = "gamepad"
+_DEVICE_COLOR_CHOICES = (
+    ("black", "Negro"),
+    ("red", "Rojo"),
+    ("green", "Verde"),
+    ("yellow", "Amarillo"),
+    ("blue", "Azul"),
+    ("magenta", "Magenta"),
+    ("cyan", "Cian"),
+    ("white", "Blanco"),
+    ("bright-black", "Negro brillante"),
+    ("bright-red", "Rojo brillante"),
+    ("bright-green", "Verde brillante"),
+    ("bright-yellow", "Amarillo brillante"),
+    ("bright-blue", "Azul brillante"),
+    ("bright-magenta", "Magenta brillante"),
+    ("bright-cyan", "Cian brillante"),
+    ("bright-white", "Blanco brillante"),
+)
+_DEVICE_COLOR_IDS = tuple(color_id for color_id, _label in _DEVICE_COLOR_CHOICES)
+_DEFAULT_DEVICE_COLOR = "blue"
 
 
 def _js_nodes_label(device: Joystick | None) -> str:
@@ -336,20 +356,35 @@ class DeviceManager(Gtk.Box):
         row: Adw.ActionRow,
         device_id: str,
     ) -> None:
-        """Añade el selector de icono simbólico a la izquierda de la fila."""
+        """Añade el selector de icono y color a la izquierda de la fila."""
         icon_id = self.store.icon_for(device_id)
         if icon_id not in _DEVICE_ICONS:
             icon_id = _DEFAULT_DEVICE_ICON
+        color_id = self.store.color_for(device_id)
+        if color_id not in _DEVICE_COLOR_IDS:
+            color_id = _DEFAULT_DEVICE_COLOR
 
         image = Gtk.Image.new_from_icon_name(_DEVICE_ICONS[icon_id])
         image.set_pixel_size(18)
+        image.set_halign(Gtk.Align.CENTER)
+        image.set_valign(Gtk.Align.CENTER)
+        image.set_hexpand(True)
+        image.set_vexpand(True)
+        icon_box = Gtk.Box()
+        icon_box.set_size_request(34, 34)
+        icon_box.set_valign(Gtk.Align.CENTER)
+        icon_box.add_css_class("device-icon-color")
+        icon_box.add_css_class(f"device-color-{color_id}")
+        icon_box.append(image)
+
         menu_button = Gtk.MenuButton()
         menu_button.add_css_class("flat")
         menu_button.add_css_class("device-icon-button")
         menu_button.set_has_frame(False)
         menu_button.set_always_show_arrow(False)
         menu_button.set_valign(Gtk.Align.CENTER)
-        menu_button.set_child(image)
+        menu_button.set_size_request(36, 36)
+        menu_button.set_child(icon_box)
         menu_button.set_tooltip_text(tr("Elegir icono"))
 
         popover = Gtk.Popover()
@@ -390,7 +425,6 @@ class DeviceManager(Gtk.Box):
                         device_id,
                         selected_id,
                         image,
-                        popover,
                         update_selection,
                     )
                 ),
@@ -400,6 +434,47 @@ class DeviceManager(Gtk.Box):
 
         update_selection(icon_id)
         content.append(grid)
+        content.append(Gtk.Separator())
+
+        color_heading = Gtk.Label(label=tr("Color"), xalign=0)
+        color_heading.add_css_class("caption")
+        content.append(color_heading)
+        color_grid = Gtk.FlowBox()
+        color_grid.set_selection_mode(Gtk.SelectionMode.NONE)
+        color_grid.set_max_children_per_line(4)
+        color_grid.set_column_spacing(4)
+        color_grid.set_row_spacing(4)
+        color_choices: dict[str, Gtk.Button] = {}
+
+        def update_color_selection(selected_id: str) -> None:
+            for choice_id, choice in color_choices.items():
+                choice.remove_css_class("device-color-selected")
+                if choice_id == selected_id:
+                    choice.add_css_class("device-color-selected")
+
+        for choice_id, label in _DEVICE_COLOR_CHOICES:
+            choice = Gtk.Button()
+            choice.add_css_class("flat")
+            choice.add_css_class("device-color-swatch")
+            choice.add_css_class(f"device-color-{choice_id}")
+            choice.set_size_request(26, 26)
+            choice.set_tooltip_text(tr(label))
+            choice.connect(
+                "clicked",
+                lambda _button, selected_id=choice_id: (
+                    self._select_device_color(
+                        device_id,
+                        selected_id,
+                        icon_box,
+                        update_color_selection,
+                    )
+                ),
+            )
+            color_choices[choice_id] = choice
+            color_grid.append(choice)
+
+        update_color_selection(color_id)
+        content.append(color_grid)
         popover.set_child(content)
         menu_button.set_popover(popover)
         row.add_prefix(menu_button)
@@ -409,7 +484,6 @@ class DeviceManager(Gtk.Box):
         device_id: str,
         icon_id: str,
         image: Gtk.Image,
-        popover: Gtk.Popover,
         update_selection,
     ) -> None:
         try:
@@ -422,7 +496,26 @@ class DeviceManager(Gtk.Box):
             return
         image.set_from_icon_name(_DEVICE_ICONS[icon_id])
         update_selection(icon_id)
-        popover.popdown()
+
+    def _select_device_color(
+        self,
+        device_id: str,
+        color_id: str,
+        icon_box: Gtk.Box,
+        update_selection,
+    ) -> None:
+        try:
+            self.store.set_color(device_id, color_id)
+        except OSError as exc:
+            self._show_error(
+                tr("No se pudo guardar el color"),
+                str(exc),
+            )
+            return
+        for known_color in _DEVICE_COLOR_IDS:
+            icon_box.remove_css_class(f"device-color-{known_color}")
+        icon_box.add_css_class(f"device-color-{color_id}")
+        update_selection(color_id)
 
     def _add_alias_control(
         self,
@@ -627,9 +720,6 @@ class DeviceManager(Gtk.Box):
         removable: bool = False,
     ) -> Adw.ActionRow:
         details = [device.bus_label, device.identifier]
-        js_label = _js_nodes_label(connected_device)
-        if js_label:
-            details.append(js_label)
         row = Adw.ActionRow(
             title=markup_escape(device.name),
             subtitle=markup_escape(" · ".join(details)),
@@ -664,7 +754,7 @@ class DeviceManager(Gtk.Box):
             self._add_hover_button(row, hide)
 
         if connected_device is not None:
-            row.add_suffix(self._connected_badge())
+            row.add_suffix(self._connected_badge(connected_device))
 
         switch = Gtk.Switch(
             active=self._pending_known.get(device.id, device.active)
@@ -683,9 +773,6 @@ class DeviceManager(Gtk.Box):
     def _unknown_row(self, device: Joystick) -> Adw.ActionRow:
         key = device_identity(device)
         details = [device.bus_label, device.identifier]
-        js_label = _js_nodes_label(device)
-        if js_label:
-            details.append(js_label)
         row = Adw.ActionRow(
             title=markup_escape(device.display_name),
             subtitle=markup_escape(" · ".join(details)),
@@ -693,7 +780,7 @@ class DeviceManager(Gtk.Box):
         row.set_activatable(False)
         self._add_device_icon(row, key)
         self._add_alias_control(row, key, device.display_name)
-        row.add_suffix(self._connected_badge())
+        row.add_suffix(self._connected_badge(device))
 
         switch = Gtk.Switch(active=key in self._pending_unknown)
         switch.set_valign(Gtk.Align.CENTER)
@@ -707,8 +794,12 @@ class DeviceManager(Gtk.Box):
         self._controls.append(switch)
         return row
 
-    def _connected_badge(self) -> Gtk.Label:
-        badge = Gtk.Label(label=tr("Conectado"))
+    def _connected_badge(self, device: Joystick | None = None) -> Gtk.Label:
+        label = tr("Conectado")
+        js_label = _js_nodes_label(device)
+        if js_label:
+            label = f"{label} · {js_label}"
+        badge = Gtk.Label(label=label)
         badge.add_css_class("device-badge")
         badge.add_css_class("device-badge-connected")
         badge.set_valign(Gtk.Align.CENTER)

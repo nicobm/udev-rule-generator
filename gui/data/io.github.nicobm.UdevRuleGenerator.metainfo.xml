@@ -65,6 +65,14 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="1.8.0" date="2026-11-26">
+      <description>
+        <p>
+          Adds GNOME Terminal palette colors to device icons and moves the
+          active js node into the Connected tag.
+        </p>
+      </description>
+    </release>
     <release version="1.7.0" date="2026-11-26">
       <description>
         <p>

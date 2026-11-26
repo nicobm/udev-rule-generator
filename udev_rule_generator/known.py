@@ -301,6 +301,7 @@ class KnownDevices:
         self._devices: dict[str, KnownDevice] = {}
         self._aliases: dict[str, str] = {}
         self._icons: dict[str, str] = {}
+        self._colors: dict[str, str] = {}
         self._lock = threading.RLock()
         self.load()
 
@@ -312,12 +313,14 @@ class KnownDevices:
                 self._devices = {}
                 self._aliases = {}
                 self._icons = {}
+                self._colors = {}
                 return
             devices = raw.get("devices", {}) if isinstance(raw, dict) else {}
             if not isinstance(devices, dict):
                 self._devices = {}
                 self._aliases = {}
                 self._icons = {}
+                self._colors = {}
                 return
             raw_aliases = raw.get("aliases", {}) if isinstance(raw, dict) else {}
             self._aliases = (
@@ -337,6 +340,16 @@ class KnownDevices:
                     if isinstance(value, str) and value.strip()
                 }
                 if isinstance(raw_icons, dict)
+                else {}
+            )
+            raw_colors = raw.get("colors", {}) if isinstance(raw, dict) else {}
+            self._colors = (
+                {
+                    str(key): value.strip()
+                    for key, value in raw_colors.items()
+                    if isinstance(value, str) and value.strip()
+                }
+                if isinstance(raw_colors, dict)
                 else {}
             )
             loaded: dict[str, KnownDevice] = {}
@@ -362,6 +375,7 @@ class KnownDevices:
                 },
                 "aliases": dict(self._aliases),
                 "icons": dict(self._icons),
+                "colors": dict(self._colors),
             }
 
     def save(self) -> None:
@@ -392,10 +406,12 @@ class KnownDevices:
         devices = raw.get("devices", {})
         aliases = raw.get("aliases", {})
         icons = raw.get("icons", {})
+        colors = raw.get("colors", {})
         if (
             not isinstance(devices, dict)
             or not isinstance(aliases, dict)
             or not isinstance(icons, dict)
+            or not isinstance(colors, dict)
         ):
             raise ValueError(tr("El archivo de dispositivos no es válido."))
 
@@ -425,7 +441,10 @@ class KnownDevices:
             for key, value in icons.items():
                 if isinstance(value, str) and value.strip():
                     self._icons[str(key)] = value.strip()
-            if imported_devices or imported_aliases or icons:
+            for key, value in colors.items():
+                if isinstance(value, str) and value.strip():
+                    self._colors[str(key)] = value.strip()
+            if imported_devices or imported_aliases or icons or colors:
                 self.save()
         return imported_devices, imported_aliases
 
@@ -474,12 +493,26 @@ class KnownDevices:
                 self._icons.pop(device_id, None)
             self.save()
 
+    def color_for(self, device_id: str) -> str:
+        with self._lock:
+            return self._colors.get(device_id, "")
+
+    def set_color(self, device_id: str, color: str) -> None:
+        color = color.strip()
+        with self._lock:
+            if color:
+                self._colors[device_id] = color
+            else:
+                self._colors.pop(device_id, None)
+            self.save()
+
     def clear_all(self) -> None:
         """Elimina todos los dispositivos, alias, iconos y estados guardados."""
         with self._lock:
             self._devices.clear()
             self._aliases.clear()
             self._icons.clear()
+            self._colors.clear()
             self.save()
 
     def set_hidden(self, device_id: str, hidden: bool) -> KnownDevice | None:
