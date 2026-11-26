@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.6 - 2026-11-26
+
+- Removes the repeated "Hidden devices" group heading inside the hidden
+  devices window. The window title is enough.
+
 ## 1.1.5 - 2026-11-26
 
 - Shows how many preset rules are installed when hovering over the

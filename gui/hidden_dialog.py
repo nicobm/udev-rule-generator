@@ -42,9 +42,7 @@ class HiddenDevicesDialog(Adw.Window):
 
         page = Adw.PreferencesPage()
         page.set_vexpand(True)
-        self.group = Adw.PreferencesGroup(
-            title=tr("Dispositivos ocultos"),
-        )
+        self.group = Adw.PreferencesGroup()
         page.add(self.group)
         toolbar.set_content(page)
         self.set_content(toolbar)
