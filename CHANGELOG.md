@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.11.5 - 2026-11-26
+
+- Keeps the dragged card fully opaque.
+- Removes the background box around the three-dot drag handle so it aligns
+  cleanly with the row.
+
 ## 1.11.4 - 2026-11-26
 
 - Replaces the native drag icon with an overlay preview fixed to the vertical

@@ -65,6 +65,13 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="1.11.5" date="2026-11-26">
+      <description>
+        <p>
+          Makes the drag preview opaque and removes the drag handle background.
+        </p>
+      </description>
+    </release>
     <release version="1.11.4" date="2026-11-26">
       <description>
         <p>

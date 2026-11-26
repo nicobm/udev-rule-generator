@@ -951,14 +951,12 @@ class DeviceManager(Gtk.Box):
             preview.set_can_target(False)
             preview.append(picture)
             self.preview_layer.put(preview, int(origin[0]), int(origin[1]))
-            row.set_opacity(0.35)
             drag_state["preview"] = preview
             drag_state["origin"] = origin
             drag_state["hot_y"] = min(20, max(0, int(position[1])))
             drag_state["timer"] = GLib.timeout_add(16, update_preview)
 
         def on_drag_end(*_args) -> None:
-            row.set_opacity(1.0)
             timer = drag_state.get("timer")
             if timer:
                 GLib.source_remove(timer)
