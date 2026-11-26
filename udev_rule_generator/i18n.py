@@ -3,14 +3,14 @@
 La app está escrita en español.  Si el locale del sistema es ``en_US`` o
 ``en_GB`` se muestra en inglés; cualquier variante de español (España,
 Latinoamérica, etc.) se muestra en español.  Para el resto de los idiomas se
-mantiene el español como idioma de respaldo.
+usa inglés como idioma de respaldo.
 """
 
 from __future__ import annotations
 
 import os
 
-LANGUAGE = "es"
+LANGUAGE = "en"
 _EN: dict[str, str] = {}
 
 
@@ -23,15 +23,15 @@ def _system_locale() -> str:
 
 
 def detect_language(locale: str | None = None) -> str:
-    """Devuelve ``en`` solo para inglés de EE. UU. o Reino Unido.
+    """Detecta el idioma de la interfaz.
 
-    ``es_*`` y el resto de los locales quedan en español; es el
-    comportamiento actual de la aplicación.
+    ``en_US``/``en_GB`` usan inglés, cualquier ``es_*`` usa español y el resto
+    de los locales caen en inglés como respaldo.
     """
     value = _system_locale() if locale is None else locale
     value = value.strip()
     if not value:
-        return "es"
+        return "en"
     # LANGUAGE puede ser una lista separada por dos puntos.
     base = value.split(".", 1)[0]
     candidates = [part.strip().lower() for part in base.split(":") if part.strip()]
@@ -41,7 +41,7 @@ def detect_language(locale: str | None = None) -> str:
             return "en"
         if normalized == "es" or normalized.startswith("es_"):
             return "es"
-    return "es"
+    return "en"
 
 
 LANGUAGE = detect_language()

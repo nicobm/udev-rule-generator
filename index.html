@@ -22,12 +22,27 @@
     />
     <meta property="og:type" content="website" />
     <script>
-      try {
-        const theme = localStorage.getItem("theme");
-        if (theme === "light" || theme === "dark") {
-          document.documentElement.dataset.theme = theme;
+      (() => {
+        const root = document.documentElement;
+        let saved = null;
+        try {
+          saved = localStorage.getItem("theme");
+        } catch {}
+        if (saved === "light" || saved === "dark") {
+          root.dataset.theme = saved;
+        } else {
+          root.dataset.theme = matchMedia("(prefers-color-scheme: dark)").matches
+            ? "dark"
+            : "light";
         }
-      } catch {}
+        const meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) {
+          meta.setAttribute(
+            "content",
+            root.dataset.theme === "dark" ? "#000000" : "#ffffff",
+          );
+        }
+      })();
     </script>
     <style>
       :root {
@@ -809,8 +824,9 @@
               rules.
             </li>
             <li>
-              Speaks English for <code>en_US</code>/<code>en_GB</code> and
-              Spanish for every <code>es_*</code> locale.
+              Speaks English for <code>en_US</code>/<code>en_GB</code>,
+              Spanish for every <code>es_*</code> locale, and falls back to
+              English for other locales.
             </li>
           </ul>
         </div>
@@ -911,14 +927,40 @@ flatpak run io.github.nicobm.UdevRuleGenerator</code></pre>
 
     <script>
       const toggle = document.querySelector(".theme-toggle");
+      const colorScheme = matchMedia("(prefers-color-scheme: dark)");
+      let manualTheme = null;
+      try {
+        manualTheme = localStorage.getItem("theme");
+      } catch {}
+
+      function applyTheme(theme) {
+        document.documentElement.dataset.theme = theme;
+        document
+          .querySelector('meta[name="theme-color"]')
+          ?.setAttribute("content", theme === "dark" ? "#000000" : "#ffffff");
+      }
+
+      function onSystemThemeChange(event) {
+        if (manualTheme === "light" || manualTheme === "dark") {
+          return;
+        }
+        applyTheme(event.matches ? "dark" : "light");
+      }
+
+      if (colorScheme.addEventListener) {
+        colorScheme.addEventListener("change", onSystemThemeChange);
+      } else {
+        colorScheme.addListener(onSystemThemeChange);
+      }
+
       toggle?.addEventListener("click", () => {
         const root = document.documentElement;
         const isDark =
           root.dataset.theme === "dark" ||
-          (!root.dataset.theme &&
-            matchMedia("(prefers-color-scheme: dark)").matches);
+          (!root.dataset.theme && colorScheme.matches);
         const theme = isDark ? "light" : "dark";
-        root.dataset.theme = theme;
+        manualTheme = theme;
+        applyTheme(theme);
         try {
           localStorage.setItem("theme", theme);
         } catch {}

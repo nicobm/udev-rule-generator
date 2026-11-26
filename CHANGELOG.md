@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.9.1 - 2026-11-26
+
+- The language fallback for unsupported locales is now English.  `en_US` and
+  `en_GB` use English, `es_*` uses Spanish, and everything else falls back to
+  English.
+- The website now follows live system light/dark theme changes unless the user
+  has manually chosen a theme.
+- README, website, tests, and metadata updated accordingly.
+
 ## 0.9.0 - 2026-11-26
 
 - El nombre visible de la aplicación pasa a ser **udev-rule-generator** en

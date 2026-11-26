@@ -21,9 +21,11 @@ class LanguageDetectionTests(unittest.TestCase):
         self.assertEqual(i18n.detect_language("es_MX.UTF-8"), "es")
         self.assertEqual(i18n.detect_language("es"), "es")
 
-    def test_other_locales_fall_back_to_spanish(self) -> None:
-        self.assertEqual(i18n.detect_language("fr_FR.UTF-8"), "es")
-        self.assertEqual(i18n.detect_language("C"), "es")
+    def test_other_locales_fall_back_to_english(self) -> None:
+        self.assertEqual(i18n.detect_language("fr_FR.UTF-8"), "en")
+        self.assertEqual(i18n.detect_language("de_DE.UTF-8"), "en")
+        self.assertEqual(i18n.detect_language("C"), "en")
+        self.assertEqual(i18n.detect_language(""), "en")
 
     def test_language_list_from_environment(self) -> None:
         self.assertEqual(i18n.detect_language("en_GB:en"), "en")
