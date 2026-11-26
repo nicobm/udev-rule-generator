@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.13.4 - 2026-11-26
+
+- Gives every device, ignored, hidden, and external-rule card the same minimum
+  height, matching the main device and external-rule cards.
+
 ## 1.13.3 - 2026-11-26
 
 - Fixes the card hover override: it no longer removes the card border, and the

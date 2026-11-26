@@ -65,6 +65,14 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="1.13.4" date="2026-11-26">
+      <description>
+        <p>
+          Gives every card the same minimum height as the main device and
+          external-rule cards.
+        </p>
+      </description>
+    </release>
     <release version="1.13.3" date="2026-11-26">
       <description>
         <p>

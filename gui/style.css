@@ -65,6 +65,10 @@
   box-shadow: none;
 }
 
+.device-card {
+  min-height: 72px;
+}
+
 /* Las tarjetas son clickeables, pero no cambian al pasar el puntero. */
 list.boxed-list-separate > row.device-card:not(.expander):not(:selected).activatable:hover,
 list.boxed-list-separate > row.device-card:not(.expander):not(:selected).activatable:active,
