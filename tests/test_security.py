@@ -17,6 +17,10 @@ class RuleValidationTests(unittest.TestCase):
             content = build_preset_content(preset)
             if preset.category == "steam":
                 self.assertIn("ValveSoftware/steam-devices", content)
+            elif preset.category == "joystick-blacklist":
+                self.assertIn(
+                    "denilsonsa/udev-joystick-blacklist", content
+                )
             else:
                 self.assertIn("fabiscafe/game-devices-udev", content)
 

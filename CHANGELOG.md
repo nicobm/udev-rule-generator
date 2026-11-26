@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.13.0 - 2026-11-26
+
+- Adds the optional **udev-joystick-blacklist** package as a third external
+  rule package in **External rules** and in `--presets`.
+- It installs `65-these-are-not-joysticks.rules`, which prevents keyboards,
+  mice, tablets, LED controllers, and other non-joystick devices from being
+  exposed as `/dev/input/js*`. The rules are public domain.
+
 ## 1.12.0 - 2026-11-26
 
 - Adds the **Ignorados** section for devices that the kernel exposes with a

@@ -1390,5 +1390,30 @@ _EN.update(
             "Changes applied. Controllers were reconnected to reassign the "
             "js nodes."
         ),
+        "Evita que teclados, ratones, tabletas y controladores de LED que "
+        "el kernel expone como joysticks aparezcan como mandos.": (
+            "Prevents keyboards, mice, tablets, and LED controllers that "
+            "the kernel exposes as joysticks from appearing as controllers."
+        ),
+        "Evita que teclados, ratones, tabletas y controladores de LED que "
+        "el kernel expone como joysticks aparezcan como mandos. Dominio "
+        "público · {url}": (
+            "Prevents keyboards, mice, tablets, and LED controllers that "
+            "the kernel exposes as joysticks from appearing as controllers. "
+            "Public domain · {url}"
+        ),
+        "instala steam-devices, game-devices-udev, "
+        "udev-joystick-blacklist o all": (
+            "install steam-devices, game-devices-udev, "
+            "udev-joystick-blacklist, or all"
+        ),
+        "Selección no válida: {selection!r}. Usá steam, game-devices-udev, "
+        "udev-joystick-blacklist o all.": (
+            "Invalid selection: {selection!r}. Use steam, "
+            "game-devices-udev, udev-joystick-blacklist, or all."
+        ),
+        "  3) udev-joystick-blacklist": "  3) udev-joystick-blacklist",
+        "  4) Todos": "  4) All",
+        "  5) Volver": "  5) Back",
     }
 )

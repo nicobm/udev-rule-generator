@@ -2,8 +2,9 @@
 
 Las reglas provienen de ``steam-devices`` de Valve y de
 ``game-devices-udev`` de Fabian Bornschein (fabiscafe), ambos bajo licencia
-MIT.  No se instalan automáticamente: solo se copian si el usuario activa el
-interruptor correspondiente.
+MIT, y de ``udev-joystick-blacklist`` de Denilson Figueiredo de Sá, de
+dominio público.  No se instalan automáticamente: solo se copian si el
+usuario activa el interruptor correspondiente.
 """
 
 from __future__ import annotations
@@ -13,7 +14,12 @@ from dataclasses import dataclass
 from importlib import resources
 from typing import Iterable
 
-from . import GAME_DEVICES_URL, STEAM_DEVICES_URL, __version__
+from . import (
+    GAME_DEVICES_URL,
+    JOYSTICK_BLACKLIST_URL,
+    STEAM_DEVICES_URL,
+    __version__,
+)
 from .i18n import tr
 
 _PACKAGE = "udev_rule_generator"
@@ -153,7 +159,24 @@ GAME_DEVICES: tuple[Preset, ...] = tuple(
     for source in _GAME_DEVICE_RULES
 )
 
-PRESETS: tuple[Preset, ...] = STEAM + GAME_DEVICES
+JOYSTICK_BLACKLIST: tuple[Preset, ...] = (
+    Preset(
+        id="joystick-blacklist",
+        title="udev-joystick-blacklist",
+        description=tr(
+            "Evita que teclados, ratones, tabletas y controladores de LED "
+            "que el kernel expone como joysticks aparezcan como mandos."
+        ),
+        source="51-these-are-not-joysticks.rules",
+        install_name="65-these-are-not-joysticks.rules",
+        category="joystick-blacklist",
+        trigger="change",
+        license="Public domain",
+        upstream=JOYSTICK_BLACKLIST_URL,
+    ),
+)
+
+PRESETS: tuple[Preset, ...] = STEAM + GAME_DEVICES + JOYSTICK_BLACKLIST
 
 
 def get_preset(preset_id: str) -> Preset:
@@ -183,13 +206,20 @@ def select_presets(selection: str) -> list[Preset]:
             "gdu",
         }:
             selected = GAME_DEVICES
+        elif item in {
+            "joystick-blacklist",
+            "udev-joystick-blacklist",
+            "blacklist",
+            "denilsonsa",
+        }:
+            selected = JOYSTICK_BLACKLIST
         elif item == "all":
             selected = PRESETS
         else:
             raise ValueError(
                 tr(
                     "Selección no válida: {selection!r}. Usá steam, "
-                    "game-devices-udev o all.",
+                    "game-devices-udev, udev-joystick-blacklist o all.",
                     selection=item,
                 )
             )

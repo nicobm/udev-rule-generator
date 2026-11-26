@@ -34,6 +34,10 @@ GAME_DEVICES_RAW = (
 GAME_DEVICES_LICENSE = (
     "https://codeberg.org/fabiscafe/game-devices-udev/raw/branch/main/LICENSE"
 )
+JOYSTICK_BLACKLIST_RAW = (
+    "https://raw.githubusercontent.com/denilsonsa/udev-joystick-blacklist/"
+    "master/"
+)
 ALLOWED_HOSTS = {"raw.githubusercontent.com", "codeberg.org"}
 USER_AGENT = "udev-rule-generator-preset-updater"
 
@@ -71,6 +75,9 @@ def remote_files() -> dict[str, str]:
     for preset in GAME_DEVICES:
         files[preset.source] = f"{GAME_DEVICES_RAW}{preset.source}"
     files["LICENSE.game-devices-udev"] = GAME_DEVICES_LICENSE
+    files["51-these-are-not-joysticks.rules"] = (
+        f"{JOYSTICK_BLACKLIST_RAW}51-these-are-not-joysticks.rules"
+    )
     return files
 
 

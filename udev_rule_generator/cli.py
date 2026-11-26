@@ -918,15 +918,17 @@ def _cmd_presets(
         print(colors.bold(tr("Paquetes de reglas externas:")))
         print(tr("  1) steam-devices (Valve)"))
         print(tr("  2) game-devices-udev (fabiscafe)"))
-        print(tr("  3) Ambos"))
-        print(tr("  4) Volver"))
+        print(tr("  3) udev-joystick-blacklist"))
+        print(tr("  4) Todos"))
+        print(tr("  5) Volver"))
         choice = _ask(tr("\nPaquete: "))
         selection = {
             "1": "steam",
             "2": "game-devices-udev",
-            "3": "all",
+            "3": "udev-joystick-blacklist",
+            "4": "all",
         }.get(choice, "")
-        if not selection or choice == "4":
+        if not selection or choice == "5":
             return 0
     presets = select_presets(selection)
     return _install_presets(
@@ -1247,7 +1249,10 @@ def build_parser() -> argparse.ArgumentParser:
         nargs="?",
         const="steam",
         metavar=tr("SELECCIÓN"),
-        help=tr("instala steam-devices, game-devices-udev o all"),
+        help=tr(
+            "instala steam-devices, game-devices-udev, "
+            "udev-joystick-blacklist o all"
+        ),
     )
     parser.add_argument(
         "--installed",

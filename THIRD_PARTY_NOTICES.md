@@ -23,6 +23,19 @@ The `*-gdu.rules` files come from **game-devices-udev** by Fabian Bornschein
 
 They are included as an optional source; they are not installed by default.
 
+## udev-joystick-blacklist
+
+The `51-these-are-not-joysticks.rules` file comes from
+**udev-joystick-blacklist** by Denilson Figueiredo de Sá (denilsonsa):
+
+- GitHub: https://github.com/denilsonsa/udev-joystick-blacklist
+- License: Public domain
+
+It is included unchanged (with only the installation filename changed by the
+application). It is offered as an optional source; it is not installed by
+default. The upstream project states that it is released into the public
+domain, without warranty.
+
 ## MIT license
 
 The steam-devices and game-devices-udev rule files and the Bootstrap Icons

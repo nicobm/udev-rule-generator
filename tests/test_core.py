@@ -20,6 +20,7 @@ from udev_rule_generator.host import HostError
 from udev_rule_generator.installed import _parse_header
 from udev_rule_generator.presets import (
     GAME_DEVICES,
+    JOYSTICK_BLACKLIST,
     PRESETS,
     STEAM,
     build_preset_content,
@@ -257,18 +258,24 @@ class PresetTests(unittest.TestCase):
     def test_presets_are_packaged(self) -> None:
         self.assertEqual(len(STEAM), 2)
         self.assertEqual(len(GAME_DEVICES), 28)
-        self.assertEqual(len(PRESETS), 30)
+        self.assertEqual(len(JOYSTICK_BLACKLIST), 1)
+        self.assertEqual(len(PRESETS), 31)
         self.assertEqual(
             {p.id for p in STEAM}, {"steam-input", "steam-vr"}
         )
         self.assertIn("8bitdo", {p.id for p in GAME_DEVICES})
-        self.assertEqual(PRESETS, STEAM + GAME_DEVICES)
+        self.assertEqual(
+            PRESETS, STEAM + GAME_DEVICES + JOYSTICK_BLACKLIST
+        )
 
     def test_preset_content_has_upstream_source(self) -> None:
         steam = build_preset_content(get_preset("steam-input"))
         gdu = build_preset_content(get_preset("8bitdo"))
+        blacklist = build_preset_content(get_preset("joystick-blacklist"))
         self.assertIn("ValveSoftware/steam-devices", steam)
         self.assertIn("fabiscafe/game-devices-udev", gdu)
+        self.assertIn("denilsonsa/udev-joystick-blacklist", blacklist)
+        self.assertIn("Public domain", blacklist)
 
     def test_preset_files(self) -> None:
         files = preset_files(PRESETS)
@@ -276,12 +283,14 @@ class PresetTests(unittest.TestCase):
         self.assertIn("71-steam-input.rules", files)
         self.assertIn("71-steam-vr.rules", files)
         self.assertIn("71-8bitdo-gdu.rules", files)
+        self.assertIn("65-these-are-not-joysticks.rules", files)
         for filename in files:
             validate_rule_filename(filename)
 
     def test_presets_use_expected_trigger(self) -> None:
         self.assertEqual(presets_trigger(STEAM), "change")
         self.assertEqual(presets_trigger(GAME_DEVICES), "add")
+        self.assertEqual(presets_trigger(JOYSTICK_BLACKLIST), "change")
         self.assertEqual(presets_trigger(PRESETS), "add")
 
     def test_select_presets(self) -> None:
@@ -292,6 +301,10 @@ class PresetTests(unittest.TestCase):
         self.assertEqual(
             {p.id for p in select_presets("game-devices-udev")},
             {p.id for p in GAME_DEVICES},
+        )
+        self.assertEqual(
+            {p.id for p in select_presets("udev-joystick-blacklist")},
+            {p.id for p in JOYSTICK_BLACKLIST},
         )
         self.assertEqual(
             {p.id for p in select_presets("all")},

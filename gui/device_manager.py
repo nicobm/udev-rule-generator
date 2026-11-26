@@ -5,13 +5,18 @@ from __future__ import annotations
 import threading
 from typing import Callable
 
-from udev_rule_generator import GAME_DEVICES_URL, STEAM_DEVICES_URL
+from udev_rule_generator import (
+    GAME_DEVICES_URL,
+    JOYSTICK_BLACKLIST_URL,
+    STEAM_DEVICES_URL,
+)
 from udev_rule_generator.devices import HidDevice, Joystick
 from udev_rule_generator.host import Host
 from udev_rule_generator.i18n import tr
 from udev_rule_generator.known import KnownDevice, KnownDevices
 from udev_rule_generator.presets import (
     GAME_DEVICES,
+    JOYSTICK_BLACKLIST,
     STEAM,
     preset_files,
     presets_trigger,
@@ -117,12 +122,16 @@ class DeviceManager(Gtk.Box):
         self._ignored_actual: dict[str, bool] = {}
         self._pending_steam: bool | None = None
         self._pending_gdu: bool | None = None
+        self._pending_blacklist: bool | None = None
         self._steam_installed = False
         self._gdu_installed = False
+        self._blacklist_installed = False
         self._steam_rule_count = 0
         self._gdu_rule_count = 0
+        self._blacklist_rule_count = 0
         self._steam_rule_total = len(STEAM)
         self._gdu_rule_total = len(GAME_DEVICES)
+        self._blacklist_rule_total = len(JOYSTICK_BLACKLIST)
         self._uinput_available = True
         self._rows: list[tuple[Adw.PreferencesGroup, Gtk.Widget]] = []
         self._row_identities: dict[Gtk.Widget, str] = {}
@@ -200,6 +209,20 @@ class DeviceManager(Gtk.Box):
         )
         self.gdu_switch.connect("notify::active", self._on_gdu_toggled)
         self.external_group.add(self.gdu_switch)
+
+        self.blacklist_switch = Adw.SwitchRow(
+            title=tr("udev-joystick-blacklist"),
+            subtitle=tr(
+                "Evita que teclados, ratones, tabletas y controladores de "
+                "LED que el kernel expone como joysticks aparezcan como "
+                "mandos. Dominio público · {url}",
+                url=JOYSTICK_BLACKLIST_URL,
+            ),
+        )
+        self.blacklist_switch.connect(
+            "notify::active", self._on_blacklist_toggled
+        )
+        self.external_group.add(self.blacklist_switch)
 
         self.append(self.external_group)
         self._update_preset_tooltips()
@@ -281,10 +304,13 @@ class DeviceManager(Gtk.Box):
         }
         steam_files = set(preset_files(STEAM))
         gdu_files = set(preset_files(GAME_DEVICES))
+        blacklist_files = set(preset_files(JOYSTICK_BLACKLIST))
         self._steam_installed = steam_files <= filenames
         self._gdu_installed = gdu_files <= filenames
+        self._blacklist_installed = blacklist_files <= filenames
         self._steam_rule_count = len(steam_files & filenames)
         self._gdu_rule_count = len(gdu_files & filenames)
+        self._blacklist_rule_count = len(blacklist_files & filenames)
         self._update_preset_tooltips()
         if (
             self._pending_steam is not None
@@ -296,6 +322,11 @@ class DeviceManager(Gtk.Box):
             and self._pending_gdu == self._gdu_installed
         ):
             self._pending_gdu = None
+        if (
+            self._pending_blacklist is not None
+            and self._pending_blacklist == self._blacklist_installed
+        ):
+            self._pending_blacklist = None
         self._update_preset_switches()
 
     def _update_preset_switches(self) -> None:
@@ -311,6 +342,11 @@ class DeviceManager(Gtk.Box):
             self._pending_gdu
             if self._pending_gdu is not None
             else self._gdu_installed
+        )
+        self.blacklist_switch.set_active(
+            self._pending_blacklist
+            if self._pending_blacklist is not None
+            else self._blacklist_installed
         )
         self._updating = False
         self._update_pending_ui()
@@ -331,6 +367,13 @@ class DeviceManager(Gtk.Box):
                 "{count} de {total} reglas instaladas",
                 count=self._gdu_rule_count,
                 total=self._gdu_rule_total,
+            )
+        )
+        self.blacklist_switch.set_tooltip_text(
+            tr(
+                "{count} de {total} reglas instaladas",
+                count=self._blacklist_rule_count,
+                total=self._blacklist_rule_total,
             )
         )
 
@@ -1762,12 +1805,24 @@ class DeviceManager(Gtk.Box):
         )
         self._update_pending_ui()
 
+    def _on_blacklist_toggled(self, row: Adw.SwitchRow, _pspec) -> None:
+        if self._updating or self._busy:
+            return
+        active = row.get_active()
+        self._pending_blacklist = (
+            None if active == self._blacklist_installed else active
+        )
+        self._update_pending_ui()
+
     def reset_after_clear(self) -> None:
         """Descarta cambios pendientes y recarga tras borrar todos los datos."""
         self._pending_known.clear()
         self._pending_unknown.clear()
         self._pending_ignored.clear()
         self._pending_ignored_joysticks.clear()
+        self._pending_steam = None
+        self._pending_gdu = None
+        self._pending_blacklist = None
         self.reload()
 
     def _update_pending_ui(self) -> None:
@@ -1777,6 +1832,7 @@ class DeviceManager(Gtk.Box):
             or self._pending_ignored
             or self._pending_steam is not None
             or self._pending_gdu is not None
+            or self._pending_blacklist is not None
         )
         self.action_bar.set_visible(pending)
         self.pending_label.set_text(
@@ -1791,6 +1847,7 @@ class DeviceManager(Gtk.Box):
             or self._pending_ignored
             or self._pending_steam is not None
             or self._pending_gdu is not None
+            or self._pending_blacklist is not None
         ):
             return
         self._set_busy(True)
@@ -1839,6 +1896,7 @@ class DeviceManager(Gtk.Box):
             preset_changes = (
                 (STEAM, self._pending_steam),
                 (GAME_DEVICES, self._pending_gdu),
+                (JOYSTICK_BLACKLIST, self._pending_blacklist),
             )
             for presets, desired in preset_changes:
                 if desired is None:
@@ -1939,6 +1997,8 @@ class DeviceManager(Gtk.Box):
                     continue
                 if presets is STEAM:
                     self._steam_installed = desired
+                elif presets is JOYSTICK_BLACKLIST:
+                    self._blacklist_installed = desired
                 else:
                     self._gdu_installed = desired
             self._pending_known.clear()
@@ -1947,6 +2007,7 @@ class DeviceManager(Gtk.Box):
             self._pending_ignored_joysticks.clear()
             self._pending_steam = None
             self._pending_gdu = None
+            self._pending_blacklist = None
         except Exception as exc:  # noqa: BLE001 (se muestra al usuario)
             GLib.idle_add(self._apply_failed, str(exc))
             return
@@ -1975,6 +2036,7 @@ class DeviceManager(Gtk.Box):
             not busy and self._uinput_available
         )
         self.gdu_switch.set_sensitive(not busy)
+        self.blacklist_switch.set_sensitive(not busy)
         self.apply_button.set_sensitive(
             not busy
             and bool(
@@ -1983,6 +2045,7 @@ class DeviceManager(Gtk.Box):
                 or self._pending_ignored
                 or self._pending_steam is not None
                 or self._pending_gdu is not None
+                or self._pending_blacklist is not None
             )
         )
         self.spinner.set_visible(busy)
@@ -2004,6 +2067,7 @@ class DeviceManager(Gtk.Box):
             enabled and self._uinput_available
         )
         self.gdu_switch.set_sensitive(enabled)
+        self.blacklist_switch.set_sensitive(enabled)
 
     def _show_error(self, heading: str, body: str) -> None:
         dialog = Adw.AlertDialog(heading=heading, body=body)
