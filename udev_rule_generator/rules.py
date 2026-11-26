@@ -158,10 +158,6 @@ def _header(device: Joystick, action: RuleAction) -> list[str]:
     ]
     if device.serial:
         lines.append(tr("# Serial: {serial}", serial=_comment_value(device.serial)))
-    if device.nodes:
-        lines.append(
-            tr("# Nodos: {nodes}", nodes=_comment_value(", ".join(device.nodes)))
-        )
     lines.extend(
         [
             tr("# Acción: {action}", action=action.label.lower()),

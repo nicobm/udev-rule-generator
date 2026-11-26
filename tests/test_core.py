@@ -143,6 +143,8 @@ class RuleTests(unittest.TestCase):
         self.assertIn("TAG+=\"uaccess\"", spec.content)
         self.assertEqual(spec.trigger, "change")
         self.assertNotIn("VID/PID desconocido", spec.content)
+        self.assertNotIn("# Nodos:", spec.content)
+        self.assertNotIn("# Nodes:", spec.content)
 
     def test_ignore_usb_deauthorizes_and_denies(self) -> None:
         spec = build_rule(_device(), RuleAction.IGNORE)

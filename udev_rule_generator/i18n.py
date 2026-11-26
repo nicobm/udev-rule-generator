@@ -348,7 +348,6 @@ _EN.update(
         "# Dispositivo: {name}": "# Device: {name}",
         "# Bus: {bus} · ID: {identifier}": "# Bus: {bus} · ID: {identifier}",
         "# Serial: {serial}": "# Serial: {serial}",
-        "# Nodos: {nodes}": "# Nodes: {nodes}",
         "# Acción: {action}": "# Action: {action}",
         "# Proyecto: {url}": "# Project: {url}",
         "# Permisos del dispositivo USB": "# USB device permissions",

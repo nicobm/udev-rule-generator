@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.2 - 2026-11-26
+
+- Generated rules no longer include the transient `# Nodos:`/`# Nodes:` line.
+  Rule matching never used that comment; `js*` numbering changes between
+  connections anyway.
+- Existing rules keep their old comment until they are regenerated or removed.
+
 ## 0.9.1 - 2026-11-26
 
 - The language fallback for unsupported locales is now English.  `en_US` and
