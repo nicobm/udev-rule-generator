@@ -52,9 +52,12 @@ part of the application installation.
 Controller support on Linux depends on udev rules that grant the active user
 access to each device. Many distributions do not ship rules for every
 controller, and some do not package rule sets such as
-[`game-devices-udev`](https://codeberg.org/fabiscafe/game-devices-udev) and/or
-[`steam-devices`](https://github.com/ValveSoftware/steam-devices) at all. This
-is especially common on immutable systems such as Fedora Silverblue.
+[`game-devices-udev`](https://codeberg.org/fabiscafe/game-devices-udev),
+[`steam-devices`](https://github.com/ValveSoftware/steam-devices), or
+[`udev-joystick-blacklist`](https://github.com/denilsonsa/udev-joystick-blacklist)
+at all. This is especially common on immutable systems such as Fedora
+Silverblue. The last one solves the opposite problem: it hides non-joystick
+devices that the kernel exposes as controllers.
 
 Copying rules from the internet is fragile: they are often tied to a specific
 vendor, model, or old VID:PID, and they may grant permissions to devices you do
@@ -86,8 +89,11 @@ hidden from the main list.
   can be enabled or disabled without connecting the controller again.
 - Hide saved devices with the eye button; restore them from the hidden-devices
   menu.
-- Inline [steam-devices](https://github.com/ValveSoftware/steam-devices)
-  switch in the main window.
+- Inline **External rules** switches for
+  [steam-devices](https://github.com/ValveSoftware/steam-devices),
+  [game-devices-udev](https://codeberg.org/fabiscafe/game-devices-udev), and
+  [udev-joystick-blacklist](https://github.com/denilsonsa/udev-joystick-blacklist)
+  in the main window.
 - GTK4/libadwaita GUI with automatic connection detection, GNOME
   notifications, and centered Pika Backup-style cards.
 - Automatic language detection for English (US/UK) and Spanish.
@@ -166,7 +172,8 @@ view/remove installed rules. The non-interactive `--known`,
 # Install an enable rule for 045e:02fd (Xbox One)
 ./udev-rule-generator --device 045e:02fd --yes
 
-# Install the steam-devices package
+# Install an external rule package (steam-devices, game-devices-udev,
+# or udev-joystick-blacklist); use --presets all for the three
 ./udev-rule-generator --presets steam
 
 # Show rules installed by this application
