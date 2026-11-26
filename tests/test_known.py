@@ -7,6 +7,7 @@ import tempfile
 import unittest
 from dataclasses import replace
 from pathlib import Path
+from unittest import mock
 
 from udev_rule_generator.devices import Joystick
 from udev_rule_generator.hidden import device_identity
@@ -120,6 +121,25 @@ class KnownDevicesTests(unittest.TestCase):
         self.assertEqual(record.bus, "bluetooth")
         self.assertEqual(record.action, "ignore")
         self.assertIn("KERNELS", record.build_spec().content)
+
+    def test_batch_disable_saves_once(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            store = KnownDevices(Path(directory) / "devices.json")
+            first = _device("First Pad")
+            second = _device("Second Pad")
+            store.record_rule(first, build_rule(first, RuleAction.ALLOW))
+            store.record_rule(second, build_rule(second, RuleAction.ALLOW))
+            filenames = [device.filename for device in store.devices()]
+
+            with mock.patch.object(
+                store, "save", wraps=store.save
+            ) as save:
+                self.assertTrue(store.mark_inactive_by_filenames(filenames))
+
+            save.assert_called_once()
+            self.assertTrue(
+                all(not device.active for device in store.devices())
+            )
 
     def test_corrupt_file_is_ignored(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

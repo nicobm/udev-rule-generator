@@ -787,6 +787,13 @@ _EN.update(
             "metadata and content are kept in devices.json even when the "
             "controller is disconnected."
         ),
+        "Cada interruptor de la lista instala o elimina la regla "
+        "guardada de ese dispositivo.  La metadata y el contenido se "
+        "conservan en devices.json aunque el mando esté desconectado.": (
+            "Each switch in the list installs or removes the saved rule for "
+            "that device.  The metadata and content are kept in devices.json "
+            "even when the controller is disconnected."
+        ),
         "Activa": "Active",
         "Desactivada": "Disabled",
         "Conectado": "Connected",
@@ -799,6 +806,29 @@ _EN.update(
         ),
         "No se pudo cambiar la regla guardada": (
             "Could not change the saved rule"
+        ),
+        "No se pudieron cambiar los dispositivos guardados": (
+            "Could not change the saved devices"
+        ),
+        "Activar todos": "Enable all",
+        "{active} de {count} activos": "{active} of {count} active",
+        "Todos activos ({count})": "All active ({count})",
+        "Ninguno activo ({count})": "None active ({count})",
+        "{active} de {count} activos · falta 1": (
+            "{active} of {count} active · 1 missing"
+        ),
+        "{active} de {count} activos · faltan {missing}": (
+            "{active} of {count} active · {missing} missing"
+        ),
+        "Se activó {count} dispositivo.": "Enabled {count} device.",
+        "Se activaron {count} dispositivos.": "Enabled {count} devices.",
+        "Se desactivó {count} dispositivo.": "Disabled {count} device.",
+        "Se desactivaron {count} dispositivos.": "Disabled {count} devices.",
+        "No se pudo guardar el estado: {error}": (
+            "Could not save the state: {error}"
+        ),
+        "No hay reglas guardadas para desactivar.": (
+            "There are no saved rules to disable."
         ),
         "Regla activada: {name}": "Rule enabled: {name}",
         "Regla desactivada: {name}": "Rule disabled: {name}",

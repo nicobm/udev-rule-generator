@@ -339,16 +339,28 @@ class KnownDevices:
             return record
 
     def update(self, record: KnownDevice) -> KnownDevice:
+        self.update_many([record])
+        return record
+
+    def update_many(self, records: list[KnownDevice]) -> None:
         with self._lock:
-            self._devices[record.id] = record
+            if not records:
+                return
+            for record in records:
+                self._devices[record.id] = record
             self.save()
-            return record
 
     def mark_inactive_by_filename(self, filename: str) -> bool:
+        return self.mark_inactive_by_filenames([filename])
+
+    def mark_inactive_by_filenames(self, filenames: list[str]) -> bool:
         with self._lock:
+            wanted = set(filenames)
+            if not wanted:
+                return False
             changed = False
             for key, record in list(self._devices.items()):
-                if record.filename == filename and record.active:
+                if record.filename in wanted and record.active:
                     self._devices[key] = replace(
                         record, active=False, updated_at=_now()
                     )

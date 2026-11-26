@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.11.0 - 2026-11-26
+
+- Removes the rule preview from the device dialog. The dialog now shows only
+  the device data, the action, visibility, and the install button.
+- Adds an **Enable all** switch above the Saved devices list. It shows the
+  active count and enables only the inactive devices, leaving already active
+  rules untouched. Turning it off removes all active saved rules.
+- Batch operations install or remove the affected rules through a single
+  polkit prompt when possible and save the registry once.
+
 ## 0.10.1 - 2026-11-26
 
 - Simplifies generated rule files for human reading. The header is now only

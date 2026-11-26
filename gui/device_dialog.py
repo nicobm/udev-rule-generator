@@ -13,11 +13,11 @@ from udev_rule_generator.known import KnownDevices
 from udev_rule_generator.privileged import install_rule_files
 from udev_rule_generator.rules import RuleAction, RuleSpec, build_rule
 
-from .gi_compat import Adw, Gdk, GLib, Gtk, Pango
+from .gi_compat import Adw, GLib, Gtk, Pango
 
 
 class DeviceDialog(Adw.Dialog):
-    """Muestra los datos del dispositivo, la acción y la regla resultante."""
+    """Muestra los datos del dispositivo y permite instalar su regla."""
 
     def __init__(
         self,
@@ -43,9 +43,9 @@ class DeviceDialog(Adw.Dialog):
 
         self.set_title(tr("Configurar joystick"))
         self.set_content_width(800)
-        self.set_content_height(820)
+        self.set_content_height(700)
         self._build_ui()
-        self._update_preview()
+        self._update_rule()
 
     def _build_ui(self) -> None:
         toolbar = Adw.ToolbarView()
@@ -57,14 +57,6 @@ class DeviceDialog(Adw.Dialog):
                 subtitle=self.device.display_name,
             )
         )
-        copy_button = Gtk.Button(
-            icon_name="edit-copy-symbolic",
-            tooltip_text=tr("Copiar la regla al portapapeles"),
-        )
-        copy_button.add_css_class("flat")
-        copy_button.connect("clicked", lambda *_: self._copy_rule())
-        header.pack_start(copy_button)
-
         close_button = Gtk.Button(
             icon_name="window-close-symbolic",
             tooltip_text=tr("Cerrar"),
@@ -88,7 +80,6 @@ class DeviceDialog(Adw.Dialog):
         page.add(self._build_info_group())
         page.add(self._build_action_group())
         page.add(self._build_visibility_group())
-        page.add(self._build_preview_group())
 
         content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         content.append(self.banner)
@@ -248,35 +239,6 @@ class DeviceDialog(Adw.Dialog):
         self.on_hidden(tr("Dispositivo oculto: {name}", name=self.device.display_name))
         self.close()
 
-    def _build_preview_group(self) -> Adw.PreferencesGroup:
-        group = Adw.PreferencesGroup(
-            title=tr("Vista previa"),
-            description=tr(
-                "La regla se instalará en /etc/udev/rules.d: 10- para permitir "
-                "y 99- para ignorar (así la denegación se aplica al final)."
-            ),
-        )
-        self.preview = Gtk.TextView()
-        self.preview.set_editable(False)
-        self.preview.set_cursor_visible(False)
-        self.preview.set_monospace(True)
-        self.preview.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
-        self.preview.set_top_margin(12)
-        self.preview.set_bottom_margin(12)
-        self.preview.set_left_margin(12)
-        self.preview.set_right_margin(12)
-        self.preview.add_css_class("rule-preview")
-
-        scroller = Gtk.ScrolledWindow()
-        scroller.set_has_frame(True)
-        scroller.set_min_content_height(210)
-        scroller.set_vexpand(True)
-        scroller.set_child(self.preview)
-        scroller.set_margin_top(4)
-        scroller.set_margin_bottom(4)
-        group.add(scroller)
-        return group
-
     def _action(self) -> RuleAction:
         return (
             RuleAction.IGNORE
@@ -285,24 +247,21 @@ class DeviceDialog(Adw.Dialog):
         )
 
     def _on_action_changed(self) -> None:
-        self._update_preview()
+        self._update_rule()
         self.banner.set_revealed(
             self.device.is_bluetooth and self._action() is RuleAction.IGNORE
         )
 
-    def _update_preview(self) -> None:
-        buffer = self.preview.get_buffer()
+    def _update_rule(self) -> None:
         try:
             self._spec = build_rule(self.device, self._action())
         except ValueError as exc:
             self._spec = None
-            buffer.set_text(
-                tr("No se pudo generar la regla:\n{error}", error=exc)
+            self.status_label.set_text(
+                tr("No se pudo generar la regla: {error}", error=exc)
             )
-            self.status_label.set_text(tr("No se puede instalar esta regla."))
             self.install_button.set_sensitive(False)
             return
-        buffer.set_text(self._spec.content)
         self.status_label.set_text(
             tr(
                 "Se instalará como /etc/udev/rules.d/{filename}",
@@ -310,15 +269,6 @@ class DeviceDialog(Adw.Dialog):
             )
         )
         self.install_button.set_sensitive(not self._busy)
-
-    def _copy_rule(self) -> None:
-        if self._spec is None:
-            return
-        display = Gdk.Display.get_default()
-        if display is None:
-            return
-        display.get_clipboard().set(self._spec.content)
-        self.status_label.set_text(tr("Regla copiada al portapapeles."))
 
     def _install(self) -> None:
         if self._busy or self._spec is None:

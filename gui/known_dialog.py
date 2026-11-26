@@ -10,6 +10,7 @@ from udev_rule_generator.i18n import tr
 from udev_rule_generator.installed import list_installed_rules
 from udev_rule_generator.known import KnownDevice, KnownDevices
 from udev_rule_generator.privileged import install_rule_files, remove_rule_files
+from udev_rule_generator.rules import RuleSpec
 
 from .gi_compat import Adw, GLib, Gtk
 
@@ -101,11 +102,19 @@ class KnownDialog(Adw.Dialog):
         content.set_margin_start(18)
         content.set_margin_end(18)
 
+        self.master_group = Adw.PreferencesGroup()
+        self.master_row = Adw.SwitchRow(title=tr("Activar todos"))
+        self.master_row.connect("notify::active", self._on_master_toggled)
+        self.master_group.add(self.master_row)
+        self.master_group.set_visible(False)
+        content.append(self.master_group)
+
         self.group = Adw.PreferencesGroup(
             title=tr("Dispositivos guardados"),
             description=tr(
-                "El interruptor instala o elimina la última regla guardada.  "
-                "La metadata y el contenido se conservan en "
+                "Cada interruptor de la lista instala o elimina la regla "
+                "guardada de ese dispositivo.  La metadata y el contenido se "
+                "conservan en "
                 "devices.json aunque el mando esté desconectado."
             ),
         )
@@ -175,8 +184,36 @@ class KnownDialog(Adw.Dialog):
         devices = self.store.devices()
         for device in devices:
             self.group.add(self._device_row(device))
+        self.master_group.set_visible(bool(devices))
+        self._update_master(devices)
         self.stack.set_visible_child_name("list" if devices else "empty")
         self._updating = False
+
+    def _update_master(self, devices: list[KnownDevice]) -> None:
+        count = len(devices)
+        active = sum(1 for device in devices if device.active)
+        missing = count - active
+        self.master_row.set_active(bool(devices) and missing == 0)
+        if not devices:
+            subtitle = ""
+        elif missing == 0:
+            subtitle = tr("Todos activos ({count})", count=count)
+        elif active == 0:
+            subtitle = tr("Ninguno activo ({count})", count=count)
+        elif missing == 1:
+            subtitle = tr(
+                "{active} de {count} activos · falta 1",
+                active=active,
+                count=count,
+            )
+        else:
+            subtitle = tr(
+                "{active} de {count} activos · faltan {missing}",
+                active=active,
+                count=count,
+                missing=missing,
+            )
+        self.master_row.set_subtitle(subtitle)
 
     def _device_row(self, device: KnownDevice) -> Adw.SwitchRow:
         state = tr("Activa") if device.active else tr("Desactivada")
@@ -210,6 +247,128 @@ class KnownDialog(Adw.Dialog):
         row.add_prefix(icon)
         self._rows.append(row)
         return row
+
+    def _on_master_toggled(self, row: Adw.SwitchRow, _pspec) -> None:
+        if self._updating or self._busy:
+            return
+        activate = row.get_active()
+        devices = self.store.devices()
+        targets = [
+            device for device in devices if device.active != activate
+        ]
+        if not targets:
+            self._reload()
+            return
+        self._set_busy(True)
+        thread = threading.Thread(
+            target=self._master_worker,
+            args=(targets, activate),
+            name="udev-rule-generator-known-all",
+            daemon=True,
+        )
+        thread.start()
+
+    def _master_worker(
+        self, devices: list[KnownDevice], activate: bool
+    ) -> None:
+        try:
+            if activate:
+                specs: list[tuple[KnownDevice, RuleSpec]] = []
+                for device in devices:
+                    spec = device.build_spec()
+                    if not spec.filename:
+                        raise ValueError(
+                            tr("No hay una regla guardada para activar.")
+                        )
+                    specs.append((device, spec))
+                files = {
+                    spec.filename: spec.content
+                    for _device, spec in specs
+                }
+                trigger = (
+                    "add"
+                    if any(
+                        spec.trigger == "add"
+                        for _device, spec in specs
+                    )
+                    else "change"
+                )
+                install_rule_files(self.host, files, trigger=trigger)
+                updated = [
+                    device.update_from_spec(spec)
+                    for device, spec in specs
+                ]
+                try:
+                    self.store.update_many(updated)
+                except OSError as exc:
+                    message = self._bulk_message(len(devices), True) + (
+                        "  "
+                        + tr(
+                            "No se pudo guardar el estado: {error}",
+                            error=exc,
+                        )
+                    )
+                else:
+                    message = self._bulk_message(len(devices), True)
+            else:
+                filenames = list(
+                    dict.fromkeys(
+                        device.filename
+                        for device in devices
+                        if device.filename
+                    )
+                )
+                if not filenames:
+                    raise ValueError(
+                        tr("No hay reglas guardadas para desactivar.")
+                    )
+                remove_rule_files(self.host, filenames)
+                try:
+                    self.store.mark_inactive_by_filenames(filenames)
+                except OSError as exc:
+                    message = self._bulk_message(len(filenames), False) + (
+                        "  "
+                        + tr(
+                            "No se pudo guardar el estado: {error}",
+                            error=exc,
+                        )
+                    )
+                else:
+                    message = self._bulk_message(len(filenames), False)
+        except Exception as exc:  # noqa: BLE001 (se muestra al usuario)
+            GLib.idle_add(self._master_failed, str(exc))
+            return
+        GLib.idle_add(self._master_succeeded, message)
+
+    @staticmethod
+    def _bulk_message(count: int, activate: bool) -> str:
+        if activate:
+            if count == 1:
+                return tr("Se activó {count} dispositivo.", count=count)
+            return tr(
+                "Se activaron {count} dispositivos.", count=count
+            )
+        if count == 1:
+            return tr("Se desactivó {count} dispositivo.", count=count)
+        return tr("Se desactivaron {count} dispositivos.", count=count)
+
+    def _master_succeeded(self, message: str) -> bool:
+        self._set_busy(False)
+        self._reload()
+        self.on_changed(message)
+        return False
+
+    def _master_failed(self, message: str) -> bool:
+        self._set_busy(False)
+        self._reload()
+        dialog = Adw.AlertDialog(
+            heading=tr("No se pudieron cambiar los dispositivos guardados"),
+            body=message,
+        )
+        dialog.add_response("close", tr("Cerrar"))
+        root = self.get_root()
+        dialog.present(root if root is not None else self.parent_window)
+        return False
 
     def _toggle(self, device: KnownDevice, active: bool) -> None:
         if self._updating or self._busy or active == device.active:
@@ -289,6 +448,7 @@ class KnownDialog(Adw.Dialog):
 
     def _set_busy(self, busy: bool) -> None:
         self._busy = busy
+        self.master_row.set_sensitive(not busy)
         for row in self._rows:
             row.set_sensitive(not busy)
         self.spinner.set_visible(busy)
