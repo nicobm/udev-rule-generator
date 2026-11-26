@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.2 - 2026-11-26
+
+- Replaces the steam-devices description with a red warning when uinput is
+  unavailable, instead of adding a separate message below the group.
+
 ## 1.1.1 - 2026-11-26
 
 - Shows a red warning when the uinput kernel module is unavailable, explaining

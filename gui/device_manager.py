@@ -74,13 +74,14 @@ class DeviceManager(Gtk.Box):
         self.external_group.set_separate_rows(True)
         self.external_group.set_hexpand(True)
 
+        self._steam_subtitle = tr(
+            "Añade las reglas udev de Valve para usar Steam Input y "
+            "SteamVR. · {url} (MIT)",
+            url=STEAM_DEVICES_URL,
+        )
         self.steam_switch = Adw.SwitchRow(
             title=tr("steam-devices"),
-            subtitle=tr(
-                "Añade las reglas udev de Valve para usar Steam Input y "
-                "SteamVR. · {url} (MIT)",
-                url=STEAM_DEVICES_URL,
-            ),
+            subtitle=self._steam_subtitle,
         )
         self.steam_switch.connect(
             "notify::active", self._on_steam_toggled
@@ -99,20 +100,6 @@ class DeviceManager(Gtk.Box):
         self.external_group.add(self.gdu_switch)
 
         self.append(self.external_group)
-
-        self.uinput_warning = Gtk.Label(
-            label=tr(
-                "uinput no está activo. Para habilitar estas reglas udev, "
-                "activá el módulo uinput en tu sistema operativo."
-            ),
-            xalign=0,
-            wrap=True,
-        )
-        self.uinput_warning.add_css_class("uinput-warning")
-        self.uinput_warning.set_margin_start(12)
-        self.uinput_warning.set_margin_end(12)
-        self.uinput_warning.set_visible(False)
-        self.append(self.uinput_warning)
 
         self.action_bar = Gtk.Box(
             orientation=Gtk.Orientation.HORIZONTAL,
@@ -160,7 +147,17 @@ class DeviceManager(Gtk.Box):
             else tr("Requiere el módulo uinput del kernel.")
         )
         self.steam_switch.set_tooltip_text(tooltip)
-        self.uinput_warning.set_visible(not available)
+        if available:
+            self.steam_switch.remove_css_class("uinput-error")
+            self.steam_switch.set_subtitle(self._steam_subtitle)
+        else:
+            self.steam_switch.add_css_class("uinput-error")
+            self.steam_switch.set_subtitle(
+                tr(
+                    "uinput no está activo. Para habilitar estas reglas "
+                    "udev, activá el módulo uinput en tu sistema operativo."
+                )
+            )
         self._update_preset_switches()
         self._apply_sensitivity()
 

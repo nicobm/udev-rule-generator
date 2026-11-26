@@ -65,6 +65,14 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="1.1.2" date="2026-11-26">
+      <description>
+        <p>
+          Replaces the steam-devices description with a red uinput warning
+          when the kernel module is unavailable.
+        </p>
+      </description>
+    </release>
     <release version="1.1.1" date="2026-11-26">
       <description>
         <p>
