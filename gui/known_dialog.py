@@ -37,7 +37,7 @@ class KnownDialog(Adw.Dialog):
         self._busy = False
         self._updating = False
 
-        self.set_title(tr("Reglas instaladas"))
+        self.set_title(tr("Gestionar dispositivos"))
         self.set_content_width(740)
         self.set_content_height(680)
         self._build_ui()
@@ -49,7 +49,7 @@ class KnownDialog(Adw.Dialog):
         header = Adw.HeaderBar()
         header.set_title_widget(
             Adw.WindowTitle(
-                title=tr("Reglas instaladas"),
+                title=tr("Gestionar dispositivos"),
                 subtitle=tr(
                     "Activá o desactivá las reglas de tus dispositivos "
                     "guardados."
@@ -237,10 +237,6 @@ class KnownDialog(Adw.Dialog):
             ),
         )
 
-        icon = Gtk.Image(icon_name="input-gaming-symbolic")
-        icon.add_css_class("dim-label")
-        icon.set_valign(Gtk.Align.CENTER)
-        row.add_prefix(icon)
         self._rows.append(row)
         return row
 

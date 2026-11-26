@@ -66,6 +66,15 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.12.6" date="2026-11-26">
+      <description>
+        <p>
+          Shows separate green and gray counts for active and disabled saved
+          rules, renames the section to Manage devices, and removes the
+          redundant gamepad avatar icons from device rows.
+        </p>
+      </description>
+    </release>
     <release version="0.12.5" date="2026-11-26">
       <description>
         <p>

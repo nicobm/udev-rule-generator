@@ -176,21 +176,40 @@ class MainWindow(Adw.ApplicationWindow):
     def _build_sections(self) -> None:
         self.status_group = Adw.PreferencesGroup(title=tr("Estado"))
         self.status_group.set_hexpand(True)
-        self.known_count_label = Gtk.Label(label="…")
-        self.known_count_label.add_css_class("device-badge")
-        self.known_count_label.set_valign(Gtk.Align.CENTER)
-        self.known_count_label.set_width_chars(2)
-        self.known_count_label.set_xalign(0.5)
+
+        self.known_badges = Gtk.Box(
+            orientation=Gtk.Orientation.HORIZONTAL,
+            spacing=6,
+        )
+        self.known_badges.set_valign(Gtk.Align.CENTER)
+
+        self.known_active_label = Gtk.Label(label="")
+        self.known_active_label.add_css_class("device-badge")
+        self.known_active_label.add_css_class("device-badge-active")
+        self.known_active_label.set_valign(Gtk.Align.CENTER)
+        self.known_active_label.set_width_chars(2)
+        self.known_active_label.set_xalign(0.5)
+        self.known_active_label.set_visible(False)
+        self.known_badges.append(self.known_active_label)
+
+        self.known_inactive_label = Gtk.Label(label="")
+        self.known_inactive_label.add_css_class("device-badge")
+        self.known_inactive_label.set_valign(Gtk.Align.CENTER)
+        self.known_inactive_label.set_width_chars(2)
+        self.known_inactive_label.set_xalign(0.5)
+        self.known_inactive_label.set_visible(False)
+        self.known_badges.append(self.known_inactive_label)
+
         self.status_group.add(
             self._action_row(
-                tr("Reglas instaladas"),
+                tr("Gestionar dispositivos"),
                 tr(
                     "Activá o desactivá las reglas de tus dispositivos "
                     "guardados."
                 ),
                 "app.known",
                 icon_name="document-open-symbolic",
-                badge=self.known_count_label,
+                badge=self.known_badges,
             )
         )
 
@@ -256,18 +275,6 @@ class MainWindow(Adw.ApplicationWindow):
             "activated",
             lambda _row, selected=device: self._open_device(selected),
         )
-
-        avatar = Gtk.CenterBox()
-        avatar.set_size_request(46, 46)
-        avatar.set_halign(Gtk.Align.CENTER)
-        avatar.set_valign(Gtk.Align.CENTER)
-        avatar.add_css_class("device-avatar")
-        icon = Gtk.Image(icon_name="input-gaming-symbolic")
-        icon.set_pixel_size(24)
-        icon.set_halign(Gtk.Align.CENTER)
-        icon.set_valign(Gtk.Align.CENTER)
-        avatar.set_center_widget(icon)
-        row.add_prefix(avatar)
 
         for text in self._device_badges(device):
             badge = Gtk.Label(label=text)
@@ -540,13 +547,29 @@ class MainWindow(Adw.ApplicationWindow):
             # El registro es auxiliar; un fallo de escritura no debe romper la
             # ventana principal.
             pass
-        known_count = len(self.known_store)
-        self.known_count_label.set_text(str(known_count))
-        if known_count == 1:
-            tooltip = tr("{count} dispositivo guardado", count=known_count)
+        known_devices = self.known_store.devices()
+        active = sum(1 for device in known_devices if device.active)
+        inactive = len(known_devices) - active
+
+        self.known_active_label.set_text(str(active))
+        self.known_active_label.set_visible(active > 0)
+        if active == 1:
+            active_tooltip = tr("{count} regla activa", count=active)
         else:
-            tooltip = tr("{count} dispositivos guardados", count=known_count)
-        self.known_count_label.set_tooltip_text(tooltip)
+            active_tooltip = tr("{count} reglas activas", count=active)
+        self.known_active_label.set_tooltip_text(active_tooltip)
+
+        self.known_inactive_label.set_text(str(inactive))
+        self.known_inactive_label.set_visible(inactive > 0)
+        if inactive == 1:
+            inactive_tooltip = tr(
+                "{count} regla desactivada", count=inactive
+            )
+        else:
+            inactive_tooltip = tr(
+                "{count} reglas desactivadas", count=inactive
+            )
+        self.known_inactive_label.set_tooltip_text(inactive_tooltip)
         return False
 
     def _on_rule_installed(self, message: str) -> None:

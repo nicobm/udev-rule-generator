@@ -75,6 +75,7 @@ _EN.update(
         "Menú principal": "Main menu",
         "Reglas preconfiguradas": "Presets",
         "Reglas instaladas": "Installed rules",
+        "Gestionar dispositivos": "Manage devices",
         "Dispositivos ocultos": "Hidden devices",
         "Acerca de": "About",
         "Buscando joysticks…": "Looking for joysticks…",
@@ -858,6 +859,10 @@ _EN.update(
         ),
         "{count} dispositivo guardado": "{count} saved device",
         "{count} dispositivos guardados": "{count} saved devices",
+        "{count} regla activa": "{count} active rule",
+        "{count} reglas activas": "{count} active rules",
+        "{count} regla desactivada": "{count} disabled rule",
+        "{count} reglas desactivadas": "{count} disabled rules",
         "Regla instalada: {filename}.  No se pudo guardar en "
         "Dispositivos guardados: {error}": (
             "Rule installed: {filename}.  Could not save it to Saved devices: "

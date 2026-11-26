@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.12.6 - 2026-11-26
+
+- Fixes the saved-rule count: the row now shows a green tag with the number of
+  active rules and a gray tag with the number of disabled rules. Each tag is
+  hidden when its count is zero.
+- The previous total tag made all-disabled devices look installed.
+- Renames the Status row and dialog from **Installed rules** to **Manage
+  devices** / **Gestionar dispositivos**.
+- Removes the gamepad avatar icons from the connected and saved-device rows.
+
 ## 0.12.5 - 2026-11-26
 
 - Removes the duplicate close button from all `Adw.Dialog` windows. The
