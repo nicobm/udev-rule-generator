@@ -2,8 +2,9 @@
 
 Las reglas de fabricantes vienen de ``game-devices-udev`` de Fabian
 Bornschein (fabiscafe), publicado bajo licencia MIT.  La regla de ASRock es
-una regla local para el controlador de LEDs que algunas placas exponen como
-si fuera un joystick.
+una regla local opcional para el controlador de LEDs que algunas placas
+exponen como si fuera un joystick; no se instala como recomendada ni dentro
+de ``all``.
 """
 
 from __future__ import annotations
@@ -76,6 +77,10 @@ class Preset:
     def is_recommended(self) -> bool:
         return self.category == "recommended"
 
+    @property
+    def is_optional(self) -> bool:
+        return self.category == "optional"
+
 
 _PRESETS: list[Preset] = [
     Preset(
@@ -87,7 +92,7 @@ _PRESETS: list[Preset] = [
         ),
         source="10-asrock-led-disable.rules",
         install_name="10-asrock-led-disable.rules",
-        category="recommended",
+        category="optional",
         trigger="add",
         license="MIT",
         upstream="Regla local de udev-rule-generator",
@@ -121,11 +126,15 @@ for _source in _UPSTREAM_ORDER:
         )
     )
 
-# Recomendadas primero, luego la biblioteca completa.  Se deduplica por el
-# nombre con el que se instala: Microsoft aparece como recomendada y también
-# dentro del archivo upstream, pero solo debe instalarse una vez.
+# Recomendadas primero, luego las opcionales de hardware específico y por
+# último la biblioteca completa.  Se deduplica por el nombre con el que se
+# instala: Microsoft aparece como recomendada y también dentro del archivo
+# upstream, pero solo debe instalarse una vez.
 RECOMMENDED: tuple[Preset, ...] = tuple(
     preset for preset in _PRESETS if preset.is_recommended
+)
+OPTIONAL: tuple[Preset, ...] = tuple(
+    preset for preset in _PRESETS if preset.is_optional
 )
 UPSTREAM: tuple[Preset, ...] = tuple(
     preset for preset in _PRESETS if preset.is_upstream
@@ -133,12 +142,18 @@ UPSTREAM: tuple[Preset, ...] = tuple(
 
 _ordered: list[Preset] = []
 _seen_install_names: set[str] = set()
-for _preset in [*RECOMMENDED, *UPSTREAM]:
+for _preset in [*RECOMMENDED, *OPTIONAL, *UPSTREAM]:
     if _preset.install_name in _seen_install_names:
         continue
     _seen_install_names.add(_preset.install_name)
     _ordered.append(_preset)
 PRESETS: tuple[Preset, ...] = tuple(_ordered)
+
+# "all" significa toda la biblioteca de fabricantes (incluido Microsoft), no
+# las reglas opcionales para hardware muy específico como el LED de ASRock.
+ALL_PRESETS: tuple[Preset, ...] = tuple(
+    preset for preset in PRESETS if not preset.is_optional
+)
 
 
 def get_preset(preset_id: str) -> Preset:
@@ -150,12 +165,14 @@ def get_preset(preset_id: str) -> Preset:
 
 
 def select_presets(selection: str) -> list[Preset]:
-    """Resuelve ``recommended``, ``all`` o una lista de ids separada por comas."""
+    """Resuelve ``recommended``, ``optional``, ``all`` o ids separados por coma."""
     selection = selection.strip()
     if selection in {"recommended", "recomendadas", "recomendado"}:
         return list(RECOMMENDED)
+    if selection in {"optional", "opcionales", "opcional"}:
+        return list(OPTIONAL)
     if selection in {"all", "todas", "todo"}:
-        return list(PRESETS)
+        return list(ALL_PRESETS)
     result: list[Preset] = []
     for item in selection.split(","):
         item = item.strip()

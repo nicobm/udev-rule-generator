@@ -15,12 +15,15 @@ from udev_rule_generator.devices import (
 from udev_rule_generator.host import HostError
 from udev_rule_generator.installed import _parse_header
 from udev_rule_generator.presets import (
+    ALL_PRESETS,
+    OPTIONAL,
     PRESETS,
     RECOMMENDED,
     UPSTREAM,
     build_preset_content,
     preset_files,
     presets_trigger,
+    select_presets,
 )
 from udev_rule_generator.rules import (
     RuleAction,
@@ -182,8 +185,14 @@ class RuleTests(unittest.TestCase):
 class PresetTests(unittest.TestCase):
     def test_presets_are_packaged(self) -> None:
         self.assertEqual(len(UPSTREAM), 27)
-        self.assertGreaterEqual(len(PRESETS), 28)
-        self.assertEqual(len(RECOMMENDED), 2)
+        self.assertEqual(len(PRESETS), 28)
+        self.assertEqual(len(RECOMMENDED), 1)
+        self.assertEqual(len(OPTIONAL), 1)
+        self.assertNotIn("asrock-led-disable", {p.id for p in RECOMMENDED})
+        self.assertEqual(RECOMMENDED[0].id, "microsoft-xbox")
+        self.assertEqual(OPTIONAL[0].id, "asrock-led-disable")
+        self.assertEqual(len(ALL_PRESETS), 27)
+        self.assertNotIn("asrock-led-disable", {p.id for p in ALL_PRESETS})
         ids = {preset.id for preset in PRESETS}
         self.assertIn("asrock-led-disable", ids)
         self.assertIn("microsoft-xbox", ids)
@@ -199,10 +208,32 @@ class PresetTests(unittest.TestCase):
         self.assertIn("71-microsoft-gdu.rules", files)
         self.assertIn("10-asrock-led-disable.rules", files)
 
-    def test_trigger_add_when_ignore_preset_selected(self) -> None:
-        self.assertEqual(presets_trigger(RECOMMENDED), "add")
-        microsoft = next(preset for preset in RECOMMENDED if preset.id == "microsoft-xbox")
-        self.assertEqual(presets_trigger([microsoft]), "change")
+    def test_trigger_depends_on_hardware_specific_presets(self) -> None:
+        self.assertEqual(presets_trigger(RECOMMENDED), "change")
+        self.assertEqual(presets_trigger(OPTIONAL), "add")
+        self.assertEqual(presets_trigger(ALL_PRESETS), "change")
+        self.assertEqual(
+            presets_trigger([*RECOMMENDED, *OPTIONAL]),
+            "add",
+        )
+
+    def test_select_presets_excludes_optional_from_all(self) -> None:
+        self.assertEqual(
+            [p.id for p in select_presets("recommended")],
+            ["microsoft-xbox"],
+        )
+        self.assertEqual(
+            [p.id for p in select_presets("optional")],
+            ["asrock-led-disable"],
+        )
+        self.assertNotIn(
+            "asrock-led-disable",
+            {p.id for p in select_presets("all")},
+        )
+        self.assertEqual(
+            [p.id for p in select_presets("asrock-led-disable")],
+            ["asrock-led-disable"],
+        )
 
 
 if __name__ == "__main__":

@@ -8,8 +8,8 @@ libadwaita integrada con GNOME.
 También puede instalar reglas ya preparadas:
 
 - **Microsoft Xbox** (Xbox 360, Xbox One, Xbox Series S|X, receptores).
-- **ASRock LED Controller** (`26ce:01a2`), el dispositivo que algunas placas
-  exponen como joystick falso.
+- **ASRock LED Controller** (`26ce:01a2`), opcional y solo para quien tiene
+  ese hardware; no se incluye en las recomendadas ni en `all`.
 - La biblioteca **game-devices-udev** de Fabian Bornschein (fabiscafe), con
   reglas para 8BitDo, Sony, Nintendo, Logitech, Hori, Valve, Razer y más.
 
@@ -96,10 +96,13 @@ ver/eliminar las reglas instaladas.
 # Ignora un dispositivo concreto
 ./udev-rule-generator --device 26ce:01a2 --action ignore --yes
 
-# Reglas recomendadas: ASRock LED + Microsoft Xbox
+# Regla recomendada: Microsoft Xbox
 ./udev-rule-generator --presets recommended
 
-# Toda la biblioteca game-devices-udev
+# Opcional: solo si tenés el controlador de LEDs ASRock 26ce:01a2
+./udev-rule-generator --presets asrock-led-disable
+
+# Toda la biblioteca game-devices-udev (sin la regla opcional de ASRock)
 ./udev-rule-generator --presets all
 
 # Reglas instaladas por esta aplicación
@@ -253,13 +256,18 @@ sobrescribir con permisos.
 
 | Selección | Archivos |
 |---|---|
-| `recommended` | `10-asrock-led-disable.rules`, `71-microsoft-gdu.rules` |
-| `all` | Las 27 reglas de game-devices-udev + las recomendadas |
+| `recommended` | `71-microsoft-gdu.rules` |
+| `all` | Las 27 reglas de game-devices-udev (incluye Microsoft) |
 | `microsoft-xbox` | Solo Microsoft Xbox |
-| `asrock-led-disable` | Solo el controlador de LEDs ASRock |
+| `asrock-led-disable` | Solo el controlador de LEDs ASRock (opcional) |
+
+Ninguna regla se instala sola: la app no escribe en `/etc/udev/rules.d` hasta
+que elegís una acción y pasás por polkit.  La regla de ASRock es la única
+opcional de hardware específico y queda fuera de `recommended` y de `all`.
 
 En la CLI, `--presets` sin valor abre un menú.  En la GUI, el diálogo permite
-elegir reglas recomendadas, todos los fabricantes o fabricantes sueltos.
+elegir la regla recomendada, la opcional de ASRock, todos los fabricantes o
+fabricantes sueltos.
 
 Las reglas de fabricantes son de **game-devices-udev**, MIT, de Fabian
 Bornschein (fabiscafe).  El detalle y la licencia completa están en

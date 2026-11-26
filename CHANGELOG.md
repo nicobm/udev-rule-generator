@@ -6,7 +6,8 @@
   `/proc`/`/sys`.
 - Reglas de permitir con prioridad `10-` e ignorar con `99-`.
 - Instalación con `pkexec` y el diálogo de polkit de GNOME.
-- Reglas preconfiguradas: ASRock LED, Microsoft Xbox y game-devices-udev.
+- Reglas preconfiguradas: Microsoft Xbox (recomendada), ASRock LED
+  (opcional, solo hardware específico) y game-devices-udev.
 - Listado y eliminación de reglas administradas.
 - CLI interactiva y comandos no interactivos (`--list`, `--device`,
   `--presets`, `--installed`, `--remove`).

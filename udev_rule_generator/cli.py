@@ -13,6 +13,7 @@ from .devices import Joystick, detect_joysticks, find_joystick
 from .host import CommandNotAvailable, Host, HostError
 from .installed import list_installed_rules
 from .presets import (
+    ALL_PRESETS,
     RECOMMENDED,
     UPSTREAM,
     Preset,
@@ -289,28 +290,26 @@ def _cmd_presets(
     if selection in {"menu", "interactive"}:
         if not sys.stdin.isatty():
             raise ValueError(
-                "Elegí una selección: recommended, all o el id de una regla."
+                "Elegí una selección: recommended, optional, all o el id de "
+                "una regla."
             )
         print()
         print(colors.bold("Reglas preconfiguradas"))
-        print("  1) Recomendadas: ASRock LED (ignorar) + Microsoft Xbox")
-        print("  2) Microsoft Xbox")
-        print("  3) ASRock LED")
-        print("  4) Todos los fabricantes de game-devices-udev")
-        print("  5) Elegir fabricantes de la biblioteca")
-        print("  6) Volver")
+        print("  1) Microsoft Xbox (recomendada)")
+        print("  2) ASRock LED (opcional; solo si tenés ese hardware)")
+        print("  3) Todos los fabricantes de game-devices-udev")
+        print("  4) Elegir fabricantes de la biblioteca")
+        print("  5) Volver")
         choice = _ask("\nSelección: ")
-        if choice in {"6", "q", ""}:
+        if choice in {"5", "q", ""}:
             return 0
         if choice == "1":
             presets = list(RECOMMENDED)
         elif choice == "2":
-            presets = [get_preset("microsoft-xbox")]
-        elif choice == "3":
             presets = [get_preset("asrock-led-disable")]
+        elif choice == "3":
+            presets = list(ALL_PRESETS)
         elif choice == "4":
-            presets = list(UPSTREAM)
-        elif choice == "5":
             _print_presets(UPSTREAM, colors)
             raw = _ask(
                 "\nNúmeros separados por coma (por ejemplo 1,3,7): "
@@ -554,6 +553,7 @@ def build_parser() -> argparse.ArgumentParser:
             "  udev-rule-generator --device 1 --action allow\n"
             "  udev-rule-generator --device 045e:0b12 --action ignore --dry-run\n"
             "  udev-rule-generator --presets recommended\n"
+            "  udev-rule-generator --presets asrock-led-disable\n"
             "  udev-rule-generator --presets all --yes\n"
             "  udev-rule-generator --installed\n\n"
             f"Proyecto: {PROJECT_URL}\n"
@@ -591,8 +591,8 @@ def build_parser() -> argparse.ArgumentParser:
         const="menu",
         metavar="SELECCIÓN",
         help=(
-            "instala reglas preconfiguradas: recommended, all o un id.  Sin "
-            "valor abre el menú"
+            "instala reglas preconfiguradas: recommended, optional, all o un "
+            "id (por ejemplo asrock-led-disable).  Sin valor abre el menú"
         ),
     )
     parser.add_argument(

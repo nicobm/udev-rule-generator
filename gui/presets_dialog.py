@@ -8,6 +8,7 @@ from typing import Callable
 from udev_rule_generator import PRESETS_URL
 from udev_rule_generator.host import Host
 from udev_rule_generator.presets import (
+    OPTIONAL,
     RECOMMENDED,
     UPSTREAM,
     Preset,
@@ -34,6 +35,7 @@ class PresetsDialog(Adw.Dialog):
         self.host = host
         self.on_installed = on_installed
         self._recommended_rows: dict[Preset, Adw.SwitchRow] = {}
+        self._optional_rows: dict[Preset, Adw.SwitchRow] = {}
         self._upstream_rows: list[tuple[Preset, Adw.SwitchRow]] = []
         self._all_row: Adw.SwitchRow | None = None
         self._updating = False
@@ -52,7 +54,7 @@ class PresetsDialog(Adw.Dialog):
         header.set_title_widget(
             Adw.WindowTitle(
                 title="Reglas preconfiguradas",
-                subtitle="ASRock, Microsoft y game-devices-udev",
+                subtitle="Microsoft, ASRock opcional y game-devices-udev",
             )
         )
         close_button = Gtk.Button(
@@ -80,8 +82,8 @@ class PresetsDialog(Adw.Dialog):
         recommended = Adw.PreferencesGroup(
             title="Recomendadas",
             description=(
-                "Pensadas para el caso típico: un mando Xbox y el controlador "
-                "de LEDs ASRock que aparece como joystick falso."
+                "Permisos para mandos Xbox.  Es la única regla que se ofrece "
+                "como recomendada; no se instala nada hasta que la actives."
             ),
         )
         for preset in RECOMMENDED:
@@ -89,6 +91,20 @@ class PresetsDialog(Adw.Dialog):
             self._recommended_rows[preset] = row
             recommended.add(row)
         page.add(recommended)
+
+        optional = Adw.PreferencesGroup(
+            title="Opcionales / hardware específico",
+            description=(
+                "Solo para quien tiene ese hardware.  La regla de ASRock "
+                "desautoriza el controlador de LEDs 26ce:01a2; no la actives "
+                "si no tenés una placa ASRock con ese dispositivo."
+            ),
+        )
+        for preset in OPTIONAL:
+            row = self._switch_row(preset)
+            self._optional_rows[preset] = row
+            optional.add(row)
+        page.add(optional)
 
         upstream = Adw.PreferencesGroup(
             title="game-devices-udev",
@@ -172,6 +188,9 @@ class PresetsDialog(Adw.Dialog):
             for preset, row in self._recommended_rows.items()
             if row.get_active()
         ]
+        selected.extend(
+            preset for preset, row in self._optional_rows.items() if row.get_active()
+        )
         selected.extend(
             preset for preset, row in self._upstream_rows if row.get_active()
         )

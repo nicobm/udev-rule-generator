@@ -130,7 +130,7 @@ class MainWindow(Adw.ApplicationWindow):
         actions_group.add(
             self._action_row(
                 "Reglas preconfiguradas",
-                "ASRock LED, Microsoft Xbox y la biblioteca game-devices-udev.",
+                "Microsoft Xbox, game-devices-udev y ASRock opcional.",
                 "app.presets",
             )
         )
