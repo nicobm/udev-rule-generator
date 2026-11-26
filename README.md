@@ -10,6 +10,18 @@ The app **never installs rules automatically**. It only writes to
 `/etc/udev/rules.d` after you choose a rule and authenticate through the GNOME
 polkit dialog. No password is stored.
 
+## Demo
+
+[![udev-rule-generator demo](docs/demo.gif)](docs/demo.webm)
+
+This recording uses version **1.11.10** and shows the GTK4 application
+detecting controllers, editing aliases, changing icons and colors, and
+reordering device cards with drag and drop.
+
+GitHub does not play repository `.webm` files inline, so the preview above is
+an animated GIF. The full recording is available in
+[`docs/demo.webm`](docs/demo.webm).
+
 Two optional rule packages are bundled as reviewed snapshots:
 
 - **[steam-devices](https://github.com/ValveSoftware/steam-devices/)** from
