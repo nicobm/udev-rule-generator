@@ -17,7 +17,11 @@ from udev_rule_generator.presets import (
     presets_trigger,
 )
 from udev_rule_generator.privileged import apply_rule_changes, remove_rule_files
-from udev_rule_generator.rules import RuleAction, build_rule
+from udev_rule_generator.rules import (
+    RuleAction,
+    build_rule,
+    validate_rule_filename,
+)
 from udev_rule_generator.userconfig import device_identity
 
 from .gi_compat import Adw, GLib, Gtk
@@ -313,8 +317,14 @@ class DeviceManager(Gtk.Box):
             title=device.name,
             subtitle=" · ".join(details),
         )
-        row.set_activatable(False)
-        row.set_tooltip_text(device.filename)
+        row.set_activatable(True)
+        row.set_tooltip_text(
+            tr("Abrir {filename}", filename=device.filename)
+        )
+        row.connect(
+            "activated",
+            lambda _row, selected=device: self._open_known_rule(selected),
+        )
 
         if connected_device is not None:
             row.add_suffix(self._connected_badge())
@@ -389,6 +399,51 @@ class DeviceManager(Gtk.Box):
         else:
             self._pending_known[device.id] = active
         self._update_pending_ui()
+
+    def _open_known_rule(self, device: KnownDevice) -> None:
+        if not device.active or not device.filename:
+            self._show_error(
+                tr("No se pudo abrir la regla"),
+                tr(
+                    "La regla no está instalada. Activá el dispositivo para "
+                    "crearla."
+                ),
+            )
+            return
+        try:
+            validate_rule_filename(device.filename)
+        except ValueError as exc:
+            self._show_error(tr("No se pudo abrir la regla"), str(exc))
+            return
+        thread = threading.Thread(
+            target=self._open_rule_worker,
+            args=(device,),
+            name="udev-rule-generator-open-rule",
+            daemon=True,
+        )
+        thread.start()
+
+    def _open_rule_worker(self, device: KnownDevice) -> None:
+        path = f"/etc/udev/rules.d/{device.filename}"
+        last_error = tr("xdg-open no pudo abrir el archivo.")
+        for argv in (["xdg-open", path], ["gio", "open", path]):
+            try:
+                result = self.host.run(argv, timeout=20)
+            except Exception as exc:  # noqa: BLE001 (se muestra al usuario)
+                last_error = str(exc)
+                continue
+            if result.ok:
+                return
+            last_error = (
+                result.stderr.strip()
+                or result.stdout.strip()
+                or last_error
+            )
+        GLib.idle_add(self._open_rule_failed, last_error)
+
+    def _open_rule_failed(self, message: str) -> bool:
+        self._show_error(tr("No se pudo abrir la regla"), message)
+        return False
 
     def _hide_known(self, device: KnownDevice) -> None:
         if self._busy:

@@ -304,6 +304,14 @@ _EN.update(
         ),
         "No se pudo instalar la regla": "Could not install the rule",
         "No se pudo ocultar el dispositivo": "Could not hide the device",
+        "Abrir {filename}": "Open {filename}",
+        "No se pudo abrir la regla": "Could not open the rule",
+        "La regla no está instalada. Activá el dispositivo para crearla.": (
+            "The rule is not installed. Enable the device to create it."
+        ),
+        "xdg-open no pudo abrir el archivo.": (
+            "xdg-open could not open the file."
+        ),
         "No se pudo guardar la preferencia: {error}": (
             "Could not save the preference: {error}"
         ),

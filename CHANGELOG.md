@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.7 - 2026-11-26
+
+- Clicking a saved device opens its installed rule with the default system
+  text editor, without root privileges.
+
 ## 1.1.6 - 2026-11-26
 
 - Removes the repeated "Hidden devices" group heading inside the hidden
