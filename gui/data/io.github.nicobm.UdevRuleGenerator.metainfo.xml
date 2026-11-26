@@ -65,6 +65,14 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="1.11.0" date="2026-11-26">
+      <description>
+        <p>
+          Adds drag handles for reordering devices and persists the custom
+          order in backups.
+        </p>
+      </description>
+    </release>
     <release version="1.10.3" date="2026-11-26">
       <description>
         <p>

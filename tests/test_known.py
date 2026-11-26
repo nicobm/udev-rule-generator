@@ -120,6 +120,7 @@ class KnownDevicesTests(unittest.TestCase):
             store.set_alias(key, "Temporal")
             store.set_icon(key, "joystick")
             store.set_color(key, "cyan")
+            store.set_order([key])
             store.clear_all()
 
             reloaded = KnownDevices(path)
@@ -127,6 +128,33 @@ class KnownDevicesTests(unittest.TestCase):
             self.assertEqual(reloaded.alias_for(key), "")
             self.assertEqual(reloaded.icon_for(key), "")
             self.assertEqual(reloaded.color_for(key), "")
+            self.assertFalse(reloaded.has_order())
+
+    def test_custom_order_persists(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "devices.json"
+            store = KnownDevices(path)
+            first = _device("First Pad")
+            second = _device("Second Pad")
+            first_record = store.record_rule(
+                first,
+                build_rule(first, RuleAction.ALLOW),
+            )
+            second_record = store.record_rule(
+                second,
+                build_rule(second, RuleAction.ALLOW),
+            )
+            store.set_order([second_record.id, first_record.id])
+
+            reloaded = KnownDevices(path)
+            self.assertEqual(
+                [device.id for device in reloaded.devices()],
+                [second_record.id, first_record.id],
+            )
+            self.assertEqual(
+                reloaded.order_index(second_record.id),
+                0,
+            )
 
     def test_hidden_state_persists(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

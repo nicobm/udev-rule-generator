@@ -24,7 +24,7 @@ from udev_rule_generator.rules import (
 )
 from udev_rule_generator.userconfig import device_identity
 
-from .gi_compat import Adw, Gdk, GLib, Gtk, markup_escape
+from .gi_compat import Adw, Gdk, GLib, GObject, Gtk, markup_escape
 
 _DEVICE_ICON_CHOICES = (
     ("controller", "controller-symbolic", "Controller"),
@@ -115,6 +115,7 @@ class DeviceManager(Gtk.Box):
         self._gdu_rule_total = len(GAME_DEVICES)
         self._uinput_available = True
         self._rows: list[tuple[Adw.PreferencesGroup, Gtk.Widget]] = []
+        self._row_identities: dict[Gtk.Widget, str] = {}
         self._controls: list[Gtk.Widget] = []
         self._busy = False
         self._updating = False
@@ -288,6 +289,7 @@ class DeviceManager(Gtk.Box):
         for group, row in self._rows:
             group.remove(row)
         self._rows.clear()
+        self._row_identities.clear()
         self._controls.clear()
 
         known = self.store.devices()
@@ -317,19 +319,37 @@ class DeviceManager(Gtk.Box):
             if device_identity(device) not in known_ids
         ]
 
-        for record in allow_known:
-            self._append(
-                self.devices_group,
-                self._known_row(
-                    record,
-                    connected_by_id.get(record.id),
-                    removable=True,
-                ),
-            )
-        for device in regular_connected:
-            self._append(self.devices_group, self._unknown_row(device))
+        entries: list[tuple[str, str, object]] = [
+            ("known", record.id, record) for record in allow_known
+        ]
+        entries.extend(
+            ("unknown", device_identity(device), device)
+            for device in regular_connected
+        )
+        if self.store.has_order():
+            def entry_key(entry: tuple[str, str, object]) -> tuple:
+                order_index = self.store.order_index(entry[1])
+                return (
+                    order_index is None,
+                    order_index if order_index is not None else 0,
+                    str(getattr(entry[2], "display_name", "")).casefold(),
+                    entry[1],
+                )
 
-        if not allow_known and not regular_connected:
+            entries.sort(key=entry_key)
+
+        for kind, device_id, entry in entries:
+            if kind == "known":
+                row = self._known_row(
+                    entry,  # type: ignore[arg-type]
+                    connected_by_id.get(device_id),
+                    removable=True,
+                )
+            else:
+                row = self._unknown_row(entry)  # type: ignore[arg-type]
+            self._append(self.devices_group, row)
+
+        if not entries:
             row = Adw.ActionRow(
                 title=tr("No hay dispositivos guardados"),
                 subtitle=tr(
@@ -782,6 +802,103 @@ class DeviceManager(Gtk.Box):
         row.add_controller(motion)
         update(False)
 
+    def _add_hover_opacity(
+        self,
+        row: Adw.ActionRow,
+        widget: Gtk.Widget,
+        normal: float,
+        hovered: float,
+    ) -> None:
+        def update(active: bool) -> None:
+            widget.set_opacity(hovered if active else normal)
+
+        def on_enter(*_args) -> None:
+            update(True)
+
+        def on_leave(*_args) -> None:
+            update(False)
+
+        motion = Gtk.EventControllerMotion()
+        motion.connect("enter", on_enter)
+        motion.connect("leave", on_leave)
+        row.add_controller(motion)
+        update(False)
+
+    def _add_drag_handle(
+        self,
+        row: Adw.ActionRow,
+        device_id: str,
+    ) -> None:
+        """Añade el tirador de tres puntos para reordenar la fila."""
+        handle = Gtk.Box()
+        handle.add_css_class("device-drag-handle")
+        handle.set_size_request(24, 34)
+        handle.set_valign(Gtk.Align.CENTER)
+        image = Gtk.Image.new_from_icon_name("view-more-symbolic")
+        image.set_pixel_size(16)
+        image.set_halign(Gtk.Align.CENTER)
+        image.set_valign(Gtk.Align.CENTER)
+        handle.append(image)
+        handle.set_tooltip_text(tr("Arrastrar para reordenar"))
+
+        source = Gtk.DragSource()
+        source.set_actions(Gdk.DragAction.MOVE)
+        source.connect(
+            "prepare",
+            lambda _source, _x, _y: Gdk.ContentProvider.new_for_value(
+                device_id
+            ),
+        )
+        handle.add_controller(source)
+
+        target = Gtk.DropTarget.new(
+            GObject.TYPE_STRING,
+            Gdk.DragAction.MOVE,
+        )
+        target.connect(
+            "drop",
+            lambda _target, value, _x, y: self._drop_row(
+                value,
+                row,
+                y,
+            ),
+        )
+        row.add_controller(target)
+        row.add_prefix(handle)
+        self._add_hover_opacity(row, handle, 0.25, 0.85)
+
+    def _drop_row(self, dragged_id: object, target_row: Adw.ActionRow, y: float) -> bool:
+        if not isinstance(dragged_id, str):
+            return False
+        target_id = self._row_identities.get(target_row)
+        if not target_id or dragged_id == target_id:
+            return False
+
+        order = [
+            row_id
+            for _group, row in self._rows
+            if (row_id := self._row_identities.get(row))
+        ]
+        if dragged_id not in order or target_id not in order:
+            return False
+
+        order.remove(dragged_id)
+        target_index = order.index(target_id)
+        if y >= target_row.get_height() / 2:
+            target_index += 1
+        order.insert(target_index, dragged_id)
+
+        try:
+            self.store.set_order(order)
+        except OSError as exc:
+            self._show_error(
+                tr("No se pudo guardar el orden"),
+                str(exc),
+            )
+            return False
+        self.reload()
+        return True
+
     def _known_row(
         self,
         device: KnownDevice,
@@ -794,6 +911,7 @@ class DeviceManager(Gtk.Box):
             title=markup_escape(device.name),
             subtitle=markup_escape(" · ".join(details)),
         )
+        self._row_identities[row] = device.id
         can_open = bool(device.active and device.filename)
         row.set_activatable(True)
         if can_open:
@@ -801,6 +919,7 @@ class DeviceManager(Gtk.Box):
                 tr("Abrir {filename}", filename=device.filename)
             )
         self._add_device_icon(row, device.id)
+        self._add_drag_handle(row, device.id)
         alias_active = self._add_alias_control(
             row,
             device.id,
@@ -855,8 +974,10 @@ class DeviceManager(Gtk.Box):
             title=markup_escape(device.display_name),
             subtitle=markup_escape(" · ".join(details)),
         )
+        self._row_identities[row] = key
         row.set_activatable(False)
         self._add_device_icon(row, key)
+        self._add_drag_handle(row, key)
         self._add_alias_control(row, key, device.display_name)
         row.add_suffix(self._connected_badge(device))
 

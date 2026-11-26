@@ -484,6 +484,8 @@ _EN.update(
             "which ones you want added to the selector."
         ),
         "{count} iconos disponibles": "{count} icons available",
+        "Arrastrar para reordenar": "Drag to reorder",
+        "No se pudo guardar el orden": "Could not save the order",
         "Elegir icono": "Choose icon",
         "Icono del dispositivo": "Device icon",
         "Controller": "Controller",

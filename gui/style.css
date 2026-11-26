@@ -35,6 +35,10 @@
   border-radius: 9px;
 }
 
+.device-drag-handle {
+  border-radius: 6px;
+}
+
 .device-icon-color {
   min-width: 34px;
   min-height: 34px;

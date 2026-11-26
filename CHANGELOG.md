@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.11.0 - 2026-11-26
+
+- Adds a three-dot drag handle to every device row. Drag it to reorder
+  devices; the handle is dim and becomes more visible on row hover.
+- Persists the custom device order in `devices.json` and `.tar.gz` backups.
+
 ## 1.10.3 - 2026-11-26
 
 - Requires a real input interface before treating a udev entry as a joystick.

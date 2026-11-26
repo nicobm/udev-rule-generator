@@ -302,6 +302,7 @@ class KnownDevices:
         self._aliases: dict[str, str] = {}
         self._icons: dict[str, str] = {}
         self._colors: dict[str, str] = {}
+        self._order: list[str] = []
         self._lock = threading.RLock()
         self.load()
 
@@ -314,6 +315,7 @@ class KnownDevices:
                 self._aliases = {}
                 self._icons = {}
                 self._colors = {}
+                self._order = []
                 return
             devices = raw.get("devices", {}) if isinstance(raw, dict) else {}
             if not isinstance(devices, dict):
@@ -321,6 +323,7 @@ class KnownDevices:
                 self._aliases = {}
                 self._icons = {}
                 self._colors = {}
+                self._order = []
                 return
             raw_aliases = raw.get("aliases", {}) if isinstance(raw, dict) else {}
             self._aliases = (
@@ -352,6 +355,12 @@ class KnownDevices:
                 if isinstance(raw_colors, dict)
                 else {}
             )
+            raw_order = raw.get("order", []) if isinstance(raw, dict) else []
+            self._order = (
+                [str(item) for item in raw_order if isinstance(item, str) and item]
+                if isinstance(raw_order, list)
+                else []
+            )
             loaded: dict[str, KnownDevice] = {}
             for key, value in devices.items():
                 if not isinstance(value, dict):
@@ -376,6 +385,7 @@ class KnownDevices:
                 "aliases": dict(self._aliases),
                 "icons": dict(self._icons),
                 "colors": dict(self._colors),
+                "order": list(self._order),
             }
 
     def save(self) -> None:
@@ -444,7 +454,26 @@ class KnownDevices:
             for key, value in colors.items():
                 if isinstance(value, str) and value.strip():
                     self._colors[str(key)] = value.strip()
-            if imported_devices or imported_aliases or icons or colors:
+            raw_order = raw.get("order", [])
+            if isinstance(raw_order, list):
+                imported_order = [
+                    str(item)
+                    for item in raw_order
+                    if isinstance(item, str) and item
+                ]
+                if imported_order:
+                    imported_set = set(imported_order)
+                    self._order = imported_order + [
+                        item for item in self._order
+                        if item not in imported_set
+                    ]
+            if (
+                imported_devices
+                or imported_aliases
+                or icons
+                or colors
+                or self._order
+            ):
                 self.save()
         return imported_devices, imported_aliases
 
@@ -506,6 +535,28 @@ class KnownDevices:
                 self._colors.pop(device_id, None)
             self.save()
 
+    def order_index(self, device_id: str) -> int | None:
+        with self._lock:
+            try:
+                return self._order.index(device_id)
+            except ValueError:
+                return None
+
+    def has_order(self) -> bool:
+        with self._lock:
+            return bool(self._order)
+
+    def set_order(self, device_ids: list[str]) -> None:
+        cleaned: list[str] = []
+        for device_id in device_ids:
+            if device_id and device_id not in cleaned:
+                cleaned.append(device_id)
+        with self._lock:
+            if self._order == cleaned:
+                return
+            self._order = cleaned
+            self.save()
+
     def clear_all(self) -> None:
         """Elimina todos los dispositivos, alias, iconos y estados guardados."""
         with self._lock:
@@ -513,6 +564,7 @@ class KnownDevices:
             self._aliases.clear()
             self._icons.clear()
             self._colors.clear()
+            self._order.clear()
             self.save()
 
     def set_hidden(self, device_id: str, hidden: bool) -> KnownDevice | None:
@@ -598,9 +650,18 @@ class KnownDevices:
 
     def devices(self) -> list[KnownDevice]:
         with self._lock:
+            order = {
+                device_id: index
+                for index, device_id in enumerate(self._order)
+            }
+            fallback = len(order)
             return sorted(
                 self._devices.values(),
-                key=lambda device: (device.name.casefold(), device.id),
+                key=lambda device: (
+                    order.get(device.id, fallback),
+                    device.name.casefold(),
+                    device.id,
+                ),
             )
 
     def remove(self, device_id: str) -> KnownDevice | None:
