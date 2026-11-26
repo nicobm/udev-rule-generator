@@ -100,6 +100,20 @@ class DeviceManager(Gtk.Box):
 
         self.append(self.external_group)
 
+        self.uinput_warning = Gtk.Label(
+            label=tr(
+                "uinput no está activo. Para habilitar estas reglas udev, "
+                "activá el módulo uinput en tu sistema operativo."
+            ),
+            xalign=0,
+            wrap=True,
+        )
+        self.uinput_warning.add_css_class("uinput-warning")
+        self.uinput_warning.set_margin_start(12)
+        self.uinput_warning.set_margin_end(12)
+        self.uinput_warning.set_visible(False)
+        self.append(self.uinput_warning)
+
         self.action_bar = Gtk.Box(
             orientation=Gtk.Orientation.HORIZONTAL,
             spacing=10,
@@ -146,6 +160,7 @@ class DeviceManager(Gtk.Box):
             else tr("Requiere el módulo uinput del kernel.")
         )
         self.steam_switch.set_tooltip_text(tooltip)
+        self.uinput_warning.set_visible(not available)
         self._update_preset_switches()
         self._apply_sensitivity()
 

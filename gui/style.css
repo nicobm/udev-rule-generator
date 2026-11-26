@@ -4,6 +4,11 @@
   font-size: 0.82em;
 }
 
+.uinput-warning {
+  color: @error_color;
+  font-size: 0.92em;
+}
+
 /* Insignias de las filas de joysticks, al estilo de Pika Backup. */
 .device-badge {
   min-height: 18px;

@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.1 - 2026-11-26
+
+- Shows a red warning when the uinput kernel module is unavailable, explaining
+  why the steam-devices switch is disabled.
+- Keeps the steam-devices switch grey and non-interactive in that state.
+
 ## 1.1.0 - 2026-11-26
 
 - Adds the optional **game-devices-udev** package from Fabian Bornschein

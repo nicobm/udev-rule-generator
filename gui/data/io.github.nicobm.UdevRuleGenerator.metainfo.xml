@@ -65,6 +65,14 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="1.1.1" date="2026-11-26">
+      <description>
+        <p>
+          Shows a red warning when uinput is unavailable and keeps the
+          steam-devices switch disabled.
+        </p>
+      </description>
+    </release>
     <release version="1.1.0" date="2026-11-26">
       <description>
         <p>

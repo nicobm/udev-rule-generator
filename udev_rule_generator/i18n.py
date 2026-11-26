@@ -116,6 +116,11 @@ _EN.update(
         "Requiere el módulo uinput del kernel.": (
             "Requires the uinput kernel module."
         ),
+        "uinput no está activo. Para habilitar estas reglas udev, "
+        "activá el módulo uinput en tu sistema operativo.": (
+            "uinput is not active. To enable these udev rules, enable the "
+            "uinput kernel module on your operating system."
+        ),
         "Añade las reglas udev del repositorio de Fabian Bornschein "
         "fabiscafe/game-devices-udev (MIT) · {url}": (
             "Adds the udev rules from Fabian Bornschein's "
