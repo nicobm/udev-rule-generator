@@ -66,6 +66,16 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.12.8" date="2026-11-26">
+      <description>
+        <p>
+          Removes the redundant refresh buttons, aligns card borders,
+          and simplifies the presets dialog by removing counts, the subtitle,
+          the license group, and switch subtitles while adding the upstream
+          repository URLs to the descriptions.
+        </p>
+      </description>
+    </release>
     <release version="0.12.7" date="2026-11-26">
       <description>
         <p>

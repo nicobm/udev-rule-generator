@@ -250,6 +250,7 @@ _EN.update(
         "Abrir": "Open",
         "{count} archivo seleccionado": "{count} file selected",
         "{count} archivos seleccionados": "{count} files selected",
+        "Listo para instalar": "Ready to install",
         "Instalar seleccionadas": "Install selected",
         "Esperando el diálogo de autenticación de GNOME/polkit…": (
             "Waiting for the GNOME/polkit authentication dialog…"
@@ -716,10 +717,13 @@ _EN.update(
     {
         "fabiscafe y steam-devices": "fabiscafe and steam-devices",
         "steam-devices (Valve)": "steam-devices (Valve)",
-        "Reglas oficiales de ValveSoftware/steam-devices (MIT).  "
-        "Steam Input y SteamVR se instalan juntos.": (
-            "Official ValveSoftware/steam-devices rules (MIT).  Steam Input "
-            "and SteamVR are installed together."
+        "Reglas oficiales de ValveSoftware/steam-devices (MIT) · {url}": (
+            "Official ValveSoftware/steam-devices rules (MIT) · {url}"
+        ),
+        "Reglas del repositorio de Fabian Bornschein "
+        "(fabiscafe/game-devices-udev) (MIT) · {url}": (
+            "Rules from Fabian Bornschein's repository "
+            "(fabiscafe/game-devices-udev) (MIT) · {url}"
         ),
         "Instalar steam-devices": "Install steam-devices",
         "Instala Steam Input y SteamVR ({count} archivos).": (

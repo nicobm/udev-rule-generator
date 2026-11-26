@@ -61,17 +61,6 @@ class MainWindow(Adw.ApplicationWindow):
         self.window_title = Adw.WindowTitle(title=tr(APP_NAME))
         header.set_title_widget(self.window_title)
 
-        refresh_button = Gtk.Button(
-            icon_name="view-refresh-symbolic",
-            tooltip_text=tr("Buscar joysticks de nuevo (Ctrl+R)"),
-        )
-        refresh_button.add_css_class("raised")
-        refresh_button.set_size_request(34, 34)
-        refresh_button.connect(
-            "clicked", lambda *_: self.refresh(silent=True)
-        )
-        header.pack_start(refresh_button)
-
         menu = Gio.Menu()
         menu.append(tr("Dispositivos ocultos"), "app.hidden")
         menu.append(tr("Acerca de"), "app.about")
@@ -143,12 +132,6 @@ class MainWindow(Adw.ApplicationWindow):
             title=tr("No hay joysticks conectados"),
             description=self._empty_description,
         )
-        button = Gtk.Button(label=tr("Buscar de nuevo"))
-        button.add_css_class("pill")
-        button.add_css_class("suggested-action")
-        button.set_halign(Gtk.Align.CENTER)
-        button.connect("clicked", lambda *_: self.refresh())
-        page.set_child(button)
         self.empty_page = page
         self.stack.add_named(page, "empty")
 
@@ -173,6 +156,7 @@ class MainWindow(Adw.ApplicationWindow):
     def _build_sections(self) -> None:
         self.status_group = Adw.PreferencesGroup(title=tr("Estado"))
         self.status_group.set_hexpand(True)
+        self.status_group.set_separate_rows(True)
 
         self.known_badges = Gtk.Box(
             orientation=Gtk.Orientation.HORIZONTAL,
@@ -218,6 +202,7 @@ class MainWindow(Adw.ApplicationWindow):
             ),
         )
         self.external_group.set_hexpand(True)
+        self.external_group.set_separate_rows(True)
         self.external_group.add(
             self._action_row(
                 tr("Reglas preconfiguradas"),

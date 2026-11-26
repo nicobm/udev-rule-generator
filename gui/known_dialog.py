@@ -99,6 +99,7 @@ class KnownDialog(Adw.Dialog):
         content.set_margin_end(18)
 
         self.master_group = Adw.PreferencesGroup()
+        self.master_group.set_separate_rows(True)
         self.master_row = Adw.SwitchRow(title=tr("Activar todos"))
         self.master_row.connect("notify::active", self._on_master_toggled)
         self.master_group.add(self.master_row)

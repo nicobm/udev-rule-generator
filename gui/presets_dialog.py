@@ -40,7 +40,7 @@ class PresetsDialog(Adw.Dialog):
 
         self.set_title(tr("Reglas preconfiguradas"))
         self.set_content_width(760)
-        self.set_content_height(820)
+        self.set_content_height(620)
         self._build_ui()
         self._update_summary()
 
@@ -49,10 +49,7 @@ class PresetsDialog(Adw.Dialog):
 
         header = Adw.HeaderBar()
         header.set_title_widget(
-            Adw.WindowTitle(
-                title=tr("Reglas preconfiguradas"),
-                subtitle=tr("fabiscafe y steam-devices"),
-            )
+            Adw.WindowTitle(title=tr("Reglas preconfiguradas"))
         )
         toolbar.add_top_bar(header)
 
@@ -62,16 +59,13 @@ class PresetsDialog(Adw.Dialog):
         steam = Adw.PreferencesGroup(
             title=tr("steam-devices (Valve)"),
             description=tr(
-                "Reglas oficiales de ValveSoftware/steam-devices (MIT).  "
-                "Steam Input y SteamVR se instalan juntos."
+                "Reglas oficiales de ValveSoftware/steam-devices (MIT) · "
+                "{url}",
+                url=STEAM_DEVICES_URL,
             ),
         )
         self._steam_switch = Adw.SwitchRow(
             title=tr("Instalar steam-devices"),
-            subtitle=tr(
-                "Instala Steam Input y SteamVR ({count} archivos).",
-                count=len(STEAM),
-            ),
         )
         self._steam_switch.set_active(False)
         self._steam_switch.connect(
@@ -83,17 +77,13 @@ class PresetsDialog(Adw.Dialog):
         upstream = Adw.PreferencesGroup(
             title=tr("game-devices-udev (fabiscafe)"),
             description=tr(
-                "Biblioteca de Fabian Bornschein (fabiscafe), licencia MIT.  "
-                "Se instala completa o no se instala ninguna regla."
+                "Reglas del repositorio de Fabian Bornschein "
+                "(fabiscafe/game-devices-udev) (MIT) · {url}",
+                url=PRESETS_URL,
             ),
         )
         self._fabiscafe_switch = Adw.SwitchRow(
             title=tr("Instalar todas las reglas de fabiscafe"),
-            subtitle=tr(
-                "Instala las {count} reglas de la biblioteca, incluida la "
-                "creación temprana de uinput.",
-                count=len(UPSTREAM),
-            ),
         )
         self._fabiscafe_switch.set_active(False)
         self._fabiscafe_switch.connect(
@@ -101,30 +91,6 @@ class PresetsDialog(Adw.Dialog):
         )
         upstream.add(self._fabiscafe_switch)
         page.add(upstream)
-
-        license_group = Adw.PreferencesGroup(title=tr("Licencia y origen"))
-        license_row = Adw.ActionRow(
-            title=tr("game-devices-udev"),
-            subtitle=tr("MIT · Fabian Bornschein (fabiscafe) · Codeberg/GitHub"),
-        )
-        link = Gtk.LinkButton(uri=PRESETS_URL)
-        link.set_label(tr("Abrir"))
-        link.add_css_class("flat")
-        link.set_valign(Gtk.Align.CENTER)
-        license_row.add_suffix(link)
-        license_group.add(license_row)
-
-        steam_license_row = Adw.ActionRow(
-            title=tr("steam-devices"),
-            subtitle=tr("MIT · Valve Software · GitHub"),
-        )
-        steam_link = Gtk.LinkButton(uri=STEAM_DEVICES_URL)
-        steam_link.set_label(tr("Abrir"))
-        steam_link.add_css_class("flat")
-        steam_link.set_valign(Gtk.Align.CENTER)
-        steam_license_row.add_suffix(steam_link)
-        license_group.add(steam_license_row)
-        page.add(license_group)
 
         toolbar.set_content(page)
 
@@ -162,16 +128,10 @@ class PresetsDialog(Adw.Dialog):
 
     def _update_summary(self) -> None:
         selected = self._selected_presets()
-        count = len(selected)
-        if count == 1:
-            self.summary.set_text(
-                tr("{count} archivo seleccionado", count=count)
-            )
-        else:
-            self.summary.set_text(
-                tr("{count} archivos seleccionados", count=count)
-            )
-        self.install_button.set_sensitive(count > 0 and not self._busy)
+        self.summary.set_text(
+            tr("Listo para instalar") if selected else ""
+        )
+        self.install_button.set_sensitive(bool(selected) and not self._busy)
 
     def _install(self) -> None:
         presets = self._selected_presets()

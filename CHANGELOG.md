@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.12.8 - 2026-11-26
+
+- Removes the header refresh button and the empty-state retry button.
+  Automatic detection with the udev monitor and the periodic fallback still
+  keep the list updated.
+- Uses the same separate-card row style in Status and External rules, so their
+  borders match the device rows.
+- Removes the hardcoded preset file counts and the selection file-count
+  summary from the presets dialog.
+- Removes the presets window subtitle, the License and source group, and the
+  switch subtitles.
+- Puts the Valve and fabiscafe repository URLs directly in each preset group
+  description.
+
 ## 0.12.7 - 2026-11-26
 
 - Uses separate card rows for connected and saved devices, so every row has
