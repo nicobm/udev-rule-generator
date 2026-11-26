@@ -591,6 +591,21 @@
         color: var(--text);
       }
 
+      .footer-button {
+        padding: 0;
+        border: 0;
+        color: var(--muted);
+        background: none;
+        font: inherit;
+        text-decoration: underline;
+        text-underline-offset: 3px;
+        cursor: pointer;
+      }
+
+      .footer-button:hover {
+        color: var(--text);
+      }
+
       @media (max-width: 700px) {
         body {
           font-size: 17px;
@@ -921,6 +936,9 @@ flatpak run io.github.nicobm.UdevRuleGenerator</code></pre>
             href="https://github.com/nicobm/udev-rule-generator/blob/main/THIRD_PARTY_NOTICES.md"
             >Third-party notices</a
           >
+          <button class="footer-button" type="button" id="use-system-theme">
+            Use system theme
+          </button>
         </div>
       </div>
     </footer>
@@ -965,6 +983,16 @@ flatpak run io.github.nicobm.UdevRuleGenerator</code></pre>
           localStorage.setItem("theme", theme);
         } catch {}
       });
+
+      document
+        .querySelector("#use-system-theme")
+        ?.addEventListener("click", () => {
+          manualTheme = null;
+          try {
+            localStorage.removeItem("theme");
+          } catch {}
+          applyTheme(colorScheme.matches ? "dark" : "light");
+        });
     </script>
   </body>
 </html>
