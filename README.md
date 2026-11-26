@@ -28,10 +28,12 @@ contraseña.
   deniega el acceso a los nodos de entrada.
 - Nombres de archivo con prioridad `10-` para permitir y `99-` para ignorar.
 - Vista previa antes de instalar y modo `--dry-run`.
-- Reglas preconfiguradas con licencia y procedencia.
+- Reglas preconfiguradas con licencia y procedencia, incluidas las opcionales
+  de Steam/SteamVR de Valve.
 - Listado y eliminación de las reglas que administra la aplicación.
-- GUI GTK4/libadwaita con el estilo de GNOME, sin dependencias Python
-  externas.
+- GUI GTK4/libadwaita con detección automática al conectar un mando,
+  notificaciones de GNOME y tarjetas centradas al estilo de Pika Backup.
+- Sin dependencias Python externas para el núcleo.
 - Flatpak con `org.gnome.Platform//51` y wrapper `build-flatpak.sh` para
   toolbox/flatpak-builder.
 
@@ -50,14 +52,21 @@ En Debian/Ubuntu los paquetes equivalentes son `python3-gi`,
 `gir1.2-gtk-4.0`, `gir1.2-adw-1` y `polkitd`/`pkexec`.  En Arch:
 `python-gobject`, `gtk4`, `libadwaita` y `polkit`.
 
-Instalación nativa opcional con `pip` (crea los comandos
-`udev-rule-generator` y `udev-rule-generator-gui`):
+Instalación nativa opcional:
 
 ```bash
-python3 -m pip install --user .
+# Instala el paquete con pip --user, el .desktop y el icono.
+# El .desktop es lo que permite que GNOME muestre nombre e icono en las
+# notificaciones.
+bash install-native.sh
+
 udev-rule-generator --list
 udev-rule-generator-gui
 ```
+
+También podés ejecutar la GUI directamente desde el repo con
+`./udev-rule-generator-gui`; en ese caso las notificaciones pueden salir sin
+nombre/icono de aplicación hasta que instales el `.desktop`.
 
 ### Flatpak
 
@@ -136,19 +145,27 @@ o:
 python3 -m gui
 ```
 
-La ventana principal lista los mandos.  Al elegir uno se abre un diálogo con:
+La ventana principal lista los mandos en tarjetas centradas, con el icono del
+dispositivo, nombre, VID:PID y pills de bus/nodo.  Al elegir uno se abre un
+diálogo con:
 
 - Datos del dispositivo.
 - Acción **Permitir / detectar** o **Ignorar**.
 - Vista previa de la regla.
 - Botón para copiar la regla y botón para instalarla.
 
-El menú de la cabecera permite abrir las reglas preconfiguradas, las reglas
-instaladas y “Acerca de”.  La GUI usa `Adw.HeaderBar`,
-`Adw.PreferencesPage`, `Adw.SwitchRow`, `Adw.Banner`, `Adw.AlertDialog` y
-`Adw.ToastOverlay`, por lo que sigue el tema claro/oscuro y el estilo de
-GNOME 51 sin CSS propio más allá de la fuente monoespaciada de la vista
-previa.
+La GUI monitorea `udevadm monitor` mientras está abierta, además de un sondeo
+de respaldo cada 5 segundos.  Al conectar un mando, la lista se actualiza sola
+y se envía una **notificación de GNOME**; al hacer clic en ella se abre la
+ventana.  El menú de la cabecera permite abrir las reglas preconfiguradas, las
+reglas instaladas y “Acerca de”.
+
+La GUI usa `Adw.HeaderBar`, `Adw.Clamp`, `Adw.PreferencesGroup`,
+`Adw.SwitchRow`, `Adw.Banner`, `Adw.AlertDialog` y `Adw.ToastOverlay`, por lo
+que sigue el tema claro/oscuro y el estilo de GNOME 51 sin CSS propio más allá
+de los avatares, las pills y la fuente monoespaciada de la vista previa.
+Las notificaciones usan `Gio.Notification`; en Flatpak GNOME las muestra a
+través del portal sin permisos extra.
 
 ## Flatpak
 
@@ -219,7 +236,7 @@ Para un mando USB, el archivo se llama por ejemplo
 `10-gamepad-045e-0b12-microsoft-xbox-series-s-x-controller.rules` y contiene:
 
 ```udev
-# Generado por udev-rule-generator 0.2.0
+# Generado por udev-rule-generator 0.3.0
 # Generador de reglas udev
 # Dispositivo: Microsoft Xbox Series S|X Controller
 # Bus: USB · ID: 045e:0b12
@@ -414,6 +431,7 @@ udev_rule_generator/
   privileged.py   # pkexec, instalación y recarga de udev
   installed.py    # lectura de reglas administradas
   host.py         # comandos nativos o flatpak-spawn --host
+  monitor.py      # udevadm monitor para la detección automática de la GUI
 gui/
   application.py
   window.py

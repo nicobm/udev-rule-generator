@@ -58,6 +58,7 @@ class Application(Adw.Application):
             ("presets", self._on_presets),
             ("installed", self._on_installed),
             ("about", self._on_about),
+            ("show", self._on_show),
             ("quit", self._on_quit),
         )
         for name, callback in actions:
@@ -92,6 +93,10 @@ class Application(Adw.Application):
     def _on_installed(self, _action, _parameter) -> None:
         if self.window is not None:
             self.window.show_installed()
+
+    def _on_show(self, _action, _parameter) -> None:
+        if self.window is not None:
+            self.window.present()
 
     def _on_about(self, _action, _parameter) -> None:
         if self.window is None:

@@ -23,6 +23,7 @@
       <li>Detección de mandos USB y Bluetooth con udevadm.</li>
       <li>Reglas de permiso con MODE 0660 y TAG uaccess.</li>
       <li>Reglas para ignorar dispositivos USB o Bluetooth.</li>
+      <li>Detección automática al conectar un mando y notificaciones de GNOME.</li>
       <li>Instalación con el diálogo de autenticación de polkit de GNOME.</li>
       <li>Interfaz de terminal y aplicación GTK4/libadwaita.</li>
     </ul>
@@ -40,6 +41,15 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.3.0" date="2026-11-26">
+      <description>
+        <p>
+          La GUI detecta automáticamente la conexión y desconexión de mandos,
+          envía notificaciones de GNOME y usa una vista de tarjetas centradas
+          al estilo de Pika Backup.
+        </p>
+      </description>
+    </release>
     <release version="0.2.0" date="2026-11-26">
       <description>
         <p>

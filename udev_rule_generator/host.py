@@ -116,6 +116,33 @@ class Host:
             raise HostError(self._format_error(result))
         return result
 
+    def popen(
+        self,
+        argv: Sequence[str],
+        *,
+        stdout: int | None = subprocess.PIPE,
+        stderr: int | None = subprocess.STDOUT,
+    ) -> subprocess.Popen[str]:
+        """Lanza un proceso de larga duración (por ejemplo, ``udevadm monitor``).
+
+        El proceso se ejecuta en el host cuando la app corre dentro de un
+        Flatpak.  El llamador es responsable de leer/terminar el proceso.
+        """
+        args = [str(arg) for arg in argv]
+        command = self._wrap(args)
+        try:
+            return subprocess.Popen(
+                command,
+                stdout=stdout,
+                stderr=stderr,
+                text=True,
+                bufsize=1,
+            )
+        except FileNotFoundError as exc:
+            raise CommandNotAvailable(f"No se encontró el comando {args[0]!r}.") from exc
+        except OSError as exc:
+            raise HostError(f"No se pudo ejecutar {args[0]!r}: {exc}") from exc
+
     @staticmethod
     def _format_error(result: CommandResult) -> str:
         detail = (result.stderr or result.stdout).strip()

@@ -12,3 +12,20 @@
 .caption {
   font-size: 0.82em;
 }
+
+/* Avatar e insignias de las filas de joysticks, al estilo de Pika Backup. */
+.device-avatar {
+  min-width: 46px;
+  min-height: 46px;
+  padding: 0;
+  border-radius: 13px;
+  background-color: alpha(@accent_bg_color, 0.16);
+}
+
+.device-badge {
+  min-height: 18px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background-color: alpha(@window_fg_color, 0.08);
+  font-size: 0.78em;
+}

@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.3.0 - 2026-11-26
+
+- La GUI monitorea `udevadm monitor` y detecta automáticamente mandos al
+  conectarlos o desconectarlos.
+- Añade un sondeo de respaldo cada 5 segundos por si el monitor no está
+  disponible.
+- Envía notificaciones de GNOME al conectar un joystick; al hacer clic se abre
+  la ventana.
+- Rediseña la lista de mandos al estilo de Pika Backup: tarjetas centradas,
+  avatar, pills de bus/nodo y filas de estado.
+- Añade `monitor.py` y pruebas del parser de eventos udev.
+
 ## 0.2.0 - 2026-11-26
 
 - Añade las reglas opcionales de **steam-devices** de Valve: Steam Input y
