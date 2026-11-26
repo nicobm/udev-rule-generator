@@ -55,6 +55,7 @@
         --text: #0a0a0a;
         --text-secondary: #2e2e33;
         --muted: #5a5a63;
+        --success: #1a7f5a;
         --accent: #6a39db;
         --accent-hover: #3c28a1;
         --accent-soft: rgba(106, 57, 219, 0.1);
@@ -83,6 +84,7 @@
           --text: #f4f4f5;
           --text-secondary: #d4d4d8;
           --muted: #a1a1aa;
+          --success: #8ff0a4;
           --accent: #b496ff;
           --accent-hover: #cab5ff;
           --accent-soft: rgba(180, 150, 255, 0.12);
@@ -102,6 +104,7 @@
         --text: #0a0a0a;
         --text-secondary: #2e2e33;
         --muted: #5a5a63;
+        --success: #1a7f5a;
         --accent: #6a39db;
         --accent-hover: #3c28a1;
         --accent-soft: rgba(106, 57, 219, 0.1);
@@ -120,6 +123,7 @@
         --text: #f4f4f5;
         --text-secondary: #d4d4d8;
         --muted: #a1a1aa;
+        --success: #8ff0a4;
         --accent: #b496ff;
         --accent-hover: #cab5ff;
         --accent-soft: rgba(180, 150, 255, 0.12);
@@ -472,22 +476,6 @@
         border-radius: 0 0 12px 12px;
       }
 
-      .device-avatar {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 44px;
-        height: 44px;
-        flex: 0 0 44px;
-        border-radius: 12px;
-        background: var(--accent-soft);
-      }
-
-      .device-avatar img {
-        width: 24px;
-        height: 24px;
-      }
-
       .device-name {
         color: var(--text);
         font-size: 0.92rem;
@@ -511,6 +499,11 @@
         background: var(--bg-subtle);
         font-size: 0.72rem;
         white-space: nowrap;
+      }
+
+      .tag-connected {
+        color: var(--success);
+        background: rgba(38, 162, 105, 0.16);
       }
 
       .status-icon {
@@ -736,34 +729,20 @@
               <span class="window-title">udev-rule-generator</span>
             </div>
             <div class="window-body">
-              <h3>Connected joysticks</h3>
+              <h3>Manage devices</h3>
               <p class="window-subtitle">
-                The list updates automatically when a controller is connected or
-                disconnected.
+                Enable or disable saved rules. Connected controllers have a
+                green tag.
               </p>
               <div class="device-card">
-                <span class="device-avatar">
-                  <img
-                    src="gui/data/icons/hicolor/scalable/apps/io.github.nicobm.UdevRuleGenerator.svg"
-                    alt=""
-                  />
-                </span>
                 <span>
                   <span class="device-name">Xbox Wireless Controller</span>
                   <span class="device-meta">USB · 045e:02fd</span>
                 </span>
                 <span class="spacer"></span>
+                <span class="tag tag-connected">Connected</span>
                 <span class="tag">USB</span>
                 <span class="tag">js0</span>
-              </div>
-              <div class="status-card">
-                <span class="status-icon">▤</span>
-                <span>
-                  <span class="status-title">Manage devices</span>
-                  <span class="status-meta">Enable or disable saved device rules</span>
-                </span>
-                <span class="spacer"></span>
-                <span class="tag">3</span>
               </div>
               <div class="status-card">
                 <span class="status-icon">✓</span>

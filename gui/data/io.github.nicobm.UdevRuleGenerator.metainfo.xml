@@ -66,6 +66,15 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.13.0" date="2026-11-26">
+      <description>
+        <p>
+          Makes saved-device management the main window, with per-device
+          switches, active and disabled counts, an Enable all switch, green
+          Connected tags, and Configure actions for connected controllers.
+        </p>
+      </description>
+    </release>
     <release version="0.12.8" date="2026-11-26">
       <description>
         <p>

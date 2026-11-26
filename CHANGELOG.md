@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.13.0 - 2026-11-26
+
+- Makes the saved-device manager the main window instead of a separate dialog.
+  The saved rules, per-device switches, active/disabled counts, and Enable all
+  switch are now the first thing shown.
+- Adds connected controllers without a saved rule to the main list, with a
+  Configure action and a green Connected tag.
+- Opens the device dialog with the stored action preselected.
+- Removes the old KnownDialog.
+
 ## 0.12.8 - 2026-11-26
 
 - Removes the header refresh button and the empty-state retry button.

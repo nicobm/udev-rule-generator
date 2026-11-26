@@ -76,6 +76,16 @@ _EN.update(
         "Reglas preconfiguradas": "Presets",
         "Reglas instaladas": "Installed rules",
         "Gestionar dispositivos": "Manage devices",
+        "Activá o desactivá las reglas guardadas.  Los mandos "
+        "conectados llevan una etiqueta verde.": (
+            "Enable or disable saved rules.  Connected controllers have a "
+            "green tag."
+        ),
+        "Conectá un mando para crear su primera regla.": (
+            "Connect a controller to create its first rule."
+        ),
+        "Configurar": "Configure",
+        "Sin regla guardada": "No saved rule",
         "Dispositivos ocultos": "Hidden devices",
         "Acerca de": "About",
         "Buscando joysticks…": "Looking for joysticks…",

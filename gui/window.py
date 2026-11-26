@@ -6,18 +6,20 @@ from concurrent.futures import Future, ThreadPoolExecutor
 
 from udev_rule_generator import APP_NAME
 from udev_rule_generator.devices import Joystick, detect_joysticks
-from udev_rule_generator.hidden import HiddenDevices, device_identity
+from udev_rule_generator.hidden import HiddenDevices
 from udev_rule_generator.host import Host
 from udev_rule_generator.i18n import tr
 from udev_rule_generator.installed import list_installed_rules
 from udev_rule_generator.known import KnownDevices
 from udev_rule_generator.monitor import UdevMonitor
+from udev_rule_generator.rules import RuleAction
 
+from .device_manager import DeviceManager
 from .gi_compat import Adw, Gio, GLib, Gtk
 
 
 class MainWindow(Adw.ApplicationWindow):
-    """Lista los joysticks y permite configurarlos."""
+    """Gestiona las reglas de los dispositivos y los paquetes externos."""
 
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
@@ -32,8 +34,6 @@ class MainWindow(Adw.ApplicationWindow):
         self._detection_pending = False
         self._first_detection = True
         self._devices: list[Joystick] = []
-        self._all_devices: list[Joystick] = []
-        self._device_rows: list[Adw.ActionRow] = []
         self._auto_refresh_source = 0
         self._poll_source = 0
         self._monitor: UdevMonitor | None = None
@@ -75,26 +75,23 @@ class MainWindow(Adw.ApplicationWindow):
         toolbar.add_top_bar(header)
 
         self.toast_overlay = Adw.ToastOverlay()
-        self.stack = Gtk.Stack()
-        self.stack.set_transition_type(Gtk.StackTransitionType.CROSSFADE)
-        self.stack.set_transition_duration(180)
-        self.stack.set_hexpand(True)
-        self.stack.set_hhomogeneous(False)
-        self.stack.set_vhomogeneous(False)
-
-        self._build_loading_page()
-        self._build_empty_page()
-        self._build_list_page()
-        self._build_sections()
 
         content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18)
         content.set_margin_top(18)
         content.set_margin_bottom(24)
         content.set_margin_start(18)
         content.set_margin_end(18)
-        content.append(self.stack)
-        content.append(self.status_group)
-        content.append(self.external_group)
+
+        self.manager = DeviceManager(
+            host=self.host,
+            store=self.known_store,
+            hidden_store=self.hidden_store,
+            parent=self,
+            on_changed=self._on_known_changed,
+            on_configure=self._open_device,
+        )
+        content.append(self.manager)
+        content.append(self._build_external_group())
 
         clamp = Adw.Clamp()
         clamp.set_maximum_size(720)
@@ -112,98 +109,17 @@ class MainWindow(Adw.ApplicationWindow):
         toolbar.set_content(self.toast_overlay)
         self.set_content(toolbar)
 
-    def _build_loading_page(self) -> None:
-        spinner = Gtk.Spinner()
-        spinner.set_size_request(36, 36)
-        spinner.start()
-        page = Adw.StatusPage(title=tr("Buscando joysticks…"))
-        page.set_child(spinner)
-        self.stack.add_named(page, "loading")
-
-    def _build_empty_page(self) -> None:
-        self._empty_description = tr(
-            "Conectá un mando por USB o Bluetooth.  La ventana se actualiza "
-            "sola y te avisa con una notificación cuando aparece.  Si ya está "
-            "conectado, revisá que el sistema lo detecte con "
-            "«udevadm info --export-db»."
-        )
-        page = Adw.StatusPage(
-            icon_name="input-gaming-symbolic",
-            title=tr("No hay joysticks conectados"),
-            description=self._empty_description,
-        )
-        self.empty_page = page
-        self.stack.add_named(page, "empty")
-
-    def _build_list_page(self) -> None:
-        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        self.banner = Adw.Banner()
-        self.banner.set_revealed(False)
-        box.append(self.banner)
-
-        self.devices_group = Adw.PreferencesGroup(
-            title=tr("Joysticks conectados"),
-            description=tr(
-                "La lista se actualiza sola al conectar o desconectar un mando.  "
-                "Elegí uno para crear su regla udev."
-            ),
-        )
-        self.devices_group.set_hexpand(True)
-        self.devices_group.set_separate_rows(True)
-        box.append(self.devices_group)
-        self.stack.add_named(box, "list")
-
-    def _build_sections(self) -> None:
-        self.status_group = Adw.PreferencesGroup(title=tr("Estado"))
-        self.status_group.set_hexpand(True)
-        self.status_group.set_separate_rows(True)
-
-        self.known_badges = Gtk.Box(
-            orientation=Gtk.Orientation.HORIZONTAL,
-            spacing=6,
-        )
-        self.known_badges.set_valign(Gtk.Align.CENTER)
-
-        self.known_active_label = Gtk.Label(label="")
-        self.known_active_label.add_css_class("device-badge")
-        self.known_active_label.add_css_class("device-badge-active")
-        self.known_active_label.set_valign(Gtk.Align.CENTER)
-        self.known_active_label.set_width_chars(2)
-        self.known_active_label.set_xalign(0.5)
-        self.known_active_label.set_visible(False)
-        self.known_badges.append(self.known_active_label)
-
-        self.known_inactive_label = Gtk.Label(label="")
-        self.known_inactive_label.add_css_class("device-badge")
-        self.known_inactive_label.set_valign(Gtk.Align.CENTER)
-        self.known_inactive_label.set_width_chars(2)
-        self.known_inactive_label.set_xalign(0.5)
-        self.known_inactive_label.set_visible(False)
-        self.known_badges.append(self.known_inactive_label)
-
-        self.status_group.add(
-            self._action_row(
-                tr("Gestionar dispositivos"),
-                tr(
-                    "Activá o desactivá las reglas de tus dispositivos "
-                    "guardados."
-                ),
-                "app.known",
-                icon_name="document-open-symbolic",
-                badge=self.known_badges,
-            )
-        )
-
-        self.external_group = Adw.PreferencesGroup(
+    def _build_external_group(self) -> Adw.PreferencesGroup:
+        group = Adw.PreferencesGroup(
             title=tr("Reglas externas"),
             description=tr(
                 "Paquetes opcionales de Valve y fabiscafe que no forman parte "
                 "del núcleo de la aplicación."
             ),
         )
-        self.external_group.set_hexpand(True)
-        self.external_group.set_separate_rows(True)
-        self.external_group.add(
+        group.set_hexpand(True)
+        group.set_separate_rows(True)
+        group.add(
             self._action_row(
                 tr("Reglas preconfiguradas"),
                 tr("Instalá las reglas de Valve y fabiscafe."),
@@ -211,6 +127,7 @@ class MainWindow(Adw.ApplicationWindow):
                 icon_name="application-x-addon-symbolic",
             )
         )
+        return group
 
     @staticmethod
     def _action_row(
@@ -219,7 +136,6 @@ class MainWindow(Adw.ApplicationWindow):
         action: str,
         *,
         icon_name: str | None = None,
-        badge: Gtk.Widget | None = None,
     ) -> Adw.ActionRow:
         row = Adw.ActionRow(title=title, subtitle=subtitle)
         row.set_activatable(True)
@@ -229,69 +145,10 @@ class MainWindow(Adw.ApplicationWindow):
             prefix.add_css_class("dim-label")
             prefix.set_valign(Gtk.Align.CENTER)
             row.add_prefix(prefix)
-        if badge is not None:
-            row.add_suffix(badge)
         arrow = Gtk.Image(icon_name="go-next-symbolic")
         arrow.add_css_class("dim-label")
         row.add_suffix(arrow)
         return row
-
-    @staticmethod
-    def _device_badges(device: Joystick) -> list[str]:
-        badges = [device.bus_label]
-        if device.nodes:
-            badges.append(device.nodes[0].rsplit("/", 1)[-1])
-        return badges
-
-    def _device_row(self, device: Joystick) -> Adw.ActionRow:
-        details = [device.identifier]
-        if device.serial:
-            details.append(device.serial)
-        row = Adw.ActionRow(
-            title=device.display_name,
-            subtitle=" · ".join(details),
-        )
-        row.set_activatable(True)
-        row.set_tooltip_text(device.nodes_label)
-        row.connect(
-            "activated",
-            lambda _row, selected=device: self._open_device(selected),
-        )
-
-        for text in self._device_badges(device):
-            badge = Gtk.Label(label=text)
-            badge.add_css_class("device-badge")
-            badge.set_valign(Gtk.Align.CENTER)
-            row.add_suffix(badge)
-
-        arrow = Gtk.Image(icon_name="go-next-symbolic")
-        arrow.add_css_class("dim-label")
-        row.add_suffix(arrow)
-        return row
-
-    def _update_empty_page(self) -> None:
-        count = len(self.hidden_store)
-        if count:
-            noun = (
-                tr("dispositivo oculto")
-                if count == 1
-                else tr("dispositivos ocultos")
-            )
-            self.empty_page.set_title(tr("No hay joysticks visibles"))
-            self.empty_page.set_description(
-                tr(
-                    "Tenés {count} {noun}.  Podés desocultarlos desde el menú "
-                    "→ Dispositivos ocultos.",
-                    count=count,
-                    noun=noun,
-                )
-            )
-            return
-        self.empty_page.set_title(tr("No hay joysticks conectados"))
-        self.empty_page.set_description(self._empty_description)
-
-    def _set_state(self, name: str) -> None:
-        self.stack.set_visible_child_name(name)
 
     def refresh(self, *, silent: bool = False, notify: bool = True) -> None:
         """Vuelve a detectar joysticks en segundo plano."""
@@ -302,9 +159,6 @@ class MainWindow(Adw.ApplicationWindow):
         self._refresh_generation += 1
         generation = self._refresh_generation
         self._detection_pending = True
-        if not silent:
-            self.banner.set_revealed(False)
-            self._set_state("loading")
         future = self._executor.submit(detect_joysticks, self.host)
         future.add_done_callback(
             lambda completed: GLib.idle_add(
@@ -326,8 +180,6 @@ class MainWindow(Adw.ApplicationWindow):
             devices = future.result()
         except Exception as exc:  # noqa: BLE001 (se muestra al usuario)
             if not silent:
-                self._set_state("empty")
-                self._first_detection = False
                 self.show_error(
                     tr("No se pudieron detectar joysticks"),
                     tr(
@@ -338,42 +190,22 @@ class MainWindow(Adw.ApplicationWindow):
                 )
             return False
 
-        self._all_devices = devices
-        devices = [
-            device for device in devices if not self.hidden_store.is_hidden(device)
-        ]
         previous_keys = {device.key for device in self._devices}
-        previous_fingerprint = {
-            (device.key, device.display_name, device.identifier)
-            for device in self._devices
-        }
-        fingerprint = {
-            (device.key, device.display_name, device.identifier)
+        visible = [
+            device
             for device in devices
-        }
-        added = [device for device in devices if device.key not in previous_keys]
+            if not self.hidden_store.is_hidden(device)
+        ]
+        added = [device for device in visible if device.key not in previous_keys]
 
-        self._devices = devices
-        if not silent or fingerprint != previous_fingerprint:
-            self._populate(devices)
-            self._set_state("list" if devices else "empty")
-        self._update_empty_page()
+        self._devices = visible
+        self.manager.set_connected_devices(devices)
 
         if notify and not self._first_detection:
             for device in added:
                 self._notify_device(device)
         self._first_detection = False
         return False
-
-    def _populate(self, devices: list[Joystick]) -> None:
-        for row in self._device_rows:
-            self.devices_group.remove(row)
-        self._device_rows.clear()
-
-        for device in devices:
-            row = self._device_row(device)
-            self.devices_group.add(row)
-            self._device_rows.append(row)
 
     def _notify_device(self, device: Joystick) -> None:
         app = self.get_application()
@@ -421,7 +253,11 @@ class MainWindow(Adw.ApplicationWindow):
         # El sondeo de respaldo sigue activo; no hace falta molestar al usuario.
         pass
 
-    def _open_device(self, device: Joystick) -> None:
+    def _open_device(
+        self,
+        device: Joystick,
+        action: RuleAction = RuleAction.ALLOW,
+    ) -> None:
         from .device_dialog import DeviceDialog
 
         dialog = DeviceDialog(
@@ -430,6 +266,7 @@ class MainWindow(Adw.ApplicationWindow):
             parent=self,
             hidden_store=self.hidden_store,
             known_store=self.known_store,
+            initial_action=action,
             on_installed=self._on_rule_installed,
             on_hidden=self._on_device_hidden,
         )
@@ -445,34 +282,6 @@ class MainWindow(Adw.ApplicationWindow):
         )
         dialog.present(self)
 
-    def show_installed(self) -> None:
-        from .installed_dialog import InstalledDialog
-
-        self._refresh_rule_metadata()
-        dialog = InstalledDialog(
-            host=self.host,
-            parent=self,
-            known_store=self.known_store,
-            on_changed=self._on_rule_installed,
-        )
-        dialog.present(self)
-
-    def show_known(self) -> None:
-        from .known_dialog import KnownDialog
-
-        self._refresh_rule_metadata()
-        connected_ids = {
-            device_identity(device) for device in self._all_devices
-        }
-        dialog = KnownDialog(
-            host=self.host,
-            store=self.known_store,
-            parent=self,
-            connected_ids=connected_ids,
-            on_changed=self._on_known_changed,
-        )
-        dialog.present(self)
-
     def show_hidden(self) -> None:
         from .hidden_dialog import HiddenDialog
 
@@ -485,10 +294,12 @@ class MainWindow(Adw.ApplicationWindow):
 
     def _on_device_hidden(self, message: str) -> None:
         self.toast_overlay.add_toast(Adw.Toast(title=message, timeout=5))
+        self.manager.reload()
         self.refresh(silent=True, notify=False)
 
     def _on_hidden_changed(self, message: str) -> None:
         self.toast_overlay.add_toast(Adw.Toast(title=message, timeout=5))
+        self.manager.reload()
         self.refresh(silent=True, notify=False)
 
     def _on_known_changed(self, message: str) -> None:
@@ -518,33 +329,12 @@ class MainWindow(Adw.ApplicationWindow):
             # El registro es auxiliar; un fallo de escritura no debe romper la
             # ventana principal.
             pass
-        known_devices = self.known_store.devices()
-        active = sum(1 for device in known_devices if device.active)
-        inactive = len(known_devices) - active
-
-        self.known_active_label.set_text(str(active))
-        self.known_active_label.set_visible(active > 0)
-        if active == 1:
-            active_tooltip = tr("{count} regla activa", count=active)
-        else:
-            active_tooltip = tr("{count} reglas activas", count=active)
-        self.known_active_label.set_tooltip_text(active_tooltip)
-
-        self.known_inactive_label.set_text(str(inactive))
-        self.known_inactive_label.set_visible(inactive > 0)
-        if inactive == 1:
-            inactive_tooltip = tr(
-                "{count} regla desactivada", count=inactive
-            )
-        else:
-            inactive_tooltip = tr(
-                "{count} reglas desactivadas", count=inactive
-            )
-        self.known_inactive_label.set_tooltip_text(inactive_tooltip)
+        self.manager.reload()
         return False
 
     def _on_rule_installed(self, message: str) -> None:
         self.toast_overlay.add_toast(Adw.Toast(title=message, timeout=5))
+        self.manager.reload()
         self._refresh_rule_metadata()
         # Si se ignoró un dispositivo, udev puede tardar un instante en
         # retirarlo; refrescar un poco después da una lista más realista.

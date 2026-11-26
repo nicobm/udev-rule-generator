@@ -27,6 +27,7 @@ class DeviceDialog(Adw.Dialog):
         parent: Gtk.Window,
         hidden_store: HiddenDevices,
         known_store: KnownDevices,
+        initial_action: RuleAction = RuleAction.ALLOW,
         on_installed: Callable[[str], None],
         on_hidden: Callable[[str], None],
     ) -> None:
@@ -36,6 +37,7 @@ class DeviceDialog(Adw.Dialog):
         self.host = host
         self.hidden_store = hidden_store
         self.known_store = known_store
+        self.initial_action = initial_action
         self.on_installed = on_installed
         self.on_hidden = on_hidden
         self._spec: RuleSpec | None = None
@@ -125,7 +127,10 @@ class DeviceDialog(Adw.Dialog):
         self.allow_radio = Gtk.CheckButton()
         self.ignore_radio = Gtk.CheckButton()
         self.ignore_radio.set_group(self.allow_radio)
-        self.allow_radio.set_active(True)
+        if self.initial_action is RuleAction.IGNORE:
+            self.ignore_radio.set_active(True)
+        else:
+            self.allow_radio.set_active(True)
 
         group.add(
             self._radio_row(
