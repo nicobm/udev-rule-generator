@@ -826,7 +826,7 @@
                 <span class="status-icon">✓</span>
                 <span>
                   <span class="status-title">External rules</span>
-                  <span class="status-meta">Steam Input/VR and game-devices-udev, optional</span>
+                  <span class="status-meta">Steam, game-devices-udev and blacklist, optional</span>
                 </span>
               </div>
             </div>
@@ -943,10 +943,10 @@ flatpak run io.github.nicobm.UdevRuleGenerator</code></pre>
       <section id="external">
         <div class="container">
           <p class="eyebrow">External rule packages</p>
-          <h2>Steam and game-devices-udev, optional.</h2>
+          <h2>Steam, game-devices-udev, and the joystick blacklist, optional.</h2>
           <p class="section-intro">
-            The Steam rules are copied only when you enable the steam-devices
-            switch. They are never installed during package installation.
+            The external rules are copied only when you enable their switch.
+            They are never installed during package installation.
           </p>
           <div class="grid">
             <div class="card">
@@ -969,6 +969,18 @@ flatpak run io.github.nicobm.UdevRuleGenerator</code></pre>
               </p>
               <a href="https://codeberg.org/fabiscafe/game-devices-udev"
                 >View on Codeberg</a
+              >
+            </div>
+            <div class="card">
+              <h3>udev-joystick-blacklist</h3>
+              <p>
+                Denilson Figueiredo de Sá's public-domain blocklist for
+                keyboards, mice, tablets, LED controllers, and other devices
+                the kernel exposes as joysticks. Installed as a separate
+                optional package.
+              </p>
+              <a href="https://github.com/denilsonsa/udev-joystick-blacklist"
+                >View on GitHub</a
               >
             </div>
           </div>

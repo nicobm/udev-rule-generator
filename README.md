@@ -22,12 +22,14 @@ GitHub does not play repository `.webm` files inline, so the preview above is
 an animated GIF. The full recording is available in
 [`docs/demo.webm`](docs/demo.webm).
 
-Two optional rule packages are bundled as reviewed snapshots:
+Three optional rule packages are bundled as reviewed snapshots:
 
 - **[steam-devices](https://github.com/ValveSoftware/steam-devices/)** from
   Valve.
 - **[game-devices-udev](https://codeberg.org/fabiscafe/game-devices-udev)**
   from Fabian Bornschein (fabiscafe).
+- **[udev-joystick-blacklist](https://github.com/denilsonsa/udev-joystick-blacklist)**
+  from Denilson Figueiredo de Sá (denilsonsa).
 
 The optional **steam-devices** rules provide Valve's permissions for Steam
 Input and SteamVR, including the `uinput` access that Steam needs to create
@@ -36,9 +38,14 @@ or SteamVR.
 
 The optional **game-devices-udev** rules add Fabian Bornschein's community
 rules for controllers that need a vendor-specific udev rule. They are useful
-when the kernel or the generated per-device rule is not enough. Both rule
-packages are disabled by default and are never installed as part of the
-application installation.
+when the kernel or the generated per-device rule is not enough.
+
+The optional **udev-joystick-blacklist** rules go in the opposite direction:
+they block keyboards, mice, tablets, LED controllers, and other devices that
+the kernel exposes as `/dev/input/js*` even though they are not joysticks.
+
+All three rule packages are disabled by default and are never installed as
+part of the application installation.
 
 ## What it solves
 
