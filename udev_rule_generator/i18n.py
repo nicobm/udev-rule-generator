@@ -359,6 +359,11 @@ _EN.update(
         "Activá esta regla para poder leer el archivo.": (
             "Enable this rule to read the file."
         ),
+        "El dispositivo «{name}» no tiene una regla instalada. "
+        "Activá esta regla para poder leer el archivo.": (
+            "The device “{name}” has no installed rule. Enable this rule to "
+            "read the file."
+        ),
         "xdg-open no pudo abrir el archivo.": (
             "xdg-open could not open the file."
         ),

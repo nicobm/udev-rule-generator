@@ -406,7 +406,11 @@ class DeviceManager(Gtk.Box):
         if not device.active or not device.filename:
             self._show_error(
                 tr("Regla no instalada"),
-                tr("Activá esta regla para poder leer el archivo."),
+                tr(
+                    "El dispositivo «{name}» no tiene una regla instalada. "
+                    "Activá esta regla para poder leer el archivo.",
+                    name=device.name,
+                ),
             )
             return
         try:

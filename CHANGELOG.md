@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.1 - 2026-11-26
+
+- Includes the device name in the "Rule not installed" prompt shown when
+  clicking a disabled saved device.
+
 ## 1.3.0 - 2026-11-26
 
 - Adds an interactive **Test buttons** action to the Rules test dialog. It
