@@ -9,6 +9,11 @@
   color: @error_color;
 }
 
+/* El nombre anterior se muestra muy tenue como placeholder al crear un alias. */
+.alias-entry placeholder {
+  opacity: 0.3;
+}
+
 /* Insignias de las filas de joysticks, al estilo de Pika Backup. */
 .device-badge {
   min-height: 18px;

@@ -299,6 +299,7 @@ class KnownDevices:
     def __init__(self, path: Path | None = None) -> None:
         self.path = path or default_path()
         self._devices: dict[str, KnownDevice] = {}
+        self._aliases: dict[str, str] = {}
         self._lock = threading.RLock()
         self.load()
 
@@ -308,11 +309,23 @@ class KnownDevices:
                 raw = json.loads(self.path.read_text(encoding="utf-8"))
             except (OSError, ValueError):
                 self._devices = {}
+                self._aliases = {}
                 return
             devices = raw.get("devices", {}) if isinstance(raw, dict) else {}
             if not isinstance(devices, dict):
                 self._devices = {}
+                self._aliases = {}
                 return
+            raw_aliases = raw.get("aliases", {}) if isinstance(raw, dict) else {}
+            self._aliases = (
+                {
+                    str(key): value.strip()
+                    for key, value in raw_aliases.items()
+                    if isinstance(value, str) and value.strip()
+                }
+                if isinstance(raw_aliases, dict)
+                else {}
+            )
             loaded: dict[str, KnownDevice] = {}
             for key, value in devices.items():
                 if not isinstance(value, dict):
@@ -333,6 +346,7 @@ class KnownDevices:
                 "devices": {
                     key: device.to_dict() for key, device in self._devices.items()
                 },
+                "aliases": dict(self._aliases),
             }
             temporary = self.path.with_suffix(self.path.suffix + ".tmp")
             temporary.write_text(
@@ -355,6 +369,24 @@ class KnownDevices:
     def update(self, record: KnownDevice) -> KnownDevice:
         self.update_many([record])
         return record
+
+    def alias_for(self, device_id: str) -> str:
+        with self._lock:
+            return self._aliases.get(device_id, "")
+
+    def set_alias(self, device_id: str, alias: str) -> None:
+        alias = alias.strip()
+        with self._lock:
+            if alias:
+                self._aliases[device_id] = alias
+            else:
+                self._aliases.pop(device_id, None)
+            self.save()
+
+    def clear_alias(self, device_id: str) -> None:
+        with self._lock:
+            if self._aliases.pop(device_id, None) is not None:
+                self.save()
 
     def set_hidden(self, device_id: str, hidden: bool) -> KnownDevice | None:
         with self._lock:

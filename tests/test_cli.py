@@ -14,6 +14,7 @@ from udev_rule_generator.cli import _collect_devices, build_parser, main
 from udev_rule_generator.devices import Joystick
 from udev_rule_generator.known import KnownDevices
 from udev_rule_generator.rules import RuleAction, build_rule
+from udev_rule_generator.userconfig import device_identity
 
 
 class GuiArgumentTests(unittest.TestCase):
@@ -73,6 +74,63 @@ class DeviceListTests(unittest.TestCase):
         self.assertFalse(entries[0].connected)
         self.assertIsNotNone(entries[0].saved)
         self.assertEqual(entries[0].device.display_name, "Saved Pad")
+
+
+class AliasArgumentTests(unittest.TestCase):
+    def test_parser_accepts_alias_actions(self) -> None:
+        args = build_parser().parse_args(
+            ["--alias", "045e:0b12", "Joystick rojo"]
+        )
+        self.assertEqual(args.alias, ["045e:0b12", "Joystick rojo"])
+        self.assertEqual(
+            build_parser().parse_args(["--unalias", "1"]).unalias,
+            "1",
+        )
+
+    def test_alias_set_and_remove_for_connected_device(self) -> None:
+        device = Joystick(
+            key="alias-key",
+            name="Test Pad",
+            vendor="Test",
+            model="Test Pad",
+            vendor_id="045e",
+            product_id="0b12",
+            serial="alias-serial",
+            bus="usb",
+            devpaths=(),
+            event_devices=(),
+            js_devices=(),
+            input_names=("Test Pad",),
+            properties={},
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            output = io.StringIO()
+            with (
+                mock.patch.dict(os.environ, {"XDG_CONFIG_HOME": directory}),
+                mock.patch(
+                    "udev_rule_generator.cli.detect_joysticks",
+                    return_value=[device],
+                ),
+                mock.patch(
+                    "udev_rule_generator.cli.list_installed_rules",
+                    return_value=[],
+                ),
+                contextlib.redirect_stdout(output),
+            ):
+                self.assertEqual(
+                    main(["--alias", "045e:0b12", "Joystick rojo"]),
+                    0,
+                )
+                store = KnownDevices()
+                key = device_identity(device)
+                self.assertEqual(store.alias_for(key), "Joystick rojo")
+                self.assertEqual(
+                    main(["--unalias", "Joystick rojo"]),
+                    0,
+                )
+                self.assertEqual(KnownDevices().alias_for(key), "")
+        self.assertIn("Alias guardado", output.getvalue())
+        self.assertIn("Alias eliminado", output.getvalue())
 
 
 class KnownArgumentTests(unittest.TestCase):

@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.3.6 - 2026-11-26
+
+- Adds per-device aliases. The pencil next to each name opens an inline field
+  with the original name as a light placeholder. The first typed character
+  turns the pencil into a save tick; after saving, a grey X removes the alias.
+- Aliases are stored in `devices.json` for connected devices even when they do
+  not have a saved rule yet.
+- Adds equivalent `--alias` and `--unalias` CLI options.
+
 ## 1.3.5 - 2026-11-26
 
 - Filters auxiliary input interfaces such as motion sensors, touchpads,

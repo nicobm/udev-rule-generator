@@ -67,6 +67,23 @@ class KnownDevicesTests(unittest.TestCase):
             self.assertTrue(reloaded.mark_inactive_by_filename(spec.filename))
             self.assertFalse(KnownDevices(path).devices()[0].active)
 
+    def test_alias_persists_without_a_saved_rule(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "devices.json"
+            store = KnownDevices(path)
+            key = device_identity(_device())
+
+            self.assertEqual(store.alias_for(key), "")
+            store.set_alias(key, "  Joystick rojo  ")
+            self.assertEqual(store.alias_for(key), "Joystick rojo")
+            self.assertEqual(
+                KnownDevices(path).alias_for(key),
+                "Joystick rojo",
+            )
+
+            store.clear_alias(key)
+            self.assertEqual(KnownDevices(path).alias_for(key), "")
+
     def test_hidden_state_persists(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "devices.json"

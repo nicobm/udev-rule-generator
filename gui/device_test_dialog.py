@@ -86,7 +86,13 @@ def _axis_name(code: int) -> str:
 class DeviceTestDialog(Adw.Window):
     """Captura eventos evdev del dispositivo seleccionado."""
 
-    def __init__(self, *, device: Joystick, parent: Gtk.Window) -> None:
+    def __init__(
+        self,
+        *,
+        device: Joystick,
+        parent: Gtk.Window,
+        display_name: str | None = None,
+    ) -> None:
         super().__init__(
             transient_for=parent,
             modal=True,
@@ -95,6 +101,7 @@ class DeviceTestDialog(Adw.Window):
             default_height=520,
         )
         self.device = device
+        self.display_name = display_name or device.display_name
         self._stop = False
         self._closed = False
         self._line_count = 0
@@ -107,7 +114,7 @@ class DeviceTestDialog(Adw.Window):
         header.set_title_widget(
             Adw.WindowTitle(
                 title=tr("Probar botones"),
-                subtitle=device.display_name,
+                subtitle=self.display_name,
             )
         )
         toolbar.add_top_bar(header)

@@ -131,9 +131,11 @@ class RulesTestDialog(Adw.Window):
             return False
 
         for device, properties, error in results:
+            alias = self.store.alias_for(device_identity(device))
+            display_name = alias or device.display_name
             if error is not None or properties is None:
                 row = Adw.ActionRow(
-                    title=markup_escape(device.display_name),
+                    title=markup_escape(display_name),
                     subtitle=markup_escape(
                         error or tr("No se pudo consultar udev.")
                     ),
@@ -175,7 +177,7 @@ class RulesTestDialog(Adw.Window):
                 rule_state,
             ]
             row = Adw.ActionRow(
-                title=markup_escape(device.display_name),
+                title=markup_escape(display_name),
                 subtitle=markup_escape(" · ".join(details)),
             )
             row.set_activatable(False)
@@ -212,9 +214,11 @@ class RulesTestDialog(Adw.Window):
                 pass
         from .device_test_dialog import DeviceTestDialog
 
+        alias = self.store.alias_for(device_identity(device))
         self._device_test_dialog = DeviceTestDialog(
             device=device,
             parent=self,
+            display_name=alias or device.display_name,
         )
         self._device_test_dialog.connect(
             "close-request", self._on_device_test_close

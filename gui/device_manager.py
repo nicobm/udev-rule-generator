@@ -302,6 +302,122 @@ class DeviceManager(Gtk.Box):
         if row not in self._controls:
             self._controls.append(row)
 
+    def _add_alias_control(
+        self,
+        row: Adw.ActionRow,
+        device_id: str,
+        original_name: str,
+    ) -> None:
+        """Añade el lápiz para editar el alias y la X para eliminarlo."""
+        prefix = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        prefix.set_valign(Gtk.Align.CENTER)
+        row.add_prefix(prefix)
+
+        button = Gtk.Button()
+        button.add_css_class("flat")
+        button.set_valign(Gtk.Align.CENTER)
+        row.add_suffix(button)
+
+        entry: Gtk.Entry | None = None
+        editing = False
+
+        def update_state() -> None:
+            nonlocal entry
+            alias = self.store.alias_for(device_id)
+            if editing:
+                has_text = entry is not None and bool(entry.get_text().strip())
+                button.set_icon_name(
+                    "emblem-ok-symbolic"
+                    if has_text
+                    else "document-edit-symbolic"
+                )
+                button.set_tooltip_text(
+                    tr("Guardar alias")
+                    if has_text
+                    else tr("Agregar alias")
+                )
+                button.set_opacity(1.0)
+                return
+            row.set_title(markup_escape(alias or original_name))
+            if alias:
+                button.set_icon_name("window-close-symbolic")
+                button.set_tooltip_text(tr("Eliminar alias"))
+                button.set_opacity(0.55)
+            else:
+                button.set_icon_name("document-edit-symbolic")
+                button.set_tooltip_text(tr("Agregar alias"))
+                button.set_opacity(1.0)
+
+        def finish_edit(save: bool) -> None:
+            nonlocal entry, editing
+            if not editing or entry is None:
+                return
+            current = entry
+            text = current.get_text().strip()
+            if save and text:
+                try:
+                    self.store.set_alias(device_id, text)
+                except OSError as exc:
+                    self._show_error(
+                        tr("No se pudo guardar el alias"),
+                        str(exc),
+                    )
+                    return
+            editing = False
+            entry = None
+            current.unparent()
+            prefix.set_hexpand(False)
+            update_state()
+
+        def focus_entry() -> bool:
+            if entry is not None:
+                entry.grab_focus()
+                entry.set_position(-1)
+            return False
+
+        def start_edit() -> None:
+            nonlocal entry, editing
+            if editing:
+                finish_edit(True)
+                return
+            if self.store.alias_for(device_id):
+                try:
+                    self.store.clear_alias(device_id)
+                except OSError as exc:
+                    self._show_error(
+                        tr("No se pudo guardar el alias"),
+                        str(exc),
+                    )
+                    return
+                update_state()
+                return
+            editing = True
+            row.set_title("")
+            prefix.set_hexpand(True)
+            entry = Gtk.Entry()
+            entry.set_placeholder_text(original_name)
+            entry.set_text("")
+            entry.set_hexpand(True)
+            entry.set_width_chars(18)
+            entry.set_valign(Gtk.Align.CENTER)
+            entry.add_css_class("alias-entry")
+            entry.connect("changed", lambda *_: update_state())
+            entry.connect("activate", lambda *_: finish_edit(True))
+            prefix.append(entry)
+            update_state()
+            GLib.idle_add(focus_entry)
+
+        def on_clicked(_button: Gtk.Button) -> None:
+            if editing:
+                finish_edit(
+                    entry is not None and bool(entry.get_text().strip())
+                )
+            else:
+                start_edit()
+
+        button.connect("clicked", on_clicked)
+        update_state()
+
     def _known_row(
         self,
         device: KnownDevice,
@@ -327,6 +443,7 @@ class DeviceManager(Gtk.Box):
             "activated",
             lambda _row, selected=device: self._open_known_rule(selected),
         )
+        self._add_alias_control(row, device.id, device.name)
 
         if connected_device is not None:
             row.add_suffix(self._connected_badge())
@@ -372,6 +489,7 @@ class DeviceManager(Gtk.Box):
             subtitle=markup_escape(" · ".join(details)),
         )
         row.set_activatable(False)
+        self._add_alias_control(row, key, device.display_name)
         row.add_suffix(self._connected_badge())
 
         switch = Gtk.Switch(active=key in self._pending_unknown)

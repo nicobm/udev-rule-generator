@@ -368,6 +368,43 @@ _EN.update(
         "xdg-open no pudo abrir el archivo.": (
             "xdg-open could not open the file."
         ),
+        "Agregar alias": "Add alias",
+        "Guardar alias": "Save alias",
+        "Eliminar alias": "Remove alias",
+        "No se pudo guardar el alias": "Could not save the alias",
+        "--alias y --unalias no se pueden combinar.": (
+            "--alias and --unalias cannot be combined."
+        ),
+        "--alias y --unalias no se combinan con --known.": (
+            "--alias and --unalias cannot be combined with --known."
+        ),
+        "asigna un alias a un dispositivo conectado o guardado": (
+            "assign an alias to a connected or saved device"
+        ),
+        "elimina el alias de un dispositivo": (
+            "remove a device alias"
+        ),
+        "El alias no puede estar vacío.": "The alias cannot be empty.",
+        "Se guardaría el alias {alias} para {name}.": (
+            "The alias {alias} would be saved for {name}."
+        ),
+        "El dispositivo no tiene alias.": "The device has no alias.",
+        "Se eliminaría el alias de {name}.": (
+            "The alias for {name} would be removed."
+        ),
+        "Alias guardado: {name} → {alias}": (
+            "Alias saved: {name} → {alias}"
+        ),
+        "Alias eliminado: {name}": "Alias removed: {name}",
+        "No se pudo guardar el alias: {error}": (
+            "Could not save the alias: {error}"
+        ),
+        "No se encontró un único joystick que coincida con "
+        "{selector!r}. Usá --list para ver los disponibles.": (
+            "No single joystick matched {selector!r}. Use --list to see the "
+            "available devices."
+        ),
+        "nombre original: ": "original name: ",
         "No se pudo guardar la preferencia: {error}": (
             "Could not save the preference: {error}"
         ),

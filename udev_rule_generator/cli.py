@@ -93,6 +93,7 @@ class CliDevice:
     device: Joystick
     connected: bool
     saved: KnownDevice | None
+    alias: str = ""
 
 
 def _collect_devices(host: Host) -> list[CliDevice]:
@@ -117,6 +118,7 @@ def _collect_devices(host: Host) -> list[CliDevice]:
                 device=device,
                 connected=record.id in by_identity,
                 saved=record,
+                alias=store.alias_for(record.id),
             )
         )
         seen.add(record.id)
@@ -124,7 +126,12 @@ def _collect_devices(host: Host) -> list[CliDevice]:
         identity = device_identity(device)
         if identity not in seen:
             entries.append(
-                CliDevice(device=device, connected=True, saved=None)
+                CliDevice(
+                    device=device,
+                    connected=True,
+                    saved=None,
+                    alias=store.alias_for(identity),
+                )
             )
     return entries
 
@@ -144,10 +151,15 @@ def _print_devices(devices: Iterable[CliDevice], colors: Colors) -> None:
         return
     for index, entry in enumerate(items, start=1):
         device = entry.device
+        display_name = entry.alias or device.display_name
         print(
             f"  {colors.bold(str(index).rjust(2))}) "
-            f"{colors.bold(device.display_name)}"
+            f"{colors.bold(display_name)}"
         )
+        if entry.alias:
+            print(
+                f"      {colors.dim(tr('nombre original: ') + device.display_name)}"
+            )
         serial = f" · serial {device.serial}" if device.serial else ""
         if entry.saved is None:
             status = tr("Conectado · sin regla guardada")
@@ -315,6 +327,7 @@ def _cmd_list(host: Host, *, as_json: bool, colors: Colors) -> int:
                     "hidden": False,
                     "active": bool(entry.saved and entry.saved.active),
                     "filename": entry.saved.filename if entry.saved else "",
+                    "alias": entry.alias,
                 }
             )
             payload.append(item)
@@ -413,6 +426,7 @@ def _find_known_device(
         device
         for device in store.devices()
         if selector in {device.id, device.filename}
+        or selector.casefold() == store.alias_for(device.id).casefold()
     ]
     if exact:
         return exact[0]
@@ -424,6 +438,7 @@ def _find_known_device(
         or lowered in device.id.casefold()
         or lowered in device.filename.casefold()
         or lowered in device.identifier.casefold()
+        or lowered in store.alias_for(device.id).casefold()
     ]
     return matches[0] if len(matches) == 1 else None
 
@@ -642,7 +657,13 @@ def _cmd_known(
     if as_json:
         print(
             json.dumps(
-                [device.to_dict() for device in devices],
+                [
+                    {
+                        **device.to_dict(),
+                        "alias": store.alias_for(device.id),
+                    }
+                    for device in devices
+                ],
                 ensure_ascii=False,
                 indent=2,
             )
@@ -664,10 +685,127 @@ def _cmd_known(
         if device.hidden:
             details.append(tr("Oculto"))
         details.append(state)
-        print(f"  {colors.bold(str(index).rjust(2))}) {colors.bold(device.name)}")
+        alias = store.alias_for(device.id)
+        display_name = alias or device.name
+        print(
+            f"  {colors.bold(str(index).rjust(2))}) "
+            f"{colors.bold(display_name)}"
+        )
+        if alias:
+            print(
+                f"      {colors.dim(tr('nombre original: ') + device.name)}"
+            )
         print(f"      {colors.cyan(' · '.join(details))}")
         print(f"      {colors.dim(device.filename)}")
         print(f"      {colors.dim(device.id)}")
+    return 0
+
+
+def _cmd_alias(
+    host: Host,
+    *,
+    set_alias: tuple[str, str] | None,
+    clear_alias: str | None,
+    dry_run: bool,
+    colors: Colors,
+) -> int:
+    entries = _collect_devices(host)
+    devices = [entry.device for entry in entries]
+    selector = set_alias[0] if set_alias is not None else clear_alias or ""
+    device = find_joystick(devices, selector)
+    if device is None and selector.strip():
+        lowered = selector.casefold()
+        by_alias = [
+            entry.device
+            for entry in entries
+            if lowered in entry.alias.casefold()
+        ]
+        if len(by_alias) == 1:
+            device = by_alias[0]
+    if device is None:
+        if not devices:
+            raise ValueError(
+                tr("No hay joysticks detectados ni guardados.")
+            )
+        raise ValueError(
+            tr(
+                "No se encontró un único joystick que coincida con "
+                "{selector!r}. Usá --list para ver los disponibles.",
+                selector=selector,
+            )
+        )
+
+    entry = next(item for item in entries if item.device is device)
+    identity = (
+        entry.saved.id
+        if entry.saved is not None
+        else device_identity(device)
+    )
+    store = KnownDevices()
+    if set_alias is not None:
+        alias = set_alias[1].strip()
+        if not alias:
+            raise ValueError(tr("El alias no puede estar vacío."))
+        if dry_run:
+            print(
+                colors.bold(
+                    tr(
+                        "Se guardaría el alias {alias} para {name}.",
+                        alias=alias,
+                        name=device.display_name,
+                    )
+                )
+            )
+            print(colors.dim(tr("Modo --dry-run: no se escribió nada.")))
+            return 0
+        try:
+            store.set_alias(identity, alias)
+        except OSError as exc:
+            raise ValueError(
+                tr(
+                    "No se pudo guardar el alias: {error}",
+                    error=exc,
+                )
+            ) from exc
+        print(
+            colors.green(
+                tr(
+                    "Alias guardado: {name} → {alias}",
+                    name=device.display_name,
+                    alias=alias,
+                )
+            )
+        )
+        return 0
+
+    if not store.alias_for(identity):
+        print(colors.dim(tr("El dispositivo no tiene alias.")))
+        return 0
+    if dry_run:
+        print(
+            colors.bold(
+                tr(
+                    "Se eliminaría el alias de {name}.",
+                    name=device.display_name,
+                )
+            )
+        )
+        print(colors.dim(tr("Modo --dry-run: no se escribió nada.")))
+        return 0
+    try:
+        store.clear_alias(identity)
+    except OSError as exc:
+        raise ValueError(
+            tr(
+                "No se pudo guardar el alias: {error}",
+                error=exc,
+            )
+        ) from exc
+    print(
+        colors.green(
+            tr("Alias eliminado: {name}", name=device.display_name)
+        )
+    )
     return 0
 
 
@@ -1071,6 +1209,17 @@ def build_parser() -> argparse.ArgumentParser:
         help=tr("vuelve a mostrar un dispositivo oculto"),
     )
     parser.add_argument(
+        "--alias",
+        nargs=2,
+        metavar=("ID", "ALIAS"),
+        help=tr("asigna un alias a un dispositivo conectado o guardado"),
+    )
+    parser.add_argument(
+        "--unalias",
+        metavar="ID",
+        help=tr("elimina el alias de un dispositivo"),
+    )
+    parser.add_argument(
         "--remove",
         action="append",
         default=[],
@@ -1110,6 +1259,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                     args.disable_known,
                     args.hide_known,
                     args.unhide_known,
+                    args.alias,
+                    args.unalias,
                     args.remove,
                     args.json,
                     args.dry_run,
@@ -1132,6 +1283,11 @@ def main(argv: Sequence[str] | None = None) -> int:
 
         if args.list:
             return _cmd_list(host, as_json=args.json, colors=colors)
+        alias_actions = [args.alias, args.unalias]
+        if sum(value is not None for value in alias_actions) > 1:
+            parser.error(
+                tr("--alias y --unalias no se pueden combinar.")
+            )
         known_actions = [
             args.enable_known,
             args.disable_known,
@@ -1144,6 +1300,24 @@ def main(argv: Sequence[str] | None = None) -> int:
                     "--enable-known, --disable-known, --hide-known y "
                     "--unhide-known no se pueden combinar."
                 )
+            )
+        if args.alias is not None or args.unalias is not None:
+            if args.known or any(
+                value is not None for value in known_actions
+            ):
+                parser.error(
+                    tr("--alias y --unalias no se combinan con --known.")
+                )
+            return _cmd_alias(
+                host,
+                set_alias=(
+                    (args.alias[0], args.alias[1])
+                    if args.alias is not None
+                    else None
+                ),
+                clear_alias=args.unalias,
+                dry_run=args.dry_run,
+                colors=colors,
             )
         if args.known or any(value is not None for value in known_actions):
             return _cmd_known(

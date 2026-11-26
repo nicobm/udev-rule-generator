@@ -67,8 +67,9 @@ class HiddenDevicesDialog(Adw.Window):
 
         for device in hidden:
             state = tr("Activa") if device.active else tr("Desactivada")
+            alias = self.store.alias_for(device.id)
             row = Adw.ActionRow(
-                title=markup_escape(device.name),
+                title=markup_escape(alias or device.name),
                 subtitle=markup_escape(
                     f"{device.bus_label} · {device.identifier} · {state}"
                 ),
