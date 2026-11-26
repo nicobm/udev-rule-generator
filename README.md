@@ -14,9 +14,9 @@ polkit dialog. No password is stored.
 
 [![udev-rule-generator demo](docs/demo.gif)](docs/demo.webm)
 
-This recording uses version **1.11.10** and shows the GTK4 application
-detecting controllers, editing aliases, changing icons and colors, and
-reordering device cards with drag and drop.
+**Demo recorded with udev-rule-generator v1.11.10.** It shows the GTK4
+application detecting controllers, editing aliases, changing icons and colors,
+and reordering device cards with drag and drop.
 
 GitHub does not play repository `.webm` files inline, so the preview above is
 an animated GIF. The full recording is available in
