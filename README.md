@@ -497,3 +497,8 @@ MIT by [Fabian Bornschein](https://codeberg.org/fabiscafe/), and the
 [steam-devices](https://github.com/ValveSoftware/steam-devices/) rules are MIT
 by [Valve Software](https://github.com/ValveSoftware/). See
 [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
+
+## Built with
+
+This project was developed with AI assistance from **DeepSeek V4.1 Flash
+1017** using **OpenCode**.
