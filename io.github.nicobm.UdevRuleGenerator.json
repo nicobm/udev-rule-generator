@@ -6,12 +6,8 @@
     "command": "udev-rule-generator-gui",
     "finish-args": [
         "--socket=wayland",
-        "--socket=fallback-x11",
-        "--share=ipc",
-        "--device=dri",
+        "--device=input",
         "--talk-name=org.freedesktop.Flatpak",
-        "--nofilesystem=home",
-        "--nofilesystem=host",
         "--unshare=network"
     ],
     "modules": [

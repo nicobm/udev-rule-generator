@@ -184,18 +184,28 @@ flatpak run --command=udev-rule-generator io.github.nicobm.UdevRuleGenerator
 flatpak run --command=udev-rule-generator io.github.nicobm.UdevRuleGenerator --list
 ```
 
-El Flatpak **no** monta `/etc` ni el home.  Para leer udev y ejecutar
-`pkexec` en el host usa `flatpak-spawn --host`, habilitado por el permiso:
+El manifiesto es deliberadamente mínimo:
 
 ```json
-"--talk-name=org.freedesktop.Flatpak"
+"finish-args": [
+    "--socket=wayland",
+    "--device=input",
+    "--talk-name=org.freedesktop.Flatpak",
+    "--unshare=network"
+]
 ```
 
-Ese permiso es necesario para una utilidad de sistema como esta: permite
-ejecutar en el host los comandos concretos que la app necesita (`udevadm` y
-`pkexec`).  El manifiesto no monta el home ni habilita la red, pero conviene
-tener en cuenta que `org.freedesktop.Flatpak` es un permiso amplio, como en
-cualquier app que necesite integración con el sistema.
+- Solo **Wayland**: no hay `fallback-x11`.
+- Solo **input**: no hay `--device=dri`, sonido ni otros dispositivos.
+- **Sin red**: `--unshare=network`.
+- No monta `/etc`, el home ni el host.
+
+Para leer udev y ejecutar `pkexec` en el host usa `flatpak-spawn --host`,
+habilitado por `org.freedesktop.Flatpak`.  Ese permiso no es red, display ni
+sonido: es lo que permite ejecutar en el host los comandos concretos que la
+app necesita (`udevadm` y `pkexec`).  Sin él, el Flatpak podría mostrar la
+interfaz pero no detectar dispositivos ni instalar reglas.  Sigue siendo un
+permiso amplio, como en cualquier app que necesite integración con el sistema.
 
 Si tu sistema todavía no tiene el runtime 51, cambiá `runtime-version` en el
 manifiesto y en `build-flatpak.sh` por la versión de GNOME que tengas
