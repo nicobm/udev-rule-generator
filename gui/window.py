@@ -89,18 +89,37 @@ class MainWindow(Adw.ApplicationWindow):
         self.stack = Gtk.Stack()
         self.stack.set_transition_type(Gtk.StackTransitionType.CROSSFADE)
         self.stack.set_transition_duration(180)
-        self.stack.set_vexpand(True)
         self.stack.set_hexpand(True)
+        self.stack.set_hhomogeneous(False)
+        self.stack.set_vhomogeneous(False)
 
         self._build_loading_page()
         self._build_empty_page()
         self._build_list_page()
         self._build_sections()
 
-        root = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        root.append(self.stack)
-        root.append(self.sections)
-        self.toast_overlay.set_child(root)
+        content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18)
+        content.set_margin_top(18)
+        content.set_margin_bottom(24)
+        content.set_margin_start(18)
+        content.set_margin_end(18)
+        content.append(self.stack)
+        content.append(self.status_group)
+        content.append(self.external_group)
+
+        clamp = Adw.Clamp()
+        clamp.set_maximum_size(720)
+        clamp.set_tightening_threshold(600)
+        clamp.set_hexpand(True)
+        clamp.set_child(content)
+
+        scroller = Gtk.ScrolledWindow()
+        scroller.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        scroller.set_vexpand(True)
+        scroller.set_hexpand(True)
+        scroller.set_child(clamp)
+
+        self.toast_overlay.set_child(scroller)
         toolbar.set_content(self.toast_overlay)
         self.set_content(toolbar)
 
@@ -143,22 +162,6 @@ class MainWindow(Adw.ApplicationWindow):
         self.banner.set_revealed(False)
         box.append(self.banner)
 
-        scroller = Gtk.ScrolledWindow()
-        scroller.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
-        scroller.set_vexpand(True)
-        scroller.set_hexpand(True)
-
-        clamp = Adw.Clamp()
-        clamp.set_maximum_size(720)
-        clamp.set_tightening_threshold(600)
-        clamp.set_hexpand(True)
-
-        content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18)
-        content.set_margin_top(18)
-        content.set_margin_bottom(24)
-        content.set_margin_start(18)
-        content.set_margin_end(18)
-
         self.devices_group = Adw.PreferencesGroup(
             title=tr("Joysticks conectados"),
             description=tr(
@@ -167,33 +170,18 @@ class MainWindow(Adw.ApplicationWindow):
             ),
         )
         self.devices_group.set_hexpand(True)
-        content.append(self.devices_group)
-
-        clamp.set_child(content)
-        scroller.set_child(clamp)
-        box.append(scroller)
+        box.append(self.devices_group)
         self.stack.add_named(box, "list")
 
     def _build_sections(self) -> None:
-        clamp = Adw.Clamp()
-        clamp.set_maximum_size(720)
-        clamp.set_tightening_threshold(600)
-        clamp.set_hexpand(True)
-
-        content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18)
-        content.set_margin_top(6)
-        content.set_margin_bottom(24)
-        content.set_margin_start(18)
-        content.set_margin_end(18)
-
-        status_group = Adw.PreferencesGroup(title=tr("Estado"))
-        status_group.set_hexpand(True)
+        self.status_group = Adw.PreferencesGroup(title=tr("Estado"))
+        self.status_group.set_hexpand(True)
         self.known_count_label = Gtk.Label(label="…")
         self.known_count_label.add_css_class("device-badge")
         self.known_count_label.set_valign(Gtk.Align.CENTER)
         self.known_count_label.set_width_chars(2)
         self.known_count_label.set_xalign(0.5)
-        status_group.add(
+        self.status_group.add(
             self._action_row(
                 tr("Reglas instaladas"),
                 tr(
@@ -205,17 +193,16 @@ class MainWindow(Adw.ApplicationWindow):
                 badge=self.known_count_label,
             )
         )
-        content.append(status_group)
 
-        external_group = Adw.PreferencesGroup(
+        self.external_group = Adw.PreferencesGroup(
             title=tr("Reglas externas"),
             description=tr(
                 "Paquetes opcionales de Valve y fabiscafe que no forman parte "
                 "del núcleo de la aplicación."
             ),
         )
-        external_group.set_hexpand(True)
-        external_group.add(
+        self.external_group.set_hexpand(True)
+        self.external_group.add(
             self._action_row(
                 tr("Reglas preconfiguradas"),
                 tr("Instalá las reglas de Valve y fabiscafe."),
@@ -223,16 +210,6 @@ class MainWindow(Adw.ApplicationWindow):
                 icon_name="application-x-addon-symbolic",
             )
         )
-        content.append(external_group)
-
-        clamp.set_child(content)
-        scroller = Gtk.ScrolledWindow()
-        scroller.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
-        scroller.set_propagate_natural_height(True)
-        scroller.set_max_content_height(300)
-        scroller.set_hexpand(True)
-        scroller.set_child(clamp)
-        self.sections = scroller
 
     @staticmethod
     def _action_row(
