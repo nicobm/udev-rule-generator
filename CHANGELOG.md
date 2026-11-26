@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.18.3 - 2026-11-26
+
+- Adds a trash button to saved rows in **Ignorar dispositivos**. It removes
+  the saved record and, when the ignore rule is active, removes the rule in
+  the same operation.
+
 ## 0.18.2 - 2026-11-26
 
 - Merges joysticks found only in `/proc` with the `udevadm` results, so a

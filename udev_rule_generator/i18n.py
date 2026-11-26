@@ -94,6 +94,20 @@ _EN.update(
         ),
         "Sin regla de ignorar": "No ignore rule",
         "Ignorar dispositivos": "Ignore devices",
+        "Eliminar de la lista": "Remove from list",
+        "¿Eliminar de Ignorar dispositivos?": "Remove from Ignore devices?",
+        "Se eliminará el registro guardado de «{name}» y su regla "
+        "de ignorar instalada.": (
+            "The saved record for “{name}” and its installed ignore rule "
+            "will be removed."
+        ),
+        "Se eliminará el registro guardado de «{name}».": (
+            "The saved record for “{name}” will be removed."
+        ),
+        "Registro eliminado: {name}": "Record removed: {name}",
+        "No se pudo eliminar el dispositivo": (
+            "Could not remove the device"
+        ),
         "Dispositivos que el kernel expone como joystick, pero que no "
         "declaran los botones típicos de un mando.  El interruptor azul "
         "significa que están ignorados.": (

@@ -65,6 +65,14 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.18.3" date="2026-11-26">
+      <description>
+        <p>
+          Adds a trash button to saved Ignorar dispositivos rows so a saved
+          record and its active ignore rule can be removed.
+        </p>
+      </description>
+    </release>
     <release version="0.18.2" date="2026-11-26">
       <description>
         <p>

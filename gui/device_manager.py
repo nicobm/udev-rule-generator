@@ -11,7 +11,7 @@ from udev_rule_generator.host import Host
 from udev_rule_generator.i18n import tr
 from udev_rule_generator.known import KnownDevice, KnownDevices
 from udev_rule_generator.presets import STEAM, preset_files, presets_trigger
-from udev_rule_generator.privileged import apply_rule_changes
+from udev_rule_generator.privileged import apply_rule_changes, remove_rule_files
 from udev_rule_generator.rules import RuleAction, build_rule
 from udev_rule_generator.userconfig import device_identity
 
@@ -231,7 +231,11 @@ class DeviceManager(Gtk.Box):
         for record in ignore_known:
             self._append(
                 self.ignore_group,
-                self._known_row(record, record.id in connected_ids),
+                self._known_row(
+                    record,
+                    record.id in connected_ids,
+                    removable=True,
+                ),
             )
             ignore_count += 1
         for device in suspicious_connected:
@@ -249,7 +253,13 @@ class DeviceManager(Gtk.Box):
         if row not in self._controls:
             self._controls.append(row)
 
-    def _known_row(self, device: KnownDevice, connected: bool) -> Adw.ActionRow:
+    def _known_row(
+        self,
+        device: KnownDevice,
+        connected: bool,
+        *,
+        removable: bool = False,
+    ) -> Adw.ActionRow:
         row = Adw.ActionRow(
             title=device.name,
             subtitle=f"{device.bus_label} · {device.identifier}",
@@ -259,6 +269,22 @@ class DeviceManager(Gtk.Box):
 
         if connected:
             row.add_suffix(self._connected_badge())
+
+        if removable:
+            delete = Gtk.Button(
+                icon_name="user-trash-symbolic",
+                tooltip_text=tr("Eliminar de la lista"),
+            )
+            delete.add_css_class("flat")
+            delete.add_css_class("destructive-action")
+            delete.set_valign(Gtk.Align.CENTER)
+            delete.connect(
+                "clicked",
+                lambda _button, selected=device: self._confirm_forget(
+                    selected
+                ),
+            )
+            row.add_suffix(delete)
 
         switch = Gtk.Switch(
             active=self._pending_known.get(device.id, device.active)
@@ -333,6 +359,77 @@ class DeviceManager(Gtk.Box):
         else:
             self._pending_known[device.id] = active
         self._update_pending_ui()
+
+    def _confirm_forget(self, device: KnownDevice) -> None:
+        if self._busy:
+            return
+        if device.active:
+            body = tr(
+                "Se eliminará el registro guardado de «{name}» y su regla "
+                "de ignorar instalada.",
+                name=device.name,
+            )
+        else:
+            body = tr(
+                "Se eliminará el registro guardado de «{name}».",
+                name=device.name,
+            )
+        dialog = Adw.AlertDialog(
+            heading=tr("¿Eliminar de Ignorar dispositivos?"),
+            body=body,
+        )
+        dialog.add_response("cancel", tr("Cancelar"))
+        dialog.add_response("remove", tr("Eliminar"))
+        dialog.set_response_appearance(
+            "remove", Adw.ResponseAppearance.DESTRUCTIVE
+        )
+        dialog.connect(
+            "response",
+            lambda _dialog, response: self._forget(device)
+            if response == "remove"
+            else None,
+        )
+        root = self.get_root()
+        dialog.present(root if root is not None else self.parent_window)
+
+    def _forget(self, device: KnownDevice) -> None:
+        if self._busy:
+            return
+        self._set_busy(True)
+        thread = threading.Thread(
+            target=self._forget_worker,
+            args=(device,),
+            name="udev-rule-generator-forget",
+            daemon=True,
+        )
+        thread.start()
+
+    def _forget_worker(self, device: KnownDevice) -> None:
+        try:
+            if device.active and device.filename:
+                remove_rule_files(self.host, [device.filename])
+            self.store.remove(device.id)
+        except Exception as exc:  # noqa: BLE001 (se muestra al usuario)
+            GLib.idle_add(self._forget_failed, str(exc))
+            return
+        GLib.idle_add(self._forget_succeeded, device)
+
+    def _forget_succeeded(self, device: KnownDevice) -> bool:
+        self._pending_known.pop(device.id, None)
+        self._set_busy(False)
+        self.reload()
+        self.on_changed(
+            tr("Registro eliminado: {name}", name=device.name)
+        )
+        return False
+
+    def _forget_failed(self, message: str) -> bool:
+        self._set_busy(False)
+        self._show_error(
+            tr("No se pudo eliminar el dispositivo"),
+            message,
+        )
+        return False
 
     def _set_unknown_pending(self, device: Joystick, active: bool) -> None:
         if self._updating or self._busy:
