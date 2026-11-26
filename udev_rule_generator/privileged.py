@@ -12,18 +12,116 @@ import re
 import shutil
 import subprocess
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Sequence
 
 from . import RULES_DIR
+from .devices import Joystick
 from .host import Host, HostError
 from .i18n import tr
 from .rules import validate_rule_filename
+from .userconfig import device_identity
 
 _POLKIT_CANCELLED = 126
 _POLKIT_NOT_AUTHORIZED = 127
 _POLKIT_ERROR = 125
 _HEX4 = re.compile(r"^[0-9a-f]{4}$")
 _DRIVER_NAME = re.compile(r"^[A-Za-z0-9_-]+$")
+_USB_INTERFACE = re.compile(
+    r"^[0-9]+-[0-9.]+:[0-9]+\.[0-9]+$"
+)
+_USB_INTERFACE_IN_PATH = re.compile(
+    r"(?:^|/)([0-9]+-[0-9.]+:[0-9]+\.[0-9]+)(?:/|$)"
+)
+_JS_NODE = re.compile(r"^js([0-9]+)$")
+
+
+@dataclass(frozen=True)
+class UsbRebind:
+    """Reasocia una interfaz USB para que el kernel reasigne su jsX."""
+
+    driver: str
+    interface: str
+
+    def validate(self) -> None:
+        if not _DRIVER_NAME.fullmatch(self.driver):
+            raise ValueError(
+                tr("Driver USB no válido: {value!r}", value=self.driver)
+            )
+        if not _USB_INTERFACE.fullmatch(self.interface):
+            raise ValueError(
+                tr("Interfaz USB no válida: {value!r}", value=self.interface)
+            )
+
+
+def _usb_rebind_script(rebinds: Sequence[UsbRebind]) -> list[str]:
+    """Reasocia interfaces USB en orden, para compactar los índices js."""
+    lines: list[str] = []
+    for rebind in rebinds:
+        rebind.validate()
+        driver = rebind.driver
+        interface = rebind.interface
+        lines.extend(
+            [
+                f'if [ -e "/sys/bus/usb/drivers/{driver}/{interface}" ]; then',
+                f'  echo "{interface}" > "/sys/bus/usb/drivers/{driver}/unbind"'
+                " || true",
+                f'  echo "{interface}" > "/sys/bus/usb/drivers/{driver}/bind"'
+                " || true",
+                "fi",
+            ]
+        )
+    return lines
+
+
+def _js_index(device: Joystick) -> int | None:
+    indices: list[int] = []
+    for node in device.js_devices:
+        match = _JS_NODE.fullmatch(Path(node).name)
+        if match:
+            indices.append(int(match.group(1)))
+    return min(indices) if indices else None
+
+
+def usb_rebinds_for_compaction(
+    connected: Sequence[Joystick],
+    ignored_ids: set[str],
+) -> list[UsbRebind]:
+    """Calcula los rebinds USB para eliminar huecos en la numeración js.
+
+    Se ordenan los mandos activos por su índice js actual y se reasocian los
+    que no coinciden con su posición final (0, 1, 2…).  Los dispositivos que
+    no son USB o que no exponen js se omiten: no se puede garantizar que el
+    kernel les reasigne un número.
+    """
+    active: list[tuple[int, Joystick]] = []
+    for device in connected:
+        if device_identity(device) in ignored_ids:
+            continue
+        index = _js_index(device)
+        if index is None:
+            continue
+        active.append((index, device))
+    active.sort(key=lambda item: item[0])
+
+    rebinds: list[UsbRebind] = []
+    for rank, (index, device) in enumerate(active):
+        if index == rank:
+            continue
+        driver = (device.properties.get("ID_USB_DRIVER") or "").strip()
+        if not driver:
+            continue
+        interface = ""
+        for path in device.devpaths:
+            match = _USB_INTERFACE_IN_PATH.search(path)
+            if match:
+                interface = match.group(1)
+                break
+        if not interface:
+            continue
+        rebinds.append(UsbRebind(driver, interface))
+    return rebinds
+
 
 
 @dataclass(frozen=True)
@@ -324,6 +422,7 @@ def _apply_as_root(
     install_files: dict[str, str],
     remove_filenames: list[str],
     hid_changes: Sequence[HidBindingChange],
+    usb_rebinds: Sequence[UsbRebind],
     trigger: str,
 ) -> InstallResult:
     installed: list[str] = []
@@ -364,19 +463,21 @@ def _apply_as_root(
         except (OSError, subprocess.TimeoutExpired):
             pass
     hid_lines = _hid_binding_script(hid_changes)
-    if hid_lines:
+    usb_lines = _usb_rebind_script(usb_rebinds)
+    if hid_lines or usb_lines:
         try:
             subprocess.run(
-                ["sh", "-c", "\n".join(hid_lines)],
+                ["sh", "-c", "\n".join([*hid_lines, *usb_lines])],
                 check=False,
                 capture_output=True,
                 text=True,
-                timeout=60,
+                timeout=120,
             )
         except (OSError, subprocess.TimeoutExpired) as exc:
             raise HostError(
                 tr(
-                    "No se pudo cambiar el estado del dispositivo HID: {error}",
+                    "No se pudo cambiar el estado de los dispositivos HID/USB: "
+                    "{error}",
                     error=exc,
                 )
             ) from exc
@@ -397,6 +498,7 @@ def _apply_with_pkexec(
     install_files: dict[str, str],
     remove_filenames: list[str],
     hid_changes: Sequence[HidBindingChange],
+    usb_rebinds: Sequence[UsbRebind],
     trigger: str,
 ) -> InstallResult:
     pkexec = host.which("pkexec")
@@ -431,6 +533,7 @@ def _apply_with_pkexec(
                 "if command -v restorecon >/dev/null 2>&1; then "
                 "restorecon -F /etc/udev/rules.d/ >/dev/null 2>&1 || true; fi",
                 *_hid_binding_script(hid_changes),
+                *_usb_rebind_script(usb_rebinds),
                 *_udev_reload_script(trigger),
             ]
         )
@@ -496,10 +599,16 @@ def apply_rule_changes(
     remove_filenames: list[str],
     *,
     hid_changes: Sequence[HidBindingChange] = (),
+    usb_rebinds: Sequence[UsbRebind] = (),
     trigger: str = "change",
 ) -> InstallResult:
-    """Aplica reglas y cambios de binding HID en una sola autenticación."""
-    if not install_files and not remove_filenames and not hid_changes:
+    """Aplica reglas, bindings HID y rebinds USB en una autenticación."""
+    if (
+        not install_files
+        and not remove_filenames
+        and not hid_changes
+        and not usb_rebinds
+    ):
         raise ValueError(tr("No hay cambios para aplicar."))
     if trigger not in {"change", "add"}:
         raise ValueError(
@@ -511,12 +620,15 @@ def apply_rule_changes(
         validate_rule_filename(filename)
     for change in hid_changes:
         change.validate()
+    for rebind in usb_rebinds:
+        rebind.validate()
 
     if os.geteuid() == 0 and not host.in_flatpak:
         return _apply_as_root(
             install_files,
             remove_filenames,
             hid_changes,
+            usb_rebinds,
             trigger,
         )
     return _apply_with_pkexec(
@@ -524,6 +636,7 @@ def apply_rule_changes(
         install_files,
         remove_filenames,
         hid_changes,
+        usb_rebinds,
         trigger,
     )
 

@@ -16,9 +16,13 @@ from udev_rule_generator.host import CommandResult
 from udev_rule_generator.known import KnownDevice, KnownDevices
 from udev_rule_generator.privileged import (
     HidBindingChange,
+    UsbRebind,
     _hid_binding_script,
+    _usb_rebind_script,
     apply_rule_changes,
+    usb_rebinds_for_compaction,
 )
+from udev_rule_generator.userconfig import device_identity
 
 
 def _device(
@@ -193,6 +197,95 @@ class HidScriptTests(unittest.TestCase):
             )
 
 
+def _usb_device(
+    *,
+    name: str,
+    js_node: str,
+    driver: str = "xpad",
+    interface: str = "1-7:1.0",
+    serial: str = "USB1",
+) -> Joystick:
+    return Joystick(
+        key=name,
+        name=name,
+        vendor="Test",
+        model=name,
+        vendor_id="045e",
+        product_id="0b12",
+        serial=serial,
+        bus="usb",
+        devpaths=(
+            f"/devices/pci0000:00/0000:00:14.0/usb1/1-7/{interface}"
+            f"/input/input24/{js_node}",
+        ),
+        event_devices=("/dev/input/event20",),
+        js_devices=(f"/dev/input/{js_node}",),
+        input_names=(name,),
+        properties={"ID_BUS": "usb", "ID_USB_DRIVER": driver},
+    )
+
+
+class UsbRebindTests(unittest.TestCase):
+    def test_compaction_rebinds_controller_with_gap(self) -> None:
+        xbox = _usb_device(name="Xbox", js_node="js1")
+        rebinds = usb_rebinds_for_compaction([xbox], set())
+        self.assertEqual(
+            rebinds,
+            [UsbRebind(driver="xpad", interface="1-7:1.0")],
+        )
+
+    def test_compaction_skips_controller_already_in_place(self) -> None:
+        xbox = _usb_device(name="Xbox", js_node="js0")
+        self.assertEqual(usb_rebinds_for_compaction([xbox], set()), [])
+
+    def test_compaction_skips_ignored_device(self) -> None:
+        xbox = _usb_device(name="Xbox", js_node="js1")
+        self.assertEqual(
+            usb_rebinds_for_compaction(
+                [xbox],
+                {device_identity(xbox)},
+            ),
+            [],
+        )
+
+    def test_compaction_orders_multiple_controllers(self) -> None:
+        first = _usb_device(
+            name="First",
+            js_node="js1",
+            interface="1-7:1.0",
+            serial="A",
+        )
+        second = _usb_device(
+            name="Second",
+            js_node="js2",
+            interface="1-8:1.0",
+            serial="B",
+        )
+        rebinds = usb_rebinds_for_compaction([second, first], set())
+        self.assertEqual(
+            rebinds,
+            [
+                UsbRebind(driver="xpad", interface="1-7:1.0"),
+                UsbRebind(driver="xpad", interface="1-8:1.0"),
+            ],
+        )
+
+    def test_skips_non_usb_controller(self) -> None:
+        xbox = _usb_device(name="Xbox", js_node="js1", driver="")
+        self.assertEqual(usb_rebinds_for_compaction([xbox], set()), [])
+
+    def test_usb_rebind_script_and_validation(self) -> None:
+        script = "\n".join(
+            _usb_rebind_script([UsbRebind("xpad", "1-7:1.0")])
+        )
+        self.assertIn("/sys/bus/usb/drivers/xpad/unbind", script)
+        self.assertIn("/sys/bus/usb/drivers/xpad/bind", script)
+        with self.assertRaises(ValueError):
+            _usb_rebind_script([UsbRebind("xpad; rm -rf /", "1-7:1.0")])
+        with self.assertRaises(ValueError):
+            _usb_rebind_script([UsbRebind("xpad", "../1-7:1.0")])
+
+
 class FakePkexecHost:
     in_flatpak = False
 
@@ -231,6 +324,22 @@ class PrivilegedIntegrationTests(unittest.TestCase):
         script = host.argv[host.argv.index("-c") + 1]
         self.assertIn("26CE:01A2", script)
         self.assertIn("/unbind", script)
+
+    def test_usb_rebinds_reach_the_pkexec_script(self) -> None:
+        host = FakePkexecHost()
+        with mock.patch.object(
+            privileged.os, "geteuid", return_value=1000
+        ):
+            result = apply_rule_changes(
+                host,
+                {},
+                [],
+                usb_rebinds=[UsbRebind("xpad", "1-7:1.0")],
+            )
+        self.assertTrue(result.used_pkexec)
+        script = host.argv[host.argv.index("-c") + 1]
+        self.assertIn("/sys/bus/usb/drivers/xpad/unbind", script)
+        self.assertIn('echo "1-7:1.0"', script)
 
 
 if __name__ == "__main__":

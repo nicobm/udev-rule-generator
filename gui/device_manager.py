@@ -20,6 +20,7 @@ from udev_rule_generator.privileged import (
     HidBindingChange,
     apply_rule_changes,
     remove_rule_files,
+    usb_rebinds_for_compaction,
 )
 from udev_rule_generator.rules import (
     RuleAction,
@@ -1853,7 +1854,10 @@ class DeviceManager(Gtk.Box):
 
             hid_changes: list[HidBindingChange] = []
             ignored_updates: list[tuple[str, bool, Joystick, str]] = []
-            for device_id, ignored in self._pending_ignored.items():
+            for device_id, ignored in sorted(
+                self._pending_ignored.items(),
+                key=lambda item: not item[1],
+            ):
                 record = self.store.get(device_id)
                 joystick = self._pending_ignored_joysticks.get(device_id)
                 if joystick is None and record is not None:
@@ -1878,7 +1882,23 @@ class DeviceManager(Gtk.Box):
                     (device_id, ignored, joystick, driver)
                 )
 
-            if not install_files and not removed and not hid_changes:
+            ignored_ids = {
+                device_id
+                for device_id, ignored in self._pending_ignored.items()
+                if ignored
+            }
+            usb_rebinds = (
+                usb_rebinds_for_compaction(self._connected, ignored_ids)
+                if ignored_ids
+                else []
+            )
+
+            if (
+                not install_files
+                and not removed
+                and not hid_changes
+                and not usb_rebinds
+            ):
                 message = tr("No hay cambios para aplicar.")
             else:
                 apply_rule_changes(
@@ -1886,6 +1906,7 @@ class DeviceManager(Gtk.Box):
                     install_files,
                     removed,
                     hid_changes=hid_changes,
+                    usb_rebinds=usb_rebinds,
                     trigger="add" if trigger_add else "change",
                 )
                 try:
@@ -1908,6 +1929,11 @@ class DeviceManager(Gtk.Box):
                     )
                 else:
                     message = tr("Cambios aplicados.")
+                    if usb_rebinds:
+                        message = tr(
+                            "Cambios aplicados. Los mandos se reconectaron "
+                            "para reasignar los nodos js."
+                        )
             for presets, desired in preset_changes:
                 if desired is None:
                     continue

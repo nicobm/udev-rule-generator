@@ -1375,5 +1375,20 @@ _EN.update(
         "No se pudo cambiar el estado del dispositivo HID: {error}": (
             "Could not change the HID device state: {error}"
         ),
+        "Driver USB no válido: {value!r}": (
+            "Invalid USB driver: {value!r}"
+        ),
+        "Interfaz USB no válida: {value!r}": (
+            "Invalid USB interface: {value!r}"
+        ),
+        "No se pudo cambiar el estado de los dispositivos HID/USB: "
+        "{error}": (
+            "Could not change the HID/USB device state: {error}"
+        ),
+        "Cambios aplicados. Los mandos se reconectaron para reasignar los "
+        "nodos js.": (
+            "Changes applied. Controllers were reconnected to reassign the "
+            "js nodes."
+        ),
     }
 )
