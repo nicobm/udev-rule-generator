@@ -362,7 +362,7 @@ class DeviceManager(Gtk.Box):
             if editing:
                 has_text = entry is not None and bool(entry.get_text().strip())
                 button.set_icon_name(
-                    "emblem-ok-symbolic"
+                    "object-select-symbolic"
                     if has_text
                     else "document-edit-symbolic"
                 )

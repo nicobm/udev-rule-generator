@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.8 - 2026-11-26
+
+- Uses `object-select-symbolic` for the alias save tick. The previous
+  `emblem-ok-symbolic` icon is not present in current Adwaita icon themes.
+
 ## 1.3.7 - 2026-11-26
 
 - Places the grey alias pencil immediately to the right of the device name
