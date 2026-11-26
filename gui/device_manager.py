@@ -30,7 +30,6 @@ from udev_rule_generator.privileged import (
 from udev_rule_generator.rules import (
     RuleAction,
     build_rule,
-    validate_rule_filename,
 )
 from udev_rule_generator.userconfig import device_identity
 
@@ -351,30 +350,42 @@ class DeviceManager(Gtk.Box):
         self._updating = False
         self._update_pending_ui()
 
+    @staticmethod
+    def _installed_files_text(count: int, total: int) -> str:
+        if total == 1:
+            return tr(
+                "{count} de {total} archivo instalado",
+                count=count,
+                total=total,
+            )
+        return tr(
+            "{count} de {total} archivos instalados",
+            count=count,
+            total=total,
+        )
+
     def _update_preset_tooltips(self) -> None:
         steam_lines = [
-            tr(
-                "{count} de {total} reglas instaladas",
-                count=self._steam_rule_count,
-                total=self._steam_rule_total,
+            self._installed_files_text(
+                self._steam_rule_count, self._steam_rule_total
             )
         ]
         if not self._uinput_available:
             steam_lines.append(tr("Requiere el módulo uinput del kernel."))
         self.steam_switch.set_tooltip_text("\n".join(steam_lines))
         self.gdu_switch.set_tooltip_text(
-            tr(
-                "{count} de {total} reglas instaladas",
-                count=self._gdu_rule_count,
-                total=self._gdu_rule_total,
+            self._installed_files_text(
+                self._gdu_rule_count, self._gdu_rule_total
             )
         )
+        blacklist_lines = [
+            self._installed_files_text(
+                self._blacklist_rule_count, self._blacklist_rule_total
+            ),
+            tr("Se instala el snapshot 0000 (un solo archivo)."),
+        ]
         self.blacklist_switch.set_tooltip_text(
-            tr(
-                "{count} de {total} reglas instaladas",
-                count=self._blacklist_rule_count,
-                total=self._blacklist_rule_total,
-            )
+            "\n".join(blacklist_lines)
         )
 
     @staticmethod
@@ -1492,26 +1503,14 @@ class DeviceManager(Gtk.Box):
             subtitle=markup_escape(" · ".join(details)),
         )
         self._row_identities[row] = device.id
-        can_open = bool(device.active and device.filename)
         row.set_activatable(True)
-        if can_open:
-            row.set_tooltip_text(
-                tr("Abrir {filename}", filename=device.filename)
-            )
+        row.set_tooltip_text(tr("Hacé clic para activar o desactivar"))
         self._add_device_icon(row, device.id)
         self._add_drag_handle(row, device.id)
         alias_active = self._add_alias_control(
             row,
             device.id,
             device.name,
-        )
-        row.connect(
-            "activated",
-            lambda _row, selected=device: (
-                None
-                if alias_active()
-                else self._open_known_rule(selected)
-            ),
         )
 
         if removable:
@@ -1537,6 +1536,7 @@ class DeviceManager(Gtk.Box):
             active=self._pending_known.get(device.id, device.active)
         )
         switch.set_valign(Gtk.Align.CENTER)
+        switch.set_tooltip_text(tr("Activar o desactivar la regla"))
         switch.connect(
             "notify::active",
             lambda selected_switch, _pspec, selected=device: self._set_known_pending(
@@ -1545,6 +1545,13 @@ class DeviceManager(Gtk.Box):
         )
         row.add_suffix(switch)
         self._controls.append(switch)
+
+        def toggle_row(_row) -> None:
+            if alias_active() or self._busy or self._updating:
+                return
+            switch.set_active(not switch.get_active())
+
+        row.connect("activated", toggle_row)
         return row
 
     def _unknown_row(self, device: Joystick) -> Adw.ActionRow:
@@ -1555,14 +1562,20 @@ class DeviceManager(Gtk.Box):
             subtitle=markup_escape(" · ".join(details)),
         )
         self._row_identities[row] = key
-        row.set_activatable(False)
+        row.set_activatable(True)
+        row.set_tooltip_text(tr("Hacé clic para activar o desactivar"))
         self._add_device_icon(row, key)
         self._add_drag_handle(row, key)
-        self._add_alias_control(row, key, device.display_name)
+        alias_active = self._add_alias_control(
+            row,
+            key,
+            device.display_name,
+        )
         row.add_suffix(self._connected_badge(device))
 
         switch = Gtk.Switch(active=key in self._pending_unknown)
         switch.set_valign(Gtk.Align.CENTER)
+        switch.set_tooltip_text(tr("Crear la regla de permisos"))
         switch.connect(
             "notify::active",
             lambda selected_switch, _pspec, selected=device: self._set_unknown_pending(
@@ -1571,6 +1584,13 @@ class DeviceManager(Gtk.Box):
         )
         row.add_suffix(switch)
         self._controls.append(switch)
+
+        def toggle_row(_row) -> None:
+            if alias_active() or self._busy or self._updating:
+                return
+            switch.set_active(not switch.get_active())
+
+        row.connect("activated", toggle_row)
         return row
 
     def _connected_badge(self, device: Joystick | None = None) -> Gtk.Label:
@@ -1618,7 +1638,10 @@ class DeviceManager(Gtk.Box):
             subtitle=markup_escape(f"{bus} · {identifier}"),
         )
         self._row_identities[row] = device_id
-        row.set_activatable(False)
+        row.set_activatable(True)
+        row.set_tooltip_text(
+            tr("Hacé clic para deshabilitar o habilitar el dispositivo")
+        )
         self._add_device_icon(row, device_id)
 
         if actual_ignored:
@@ -1656,6 +1679,13 @@ class DeviceManager(Gtk.Box):
         )
         row.add_suffix(switch)
         self._controls.append(switch)
+
+        def toggle_row(_row) -> None:
+            if self._busy or self._updating:
+                return
+            switch.set_active(not switch.get_active())
+
+        row.connect("activated", toggle_row)
         return row
 
     def _set_ignored_pending(
@@ -1684,52 +1714,6 @@ class DeviceManager(Gtk.Box):
         else:
             self._pending_known[device.id] = active
         self._update_pending_ui()
-
-    def _open_known_rule(self, device: KnownDevice) -> None:
-        if not device.active or not device.filename:
-            self._show_error(
-                tr("Regla no instalada"),
-                tr(
-                    "El dispositivo «{name}» no tiene una regla instalada. "
-                    "Activá esta regla para poder leer el archivo.",
-                    name=device.name,
-                ),
-            )
-            return
-        try:
-            validate_rule_filename(device.filename)
-        except ValueError as exc:
-            self._show_error(tr("No se pudo abrir la regla"), str(exc))
-            return
-        thread = threading.Thread(
-            target=self._open_rule_worker,
-            args=(device,),
-            name="udev-rule-generator-open-rule",
-            daemon=True,
-        )
-        thread.start()
-
-    def _open_rule_worker(self, device: KnownDevice) -> None:
-        path = f"/etc/udev/rules.d/{device.filename}"
-        last_error = tr("xdg-open no pudo abrir el archivo.")
-        for argv in (["xdg-open", path], ["gio", "open", path]):
-            try:
-                result = self.host.run(argv, timeout=20)
-            except Exception as exc:  # noqa: BLE001 (se muestra al usuario)
-                last_error = str(exc)
-                continue
-            if result.ok:
-                return
-            last_error = (
-                result.stderr.strip()
-                or result.stdout.strip()
-                or last_error
-            )
-        GLib.idle_add(self._open_rule_failed, last_error)
-
-    def _open_rule_failed(self, message: str) -> bool:
-        self._show_error(tr("No se pudo abrir la regla"), message)
-        return False
 
     def _hide_known(self, device: KnownDevice) -> None:
         if self._busy:

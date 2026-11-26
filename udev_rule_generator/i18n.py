@@ -1415,5 +1415,22 @@ _EN.update(
         "  3) udev-joystick-blacklist": "  3) udev-joystick-blacklist",
         "  4) Todos": "  4) All",
         "  5) Volver": "  5) Back",
+        "Hacé clic para activar o desactivar": (
+            "Click to enable or disable"
+        ),
+        "Hacé clic para deshabilitar o habilitar el dispositivo": (
+            "Click to disable or enable the device"
+        ),
+        "Activar o desactivar la regla": "Enable or disable the rule",
+        "Crear la regla de permisos": "Create the permission rule",
+        "{count} de {total} archivo instalado": (
+            "{count} of {total} file installed"
+        ),
+        "{count} de {total} archivos instalados": (
+            "{count} of {total} files installed"
+        ),
+        "Se instala el snapshot 0000 (un solo archivo).": (
+            "The 0000 snapshot is installed as a single file."
+        ),
     }
 )

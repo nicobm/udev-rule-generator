@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.13.1 - 2026-11-26
+
+- Clicking anywhere on a saved, connected, or ignored device card now toggles
+  its switch. The installed rule file is no longer opened from the row.
+- The external rule tooltips count installed files instead of rule entries and
+  clarify that udev-joystick-blacklist installs the single 0000 snapshot.
+
 ## 1.13.0 - 2026-11-26
 
 - Adds the optional **udev-joystick-blacklist** package as a third external
