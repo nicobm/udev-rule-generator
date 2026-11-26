@@ -5,19 +5,13 @@ elegir uno y crea una regla udev para **permitirlo/detectarlo** o para
 **ignorarlo**.  Incluye una interfaz de terminal y una aplicación GTK4 +
 libadwaita integrada con GNOME.
 
-También puede instalar reglas ya preparadas:
+La app **no instala ninguna regla automáticamente**.  Solo escribe en
+`/etc/udev/rules.d` cuando elegís una regla para un dispositivo y pasás por el
+diálogo de autenticación de polkit/GNOME.  No se guarda ninguna contraseña.
 
-- **Microsoft Xbox** (Xbox 360, Xbox One, Xbox Series S|X, receptores).
-- **ASRock LED Controller** (`26ce:01a2`), opcional y solo para quien tiene
-  ese hardware; no se incluye en las recomendadas ni en `all`.
-- La biblioteca **game-devices-udev** de Fabian Bornschein (fabiscafe), con
-  reglas para 8BitDo, Sony, Nintendo, Logitech, Hori, Valve, Razer y más.
-- Las reglas opcionales de **steam-devices** de Valve para Steam Input y
-  SteamVR, en una fuente separada.
-
-La instalación se hace en `/etc/udev/rules.d` y usa `pkexec`, así que GNOME
-muestra su diálogo de autenticación de polkit.  No se guarda ninguna
-contraseña.
+Los presets de terceros son opcionales y están desactivados por defecto; se
+explican más abajo, en “Presets opcionales”.  No forman parte del flujo normal
+de generación de reglas.
 
 ## Características
 
@@ -28,8 +22,8 @@ contraseña.
   deniega el acceso a los nodos de entrada.
 - Nombres de archivo con prioridad `10-` para permitir y `99-` para ignorar.
 - Vista previa antes de instalar y modo `--dry-run`.
-- Reglas preconfiguradas con licencia y procedencia, incluidas las opcionales
-  de Steam/SteamVR de Valve.
+- Presets de terceros opcionales, con licencia y procedencia, que solo se
+  instalan si los elegís explícitamente.
 - Listado y eliminación de las reglas que administra la aplicación.
 - Ocultar dispositivos de la lista y recuperarlos desde “Dispositivos
   ocultos”, sin borrar sus reglas.
@@ -294,7 +288,11 @@ sobrescribir con permisos.
 > tenés reglas viejas así, renombrarlas a `71-microsoft-gdu.rules` o
 > eliminarlas para que la regla de ignorar no sea sobrescrita.
 
-## Reglas preconfiguradas
+## Presets opcionales
+
+Estos presets son archivos de terceros que la app puede copiar **solo si los
+elegís**.  No son reglas activas, no se cargan al abrir la app y no se
+instalan durante la instalación del paquete.
 
 | Selección | Archivos |
 |---|---|
