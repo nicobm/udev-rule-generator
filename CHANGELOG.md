@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.10.1 - 2026-11-26
+
+- Prevents a saved device row from opening its installed rule while the alias
+  editor or alias-delete confirmation is active.
+
 ## 1.10.0 - 2026-11-26
 
 - Adds the selected production icon set: controller, joystick, input gaming,

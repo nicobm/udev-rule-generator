@@ -543,14 +543,14 @@ class DeviceManager(Gtk.Box):
         row: Adw.ActionRow,
         device_id: str,
         original_name: str,
-    ) -> None:
+    ) -> Callable[[], bool]:
         """Añade el lápiz pegado al título y la X para eliminarlo."""
         title = self._find_title_label(row)
         if title is None or title.get_parent() is None:
-            return
+            return lambda: False
         title_box = title.get_parent()
         if not isinstance(title_box, Gtk.Box):
-            return
+            return lambda: False
         title_row = Gtk.Box(
             orientation=Gtk.Orientation.HORIZONTAL,
             spacing=2,
@@ -575,6 +575,19 @@ class DeviceManager(Gtk.Box):
         editing = False
         hovered = False
         visible_opacity = 0.55
+        suspended_activatable: bool | None = None
+
+        def suspend_row_activation() -> None:
+            nonlocal suspended_activatable
+            if suspended_activatable is None:
+                suspended_activatable = row.get_activatable()
+            row.set_activatable(False)
+
+        def restore_row_activation() -> None:
+            nonlocal suspended_activatable
+            if suspended_activatable is not None:
+                row.set_activatable(suspended_activatable)
+                suspended_activatable = None
 
         def refresh_visibility() -> None:
             visible = hovered or editing
@@ -630,6 +643,7 @@ class DeviceManager(Gtk.Box):
             entry = None
             current.unparent()
             title.set_visible(True)
+            restore_row_activation()
             update_state()
 
         def focus_entry() -> bool:
@@ -657,18 +671,22 @@ class DeviceManager(Gtk.Box):
             )
             dialog.set_default_response("cancel")
             dialog.set_close_response("cancel")
+            suspend_row_activation()
 
             def on_response(_dialog, response: str) -> None:
                 if response != "remove":
+                    restore_row_activation()
                     return
                 try:
                     self.store.clear_alias(device_id)
                 except OSError as exc:
+                    restore_row_activation()
                     self._show_error(
                         tr("No se pudo guardar el alias"),
                         str(exc),
                     )
                     return
+                restore_row_activation()
                 update_state()
 
             dialog.connect("response", on_response)
@@ -683,6 +701,7 @@ class DeviceManager(Gtk.Box):
             if self.store.alias_for(device_id):
                 confirm_clear_alias()
                 return
+            suspend_row_activation()
             editing = True
             title.set_visible(False)
             entry = Gtk.Entry()
@@ -738,6 +757,7 @@ class DeviceManager(Gtk.Box):
 
         button.connect("clicked", on_clicked)
         update_state()
+        return lambda: editing or suspended_activatable is not None
 
     def _add_hover_button(
         self,
@@ -780,12 +800,20 @@ class DeviceManager(Gtk.Box):
             row.set_tooltip_text(
                 tr("Abrir {filename}", filename=device.filename)
             )
+        self._add_device_icon(row, device.id)
+        alias_active = self._add_alias_control(
+            row,
+            device.id,
+            device.name,
+        )
         row.connect(
             "activated",
-            lambda _row, selected=device: self._open_known_rule(selected),
+            lambda _row, selected=device: (
+                None
+                if alias_active()
+                else self._open_known_rule(selected)
+            ),
         )
-        self._add_device_icon(row, device.id)
-        self._add_alias_control(row, device.id, device.name)
 
         if removable:
             hide = Gtk.Button(
