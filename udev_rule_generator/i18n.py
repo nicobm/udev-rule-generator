@@ -81,6 +81,9 @@ _EN.update(
             "Enable or disable saved rules.  Connected controllers have a "
             "green tag."
         ),
+        "Activá o desactivá las reglas guardadas.": (
+            "Enable or disable saved rules."
+        ),
         "Conectá un mando para crear su primera regla.": (
             "Connect a controller to create its first rule."
         ),

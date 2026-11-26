@@ -10,7 +10,7 @@ from udev_rule_generator.host import Host
 from udev_rule_generator.i18n import tr
 from udev_rule_generator.known import KnownDevice, KnownDevices
 from udev_rule_generator.privileged import install_rule_files, remove_rule_files
-from udev_rule_generator.rules import RuleAction, RuleSpec, build_rule
+from udev_rule_generator.rules import RuleAction, build_rule
 from udev_rule_generator.userconfig import device_identity
 
 from .gi_compat import Adw, GLib, Gtk
@@ -33,7 +33,6 @@ class DeviceManager(Gtk.Box):
         self.parent_window = parent
         self.on_changed = on_changed
         self._connected: list[Joystick] = []
-        self._visible_known: list[KnownDevice] = []
         self._rows: list[Gtk.Widget] = []
         self._controls: list[Gtk.Widget] = []
         self._known_busy = False
@@ -43,20 +42,9 @@ class DeviceManager(Gtk.Box):
         self.reload()
 
     def _build_ui(self) -> None:
-        self.master_group = Adw.PreferencesGroup()
-        self.master_group.set_separate_rows(True)
-        self.master_row = Adw.SwitchRow(title=tr("Activar todos"))
-        self.master_row.connect("notify::active", self._on_master_toggled)
-        self.master_group.add(self.master_row)
-        self.master_group.set_visible(False)
-        self.append(self.master_group)
-
         self.devices_group = Adw.PreferencesGroup(
             title=tr("Gestionar dispositivos"),
-            description=tr(
-                "Activá o desactivá las reglas guardadas.  Los mandos "
-                "conectados llevan una etiqueta verde."
-            ),
+            description=tr("Activá o desactivá las reglas guardadas."),
         )
         self.devices_group.set_separate_rows(True)
         self.devices_group.set_hexpand(True)
@@ -83,7 +71,6 @@ class DeviceManager(Gtk.Box):
         self._controls.clear()
 
         known = self.store.devices()
-        self._visible_known = known
         connected = self._connected
         connected_ids = {device_identity(device) for device in connected}
         known_ids = {device.id for device in known}
@@ -104,8 +91,6 @@ class DeviceManager(Gtk.Box):
             row.set_activatable(False)
             self._append(row)
 
-        self.master_group.set_visible(bool(known))
-        self._update_master(known)
         self._apply_sensitivity()
         self._updating = False
 
@@ -167,114 +152,6 @@ class DeviceManager(Gtk.Box):
         badge.add_css_class("device-badge-connected")
         badge.set_valign(Gtk.Align.CENTER)
         return badge
-
-    def _update_master(self, devices: list[KnownDevice]) -> None:
-        active = sum(1 for device in devices if device.active)
-        self.master_row.set_active(bool(devices) and active == len(devices))
-
-    def _on_master_toggled(self, row: Adw.SwitchRow, _pspec) -> None:
-        if self._updating or self._known_busy:
-            return
-        activate = row.get_active()
-        targets = [
-            device
-            for device in self._visible_known
-            if device.active != activate
-        ]
-        if not targets:
-            self.reload()
-            return
-        self._set_busy(True)
-        thread = threading.Thread(
-            target=self._master_worker,
-            args=(targets, activate),
-            name="udev-rule-generator-known-all",
-            daemon=True,
-        )
-        thread.start()
-
-    def _master_worker(
-        self, devices: list[KnownDevice], activate: bool
-    ) -> None:
-        try:
-            if activate:
-                specs: list[tuple[KnownDevice, RuleSpec]] = []
-                for device in devices:
-                    spec = device.build_spec()
-                    if not spec.filename:
-                        raise ValueError(
-                            tr("No hay una regla guardada para activar.")
-                        )
-                    specs.append((device, spec))
-                files = {spec.filename: spec.content for _device, spec in specs}
-                trigger = (
-                    "add"
-                    if any(spec.trigger == "add" for _device, spec in specs)
-                    else "change"
-                )
-                install_rule_files(self.host, files, trigger=trigger)
-                updated = [
-                    device.update_from_spec(spec)
-                    for device, spec in specs
-                ]
-                try:
-                    self.store.update_many(updated)
-                except OSError as exc:
-                    message = self._bulk_message(len(devices), True) + (
-                        "  " + tr("No se pudo guardar el estado: {error}", error=exc)
-                    )
-                else:
-                    message = self._bulk_message(len(devices), True)
-            else:
-                filenames = list(
-                    dict.fromkeys(
-                        device.filename
-                        for device in devices
-                        if device.filename
-                    )
-                )
-                if not filenames:
-                    raise ValueError(
-                        tr("No hay reglas guardadas para desactivar.")
-                    )
-                remove_rule_files(self.host, filenames)
-                try:
-                    self.store.mark_inactive_by_filenames(filenames)
-                except OSError as exc:
-                    message = self._bulk_message(len(filenames), False) + (
-                        "  " + tr("No se pudo guardar el estado: {error}", error=exc)
-                    )
-                else:
-                    message = self._bulk_message(len(filenames), False)
-        except Exception as exc:  # noqa: BLE001 (se muestra al usuario)
-            GLib.idle_add(self._master_failed, str(exc))
-            return
-        GLib.idle_add(self._master_succeeded, message)
-
-    @staticmethod
-    def _bulk_message(count: int, activate: bool) -> str:
-        if activate:
-            if count == 1:
-                return tr("Se activó {count} dispositivo.", count=count)
-            return tr("Se activaron {count} dispositivos.", count=count)
-        if count == 1:
-            return tr("Se desactivó {count} dispositivo.", count=count)
-        return tr("Se desactivaron {count} dispositivos.", count=count)
-
-    def _master_succeeded(self, message: str) -> bool:
-        self._set_busy(False)
-        self.reload()
-        self.on_changed(message)
-        return False
-
-    def _master_failed(self, message: str) -> bool:
-        self._set_busy(False)
-        self.reload()
-        self._show_error(
-            tr("No se pudieron cambiar los dispositivos guardados"),
-            message,
-        )
-        return False
 
     def _enable_unknown(self, device: Joystick) -> None:
         if self._updating or self._known_busy:
@@ -412,7 +289,6 @@ class DeviceManager(Gtk.Box):
 
     def _apply_sensitivity(self) -> None:
         enabled = not self._known_busy
-        self.master_row.set_sensitive(enabled)
         for control in self._controls:
             control.set_sensitive(enabled)
 

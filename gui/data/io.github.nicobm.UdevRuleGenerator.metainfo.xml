@@ -64,6 +64,15 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.15.0" date="2026-11-26">
+      <description>
+        <p>
+          Removes the Enable all switch, simplifies the device list
+          description, and fixes the About dialog crash. The app continues to
+          use pkexec/polkit and never stores the password.
+        </p>
+      </description>
+    </release>
     <release version="0.14.0" date="2026-11-26">
       <description>
         <p>

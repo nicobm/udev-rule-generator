@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.15.0 - 2026-11-26
+
+- Removes the Enable all switch and the redundant “connected controllers have
+  a green tag” description.
+- Fixes the About dialog crash caused by the missing `Gtk.License.MIT` enum.
+- Documents that the app uses pkexec/polkit, not sudo, and never stores the
+  password.
+
 ## 0.14.0 - 2026-11-26
 
 - Removes hidden devices and the hidden-devices menu entry. The hamburger menu

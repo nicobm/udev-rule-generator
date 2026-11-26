@@ -98,20 +98,22 @@ class Application(Adw.Application):
         window = self.window or self.get_active_window()
         if window is None:
             return
-        license_type = getattr(Gtk.License, "MIT_X11", Gtk.License.MIT)
         try:
-            dialog = Adw.AboutDialog(
-                application_name=tr(APP_NAME),
-                application_icon=APP_ID,
-                developer_name="Nicolás (nicobm)",
-                version=__version__,
-                developers=["Nicolás (nicobm)"],
-                copyright="© 2026 Nicolás",
-                license_type=license_type,
-                website=PROJECT_URL,
-                issue_url=ISSUE_URL,
-                comments=tr(APP_SUMMARY),
-            )
+            details = {
+                "application_name": tr(APP_NAME),
+                "application_icon": APP_ID,
+                "developer_name": "Nicolás (nicobm)",
+                "version": __version__,
+                "developers": ["Nicolás (nicobm)"],
+                "copyright": "© 2026 Nicolás",
+                "website": PROJECT_URL,
+                "issue_url": ISSUE_URL,
+                "comments": tr(APP_SUMMARY),
+            }
+            license_type = getattr(Gtk.License, "MIT_X11", None)
+            if license_type is not None:
+                details["license_type"] = license_type
+            dialog = Adw.AboutDialog(**details)
             dialog.connect("closed", self._on_about_closed)
             self._about_dialog = dialog
             dialog.present(window)
