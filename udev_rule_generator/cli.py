@@ -8,9 +8,10 @@ import os
 import sys
 from typing import Iterable, Sequence
 
-from . import APP_NAME, ISSUE_URL, PROJECT_URL, __version__, version_string
+from . import ISSUE_URL, PROJECT_URL, __version__, version_string
 from .devices import Joystick, detect_joysticks, find_joystick
 from .host import CommandNotAvailable, Host, HostError
+from .i18n import tr
 from .installed import list_installed_rules
 from .presets import (
     ALL_PRESETS,
@@ -81,7 +82,7 @@ def _confirm(prompt: str, *, default: bool = False) -> bool:
 def _print_banner(colors: Colors) -> None:
     print()
     print(colors.bold(version_string()))
-    print(colors.dim("Reglas udev para permitir o ignorar joysticks y gamepads"))
+    print(colors.dim(tr("Reglas udev para permitir o ignorar joysticks y gamepads")))
     print(colors.dim(PROJECT_URL))
     print()
 
@@ -89,28 +90,38 @@ def _print_banner(colors: Colors) -> None:
 def _print_devices(devices: Iterable[Joystick], colors: Colors) -> None:
     items = list(devices)
     if not items:
-        print(colors.yellow("No se detectaron joysticks conectados."))
+        print(colors.yellow(tr("No se detectaron joysticks conectados.")))
         print(
             colors.dim(
-                "Conectá un mando por USB o Bluetooth y volvé a intentarlo. "
-                "Si ya está conectado, revisá que udev lo vea con: udevadm info --export-db"
+                tr(
+                    "Conectá un mando por USB o Bluetooth y volvé a intentarlo. "
+                    "Si ya está conectado, revisá que udev lo vea con: "
+                    "udevadm info --export-db"
+                )
             )
         )
         return
     for index, device in enumerate(items, start=1):
         print(f"  {colors.bold(str(index).rjust(2))}) {colors.bold(device.display_name)}")
-        print(
-            f"      {colors.cyan(device.bus_label)} · {device.identifier}"
-            + (f" · serial {device.serial}" if device.serial else "")
-        )
+        serial = f" · serial {device.serial}" if device.serial else ""
+        print(f"      {colors.cyan(device.bus_label)} · {device.identifier}{serial}")
         print(f"      {colors.dim(device.nodes_label)}")
         if device.input_names and device.input_names[0] != device.display_name:
-            print(f"      {colors.dim('nombre de entrada: ' + device.input_names[0])}")
+            print(
+                f"      {colors.dim(tr('nombre de entrada: ') + device.input_names[0])}"
+            )
 
 
 def _print_rule_preview(spec: RuleSpec, colors: Colors) -> None:
     print()
-    print(colors.bold(f"Vista previa: /etc/udev/rules.d/{spec.filename}"))
+    print(
+        colors.bold(
+            tr(
+                "Vista previa: /etc/udev/rules.d/{filename}",
+                filename=spec.filename,
+            )
+        )
+    )
     print(colors.dim("─" * 72))
     for line in spec.content.rstrip().splitlines():
         if line.startswith("#"):
@@ -122,11 +133,19 @@ def _print_rule_preview(spec: RuleSpec, colors: Colors) -> None:
 
 def _print_install_result(result: InstallResult, colors: Colors) -> None:
     for filename in result.filenames:
-        print(colors.green(f"✓ Instalada: {result.target_dir}/{filename}"))
+        print(
+            colors.green(
+                tr(
+                    "✓ Instalada: {path}/{filename}",
+                    path=result.target_dir,
+                    filename=filename,
+                )
+            )
+        )
     if result.used_pkexec:
-        print(colors.dim("  Instalada con autenticación de polkit."))
+        print(colors.dim(tr("  Instalada con autenticación de polkit.")))
     if result.reloaded:
-        print(colors.dim("  Reglas recargadas con udevadm."))
+        print(colors.dim(tr("  Reglas recargadas con udevadm.")))
     elif result.warning:
         print(colors.yellow(f"  {result.warning}"))
 
@@ -152,7 +171,7 @@ def _confirm_and_install(
             print(colors.bold(f"--- {filename} ---"))
             print(content.rstrip())
         print()
-        print(colors.dim("Modo --dry-run: no se escribió nada."))
+        print(colors.dim(tr("Modo --dry-run: no se escribió nada.")))
         return 0
 
     if not assume_yes:
@@ -160,8 +179,10 @@ def _confirm_and_install(
             print()
             print(
                 colors.yellow(
-                    "Se generó la regla, pero no se instaló porque la entrada no es "
-                    "interactiva. Usá --yes para instalarla."
+                    tr(
+                        "Se generó la regla, pero no se instaló porque la entrada no es "
+                        "interactiva. Usá --yes para instalarla."
+                    )
                 )
             )
             for filename, content in files.items():
@@ -169,11 +190,17 @@ def _confirm_and_install(
                 print(colors.bold(f"--- {filename} ---"))
                 print(content.rstrip())
             return 0
-        if not _confirm("¿Instalar en /etc/udev/rules.d con permisos de administrador?"):
-            print(colors.dim("No se instaló nada."))
+        if not _confirm(
+            tr("¿Instalar en /etc/udev/rules.d con permisos de administrador?")
+        ):
+            print(colors.dim(tr("No se instaló nada.")))
             return 0
 
-    print(colors.dim("Se abrirá el diálogo de autenticación de polkit/GNOME..."))
+    print(
+        colors.dim(
+            tr("Se abrirá el diálogo de autenticación de polkit/GNOME...")
+        )
+    )
     result = install_rule_files(host, files, trigger=trigger)
     _print_install_result(result, colors)
     return 0
@@ -208,33 +235,56 @@ def _cmd_installed(
         missing = [filename for filename in remove if filename not in available]
         if missing:
             raise ValueError(
-                "No se encontraron reglas administradas por esta aplicación: "
-                + ", ".join(missing)
+                tr(
+                    "No se encontraron reglas administradas por esta aplicación: "
+                    "{names}",
+                    names=", ".join(missing),
+                )
             )
         for filename in remove:
             validate_rule_filename(filename)
         if not assume_yes:
             if not sys.stdin.isatty():
-                raise ValueError("Para eliminar reglas sin interacción usá --yes.")
-            if not _confirm("¿Eliminar " + ", ".join(remove) + "?"):
-                print(colors.dim("No se eliminó nada."))
+                raise ValueError(
+                    tr("Para eliminar reglas sin interacción usá --yes.")
+                )
+            if not _confirm(
+                tr("¿Eliminar {names}?", names=", ".join(remove))
+            ):
+                print(colors.dim(tr("No se eliminó nada.")))
                 return 0
-        print(colors.dim("Se abrirá el diálogo de autenticación de polkit/GNOME..."))
+        print(
+            colors.dim(
+                tr("Se abrirá el diálogo de autenticación de polkit/GNOME...")
+            )
+        )
         result = remove_rule_files(host, list(remove))
         for filename in result.filenames:
-            print(colors.green(f"✓ Eliminada: {result.target_dir}/{filename}"))
+            print(
+                colors.green(
+                    tr(
+                        "✓ Eliminada: {path}/{filename}",
+                        path=result.target_dir,
+                        filename=filename,
+                    )
+                )
+            )
         if result.reloaded:
-            print(colors.dim("  Reglas recargadas con udevadm."))
+            print(colors.dim(tr("  Reglas recargadas con udevadm.")))
         return 0
 
     if as_json:
         print(json.dumps([rule.to_dict() for rule in rules], ensure_ascii=False, indent=2))
         return 0
     if not rules:
-        print(colors.dim("No hay reglas administradas por esta aplicación."))
+        print(
+            colors.dim(
+                tr("No hay reglas administradas por esta aplicación.")
+            )
+        )
         return 0
     for rule in rules:
-        kind = "generada" if rule.kind == "generated" else "preconfigurada"
+        kind = tr("generada") if rule.kind == "generated" else tr("preconfigurada")
         print(f"  {colors.bold(rule.filename)}")
         print(f"      {rule.title} · {colors.dim(kind)}")
         if rule.source:
@@ -249,7 +299,11 @@ def _print_presets(presets: Iterable[Preset], colors: Colors) -> None:
         print(
             "      "
             + colors.dim(
-                f"instala /etc/udev/rules.d/{preset.install_name} · {preset.license}"
+                tr(
+                    "instala /etc/udev/rules.d/{filename} · {license}",
+                    filename=preset.install_name,
+                    license=preset.license,
+                )
             )
         )
 
@@ -263,11 +317,11 @@ def _install_presets(
     colors: Colors,
 ) -> int:
     if not presets:
-        print(colors.yellow("No se seleccionó ninguna regla."))
+        print(colors.yellow(tr("No se seleccionó ninguna regla.")))
         return 0
     files = preset_files(presets)
     print()
-    print(colors.bold("Se instalarán:"))
+    print(colors.bold(tr("Se instalarán:")))
     for preset in presets:
         print(f"  · {preset.install_name}  ({preset.title})")
     return _confirm_and_install(
@@ -291,18 +345,20 @@ def _cmd_presets(
     if selection in {"menu", "interactive"}:
         if not sys.stdin.isatty():
             raise ValueError(
-                "Elegí una selección: recommended, optional, steam, all o el "
-                "id de una regla."
+                tr(
+                    "Elegí una selección: recommended, optional, steam, all o el "
+                    "id de una regla."
+                )
             )
         print()
-        print(colors.bold("Reglas preconfiguradas"))
-        print("  1) Microsoft Xbox (recomendada)")
-        print("  2) ASRock LED (opcional; solo si tenés ese hardware)")
-        print("  3) Toda la biblioteca game-devices-udev (fabiscafe)")
-        print("  4) Steam / SteamVR (Valve)")
-        print("  5) Elegir fabricantes de fabiscafe")
-        print("  6) Volver")
-        choice = _ask("\nSelección: ")
+        print(colors.bold(tr("Reglas preconfiguradas")))
+        print(tr("  1) Microsoft Xbox (recomendada)"))
+        print(tr("  2) ASRock LED (opcional; solo si tenés ese hardware)"))
+        print(tr("  3) Toda la biblioteca game-devices-udev (fabiscafe)"))
+        print(tr("  4) Steam / SteamVR (Valve)"))
+        print(tr("  5) Elegir fabricantes de fabiscafe"))
+        print(tr("  6) Volver"))
+        choice = _ask(tr("\nSelección: "))
         if choice in {"6", "q", ""}:
             return 0
         if choice == "1":
@@ -316,7 +372,7 @@ def _cmd_presets(
         elif choice == "5":
             _print_presets(UPSTREAM, colors)
             raw = _ask(
-                "\nNúmeros separados por coma (por ejemplo 1,3,7): "
+                tr("\nNúmeros separados por coma (por ejemplo 1,3,7): ")
             )
             try:
                 indexes = {
@@ -332,7 +388,7 @@ def _cmd_presets(
                 if index in indexes
             ]
         else:
-            print(colors.red("Selección no válida."))
+            print(colors.red(tr("Selección no válida.")))
             return 1
         return _install_presets(
             host,
@@ -368,10 +424,13 @@ def _cmd_device(
     device = find_joystick(devices, selector)
     if device is None:
         if not devices:
-            raise ValueError("No se detectaron joysticks conectados.")
+            raise ValueError(tr("No se detectaron joysticks conectados."))
         raise ValueError(
-            f"No se encontró un único joystick que coincida con {selector!r}. "
-            "Usá --list para ver los disponibles."
+            tr(
+                "No se encontró un único joystick que coincida con {selector!r}. "
+                "Usá --list para ver los disponibles.",
+                selector=selector,
+            )
         )
     action = _resolve_action(action_value, device)
     spec = build_rule(device, action)
@@ -381,13 +440,15 @@ def _cmd_device(
     if action is RuleAction.IGNORE and device.is_bluetooth:
         print(
             colors.yellow(
-                "Aviso: en Bluetooth el ignorar es best effort; se deniega el "
-                "acceso a los nodos de entrada, pero el dispositivo puede seguir "
-                "existiendo para root."
+                tr(
+                    "Aviso: en Bluetooth el ignorar es best effort; se deniega el "
+                    "acceso a los nodos de entrada, pero el dispositivo puede seguir "
+                    "existiendo para root."
+                )
             )
         )
     if dry_run:
-        print(colors.dim("Modo --dry-run: no se escribió nada."))
+        print(colors.dim(tr("Modo --dry-run: no se escribió nada.")))
         return 0
     return _confirm_and_install(
         host,
@@ -403,14 +464,24 @@ def _interactive_device(host: Host, args: argparse.Namespace, colors: Colors) ->
     while True:
         devices = detect_joysticks(host)
         print()
-        print(colors.bold("Joysticks detectados"))
+        print(colors.bold(tr("Joysticks detectados")))
         _print_devices(devices, colors)
         if not devices:
-            print(colors.dim("\nVolvé al menú y actualizá después de conectar el mando."))
+            print(
+                colors.dim(
+                    tr(
+                        "\nVolvé al menú y actualizá después de conectar el mando."
+                    )
+                )
+            )
             return
         print()
-        print(colors.dim("  r) Actualizar   p) Reglas preconfiguradas   q) Volver"))
-        selection = _ask("\nElegí un número: ").casefold()
+        print(
+            colors.dim(
+                tr("  r) Actualizar   p) Reglas preconfiguradas   q) Volver")
+            )
+        )
+        selection = _ask(tr("\nElegí un número: ")).casefold()
         if selection in {"q", "volver", ""}:
             return
         if selection == "r":
@@ -420,55 +491,78 @@ def _interactive_device(host: Host, args: argparse.Namespace, colors: Colors) ->
             continue
         device = find_joystick(devices, selection)
         if device is None:
-            print(colors.red("Selección no válida."))
+            print(colors.red(tr("Selección no válida.")))
             continue
 
         print()
         print(colors.bold(device.display_name))
         print(colors.dim(device.hardware_label))
         if device.input_names:
-            print(colors.dim("Nombres de entrada: " + ", ".join(device.input_names)))
+            print(
+                colors.dim(
+                    tr(
+                        "Nombres de entrada: {names}",
+                        names=", ".join(device.input_names),
+                    )
+                )
+            )
         print()
-        print(colors.bold("¿Qué querés hacer con este dispositivo?"))
-        print(f"  1) {colors.green('Permitir / detectar')}  ({RuleAction.ALLOW.description})")
-        print(f"  2) {colors.yellow('Ignorar')}            ({RuleAction.IGNORE.description})")
-        print("  3) Volver")
-        choice = _ask("\nAcción: ")
+        print(colors.bold(tr("¿Qué querés hacer con este dispositivo?")))
+        print(
+            f"  1) {colors.green(tr('Permitir / detectar'))}  "
+            f"({RuleAction.ALLOW.description})"
+        )
+        print(
+            f"  2) {colors.yellow(tr('Ignorar'))}            "
+            f"({RuleAction.IGNORE.description})"
+        )
+        print(tr("  3) Volver"))
+        choice = _ask(tr("\nAcción: "))
         if choice in {"3", "q", ""}:
             return
         if choice not in {"1", "2"}:
-            print(colors.red("Acción no válida."))
+            print(colors.red(tr("Acción no válida.")))
             continue
         action = RuleAction.ALLOW if choice == "1" else RuleAction.IGNORE
         try:
             spec = build_rule(device, action)
         except ValueError as exc:
-            print(colors.red(f"No se pudo generar la regla: {exc}"))
+            print(
+                colors.red(
+                    tr("No se pudo generar la regla: {error}", error=exc)
+                )
+            )
             return
         _print_rule_preview(spec, colors)
         if action is RuleAction.IGNORE and device.is_bluetooth:
             print(
                 colors.yellow(
-                    "Aviso: en Bluetooth no se puede desautorizar el USB. La regla "
-                    "deniega el acceso a los nodos de entrada; es un ignorar "
-                    "'best effort'."
+                    tr(
+                        "Aviso: en Bluetooth no se puede desautorizar el USB. La regla "
+                        "deniega el acceso a los nodos de entrada; es un ignorar "
+                        "'best effort'."
+                    )
                 )
             )
         if _confirm(
-            "¿Instalar en /etc/udev/rules.d con permisos de administrador?",
+            tr("¿Instalar en /etc/udev/rules.d con permisos de administrador?"),
             default=False,
         ):
-            print(colors.dim("Se abrirá el diálogo de autenticación de polkit/GNOME..."))
+            print(
+                colors.dim(
+                    tr("Se abrirá el diálogo de autenticación de polkit/GNOME...")
+                )
+            )
             try:
                 result = install_rule_files(
                     host, {spec.filename: spec.content}, trigger=spec.trigger
                 )
             except (HostError, CommandNotAvailable) as exc:
-                print(colors.red(f"Error: {exc}"))
+                print(colors.red(tr("Error: {error}", error=exc)))
                 return
             _print_install_result(result, colors)
         else:
-            print(colors.dim("No se instaló nada."))
+            print(colors.dim(tr("No se instaló nada.")))
         return
 
 
@@ -485,20 +579,20 @@ def _interactive_presets(host: Host, args: argparse.Namespace, colors: Colors) -
 def _interactive_installed(host: Host, colors: Colors) -> None:
     rules = list_installed_rules(host)
     print()
-    print(colors.bold("Reglas instaladas por esta aplicación"))
+    print(colors.bold(tr("Reglas instaladas por esta aplicación")))
     if not rules:
-        print(colors.dim("No hay reglas administradas."))
+        print(colors.dim(tr("No hay reglas administradas.")))
         return
     for index, rule in enumerate(rules, start=1):
-        kind = "generada" if rule.kind == "generated" else "preconfigurada"
+        kind = tr("generada") if rule.kind == "generated" else tr("preconfigurada")
         print(f"  {colors.bold(str(index).rjust(2))}) {rule.filename}")
         print(f"      {rule.title} · {colors.dim(kind)}")
         if rule.source:
             print(f"      {colors.dim(rule.source)}")
     print()
-    if not _confirm("¿Eliminar alguna regla?", default=False):
+    if not _confirm(tr("¿Eliminar alguna regla?"), default=False):
         return
-    raw = _ask("Números separados por coma: ")
+    raw = _ask(tr("Números separados por coma: "))
     indexes = {
         int(part.strip()) for part in raw.split(",") if part.strip().isdigit()
     }
@@ -506,32 +600,45 @@ def _interactive_installed(host: Host, colors: Colors) -> None:
         rule for index, rule in enumerate(rules, start=1) if index in indexes
     ]
     if not selected:
-        print(colors.dim("No se seleccionó ninguna regla."))
+        print(colors.dim(tr("No se seleccionó ninguna regla.")))
         return
-    if not _confirm("¿Eliminar " + ", ".join(rule.filename for rule in selected) + "?"):
-        print(colors.dim("No se eliminó nada."))
+    if not _confirm(
+        tr(
+            "¿Eliminar {names}?",
+            names=", ".join(rule.filename for rule in selected),
+        )
+    ):
+        print(colors.dim(tr("No se eliminó nada.")))
         return
     try:
         result = remove_rule_files(host, [rule.filename for rule in selected])
     except (HostError, CommandNotAvailable) as exc:
-        print(colors.red(f"Error: {exc}"))
+        print(colors.red(tr("Error: {error}", error=exc)))
         return
     for filename in result.filenames:
-        print(colors.green(f"✓ Eliminada: {result.target_dir}/{filename}"))
+        print(
+            colors.green(
+                tr(
+                    "✓ Eliminada: {path}/{filename}",
+                    path=result.target_dir,
+                    filename=filename,
+                )
+            )
+        )
 
 
 def _interactive(host: Host, args: argparse.Namespace) -> int:
     colors = _colors()
     _print_banner(colors)
     while True:
-        print(colors.bold("Menú principal"))
-        print("  1) Listar y configurar un joystick")
-        print("  2) Instalar reglas preconfiguradas")
-        print("  3) Ver o eliminar reglas instaladas")
-        print("  4) Salir")
-        choice = _ask("\nOpción: ").casefold()
+        print(colors.bold(tr("Menú principal")))
+        print(tr("  1) Listar y configurar un joystick"))
+        print(tr("  2) Instalar reglas preconfiguradas"))
+        print(tr("  3) Ver o eliminar reglas instaladas"))
+        print(tr("  4) Salir"))
+        choice = _ask(tr("\nOpción: ")).casefold()
         if choice in {"4", "q", "salir", "exit"}:
-            print(colors.dim("Hasta luego."))
+            print(colors.dim(tr("Hasta luego.")))
             return 0
         if choice in {"1", "j", "joystick"}:
             _interactive_device(host, args, colors)
@@ -540,18 +647,18 @@ def _interactive(host: Host, args: argparse.Namespace) -> int:
         elif choice in {"3", "r", "reglas"}:
             _interactive_installed(host, colors)
         else:
-            print(colors.red("Opción no válida."))
+            print(colors.red(tr("Opción no válida.")))
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="udev-rule-generator",
-        description=(
+        description=tr(
             "Crea reglas udev para permitir o ignorar joysticks.  Sin argumentos "
             "abre el menú interactivo; con --gui abre la interfaz gráfica."
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog=(
+        epilog=tr(
             "Ejemplos:\n"
             "  udev-rule-generator --gui\n"
             "  udev-rule-generator --list\n"
@@ -563,8 +670,10 @@ def build_parser() -> argparse.ArgumentParser:
             "  udev-rule-generator --presets asrock-led-disable\n"
             "  udev-rule-generator --presets all --yes\n"
             "  udev-rule-generator --installed\n\n"
-            f"Proyecto: {PROJECT_URL}\n"
-            f"Problemas: {ISSUE_URL}"
+            "Proyecto: {project}\n"
+            "Problemas: {issues}",
+            project=PROJECT_URL,
+            issues=ISSUE_URL,
         ),
     )
     parser.add_argument(
@@ -575,34 +684,34 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--gui",
         action="store_true",
-        help="abre la interfaz gráfica GTK4/libadwaita",
+        help=tr("abre la interfaz gráfica GTK4/libadwaita"),
     )
     parser.add_argument(
         "--list",
         action="store_true",
-        help="lista los joysticks detectados y sale",
+        help=tr("lista los joysticks detectados y sale"),
     )
     parser.add_argument(
         "--json",
         action="store_true",
-        help="salida JSON para --list o --installed",
+        help=tr("salida JSON para --list o --installed"),
     )
     parser.add_argument(
         "--device",
         metavar="ID",
-        help="índice, VID:PID o parte del nombre del joystick",
+        help=tr("índice, VID:PID o parte del nombre del joystick"),
     )
     parser.add_argument(
         "--action",
         choices=[action.value for action in RuleAction],
-        help="acción a aplicar con --device",
+        help=tr("acción a aplicar con --device"),
     )
     parser.add_argument(
         "--presets",
         nargs="?",
         const="menu",
-        metavar="SELECCIÓN",
-        help=(
+        metavar=tr("SELECCIÓN"),
+        help=tr(
             "instala reglas preconfiguradas: recommended, optional, steam, all "
             "o un id (por ejemplo steam-input).  Sin valor abre el menú"
         ),
@@ -610,25 +719,25 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--installed",
         action="store_true",
-        help="lista las reglas instaladas por esta aplicación",
+        help=tr("lista las reglas instaladas por esta aplicación"),
     )
     parser.add_argument(
         "--remove",
         action="append",
         default=[],
-        metavar="ARCHIVO.rules",
-        help="elimina una regla administrada (se puede repetir)",
+        metavar=tr("ARCHIVO.rules"),
+        help=tr("elimina una regla administrada (se puede repetir)"),
     )
     parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="muestra las reglas sin instalarlas",
+        help=tr("muestra las reglas sin instalarlas"),
     )
     parser.add_argument(
         "--yes",
         "-y",
         action="store_true",
-        help="no pide confirmación antes de llamar a pkexec",
+        help=tr("no pide confirmación antes de llamar a pkexec"),
     )
     return parser
 
@@ -655,11 +764,16 @@ def main(argv: Sequence[str] | None = None) -> int:
                 )
             )
             if conflicting:
-                parser.error("--gui no se puede combinar con otras opciones.")
+                parser.error(
+                    tr("--gui no se puede combinar con otras opciones.")
+                )
             try:
                 from gui.main import main as gui_main
             except ImportError as exc:
-                print(f"error: no se pudo cargar la GUI: {exc}", file=sys.stderr)
+                print(
+                    tr("error: no se pudo cargar la GUI: {error}", error=exc),
+                    file=sys.stderr,
+                )
                 return 1
             return gui_main([sys.argv[0]])
 
@@ -691,16 +805,16 @@ def main(argv: Sequence[str] | None = None) -> int:
                 colors=colors,
             )
         if args.action:
-            parser.error("--action requiere --device.")
+            parser.error(tr("--action requiere --device."))
         if not sys.stdin.isatty() or not sys.stdout.isatty():
             parser.print_help()
             return 2
         return _interactive(host, args)
     except KeyboardInterrupt:
-        print("\nCancelado.", file=sys.stderr)
+        print(tr("\nCancelado."), file=sys.stderr)
         return 130
     except (HostError, CommandNotAvailable, ValueError, KeyError) as exc:
-        print(f"error: {exc}", file=sys.stderr)
+        print(tr("error: {error}", error=exc), file=sys.stderr)
         return 1
 
 

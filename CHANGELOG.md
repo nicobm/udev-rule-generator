@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.5.0 - 2026-11-26
+
+- Autodetección de idioma: `en_US`/`en_GB` → inglés; cualquier español →
+  español; otros locales → español como respaldo.
+- Traducciones de GUI, CLI, diálogos, notificaciones, errores y cabeceras de
+  reglas generadas.
+- Añade nombre/descripción en inglés al `.desktop` y al metainfo.
+- Arregla el diálogo de dispositivo: el texto largo del pie ahora se ajusta y
+  los botones Cancelar/Instalar quedan visibles.
+- Aumenta el tamaño del diálogo de dispositivo.
+
 ## 0.4.0 - 2026-11-26
 
 - Centra correctamente el icono dentro del avatar de cada dispositivo.

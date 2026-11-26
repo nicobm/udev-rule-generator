@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .devices import Joystick
+from .i18n import tr
 
 
 def default_config_path() -> Path:
@@ -42,7 +43,7 @@ def bus_label(bus: str) -> str:
         "i2c": "I2C",
         "pci": "PCI",
         "platform": "Platform",
-    }.get(bus, bus.title() if bus else "Bus desconocido")
+    }.get(bus, bus.title() if bus else tr("Bus desconocido"))
 
 
 @dataclass(frozen=True)
@@ -62,7 +63,7 @@ class HiddenDevice:
     def identifier(self) -> str:
         if self.vendor_id and self.product_id:
             return f"{self.vendor_id}:{self.product_id}"
-        return "VID/PID desconocido"
+        return tr("VID/PID desconocido")
 
     @property
     def bus_label(self) -> str:
@@ -85,7 +86,7 @@ class HiddenDevice:
     def from_dict(cls, data: dict[str, object]) -> "HiddenDevice":
         return cls(
             id=str(data.get("id", "")),
-            name=str(data.get("name", "Dispositivo")),
+            name=str(data.get("name", tr("Dispositivo"))),
             vendor_id=str(data.get("vendor_id", "")),
             product_id=str(data.get("product_id", "")),
             bus=str(data.get("bus", "")),

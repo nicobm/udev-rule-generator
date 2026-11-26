@@ -6,6 +6,7 @@ import threading
 from typing import Callable
 
 from udev_rule_generator.host import Host
+from udev_rule_generator.i18n import tr
 from udev_rule_generator.installed import InstalledRule, list_installed_rules
 from udev_rule_generator.privileged import remove_rule_files
 
@@ -31,7 +32,7 @@ class InstalledDialog(Adw.Dialog):
         self._rows: list[Adw.ActionRow] = []
         self._busy = False
 
-        self.set_title("Reglas instaladas")
+        self.set_title(tr("Reglas instaladas"))
         self.set_content_width(720)
         self.set_content_height(680)
         self._build_ui()
@@ -43,13 +44,13 @@ class InstalledDialog(Adw.Dialog):
         header = Adw.HeaderBar()
         header.set_title_widget(
             Adw.WindowTitle(
-                title="Reglas instaladas",
-                subtitle="Solo las creadas por esta aplicación",
+                title=tr("Reglas instaladas"),
+                subtitle=tr("Solo las creadas por esta aplicación"),
             )
         )
         close_button = Gtk.Button(
             icon_name="window-close-symbolic",
-            tooltip_text="Cerrar",
+            tooltip_text=tr("Cerrar"),
         )
         close_button.add_css_class("flat")
         close_button.connect("clicked", lambda *_: self.close())
@@ -65,15 +66,15 @@ class InstalledDialog(Adw.Dialog):
         spinner.start()
         loading = Adw.StatusPage(
             icon_name="document-open-symbolic",
-            title="Leyendo reglas instaladas…",
+            title=tr("Leyendo reglas instaladas…"),
         )
         loading.set_child(spinner)
         self.stack.add_named(loading, "loading")
 
         self.empty_page = Adw.StatusPage(
             icon_name="document-open-symbolic",
-            title="No hay reglas administradas",
-            description=(
+            title=tr("No hay reglas administradas"),
+            description=tr(
                 "Cuando instales una regla desde esta aplicación va a aparecer "
                 "acá, con la opción de eliminarla."
             ),
@@ -83,8 +84,8 @@ class InstalledDialog(Adw.Dialog):
         self.list_page = Adw.PreferencesPage()
         self.list_page.set_vexpand(True)
         self.group = Adw.PreferencesGroup(
-            title="Reglas instaladas",
-            description=(
+            title=tr("Reglas instaladas"),
+            description=tr(
                 "Podés eliminar una regla y udev se recargará automáticamente."
             ),
         )
@@ -135,7 +136,7 @@ class InstalledDialog(Adw.Dialog):
     def _load_failed(self, message: str) -> bool:
         self.stack.set_visible_child_name("empty")
         self.empty_page.set_description(
-            f"No se pudieron leer las reglas: {message}"
+            tr("No se pudieron leer las reglas: {error}", error=message)
         )
         return False
 
@@ -146,7 +147,7 @@ class InstalledDialog(Adw.Dialog):
         self._delete_buttons.clear()
 
         for rule in self._rules:
-            kind = "generada" if rule.kind == "generated" else "preconfigurada"
+            kind = tr("generada") if rule.kind == "generated" else tr("preconfigurada")
             subtitle = f"{rule.title} · {kind}"
             if rule.source:
                 subtitle = f"{subtitle} · {rule.source}"
@@ -155,7 +156,7 @@ class InstalledDialog(Adw.Dialog):
 
             delete = Gtk.Button(
                 icon_name="user-trash-symbolic",
-                tooltip_text=f"Eliminar {rule.filename}",
+                tooltip_text=tr("Eliminar {filename}", filename=rule.filename),
             )
             delete.add_css_class("flat")
             delete.add_css_class("destructive-action")
@@ -173,14 +174,15 @@ class InstalledDialog(Adw.Dialog):
         if self._busy:
             return
         dialog = Adw.AlertDialog(
-            heading="¿Eliminar la regla?",
-            body=(
-                f"Se eliminará /etc/udev/rules.d/{rule.filename} y se recargará "
-                "udev.  Esta acción necesita autenticación de administrador."
+            heading=tr("¿Eliminar la regla?"),
+            body=tr(
+                "Se eliminará /etc/udev/rules.d/{filename} y se recargará "
+                "udev.  Esta acción necesita autenticación de administrador.",
+                filename=rule.filename,
             ),
         )
-        dialog.add_response("cancel", "Cancelar")
-        dialog.add_response("remove", "Eliminar")
+        dialog.add_response("cancel", tr("Cancelar"))
+        dialog.add_response("remove", tr("Eliminar"))
         dialog.set_response_appearance(
             "remove", Adw.ResponseAppearance.DESTRUCTIVE
         )
@@ -216,17 +218,19 @@ class InstalledDialog(Adw.Dialog):
     def _remove_succeeded(self, result) -> bool:
         self._set_busy(False)
         for filename in result.filenames:
-            self.on_changed(f"Regla eliminada: {filename}")
+            self.on_changed(
+                tr("Regla eliminada: {filename}", filename=filename)
+            )
         self._reload()
         return False
 
     def _remove_failed(self, message: str) -> bool:
         self._set_busy(False)
         dialog = Adw.AlertDialog(
-            heading="No se pudo eliminar la regla",
+            heading=tr("No se pudo eliminar la regla"),
             body=message,
         )
-        dialog.add_response("close", "Cerrar")
+        dialog.add_response("close", tr("Cerrar"))
         root = self.get_root()
         dialog.present(root if root is not None else self.parent_window)
         return False
@@ -239,7 +243,7 @@ class InstalledDialog(Adw.Dialog):
         if busy:
             self.spinner.start()
             self.status.set_text(
-                "Esperando el diálogo de autenticación de GNOME/polkit…"
+                tr("Esperando el diálogo de autenticación de GNOME/polkit…")
             )
             return
         self.spinner.stop()

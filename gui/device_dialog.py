@@ -8,10 +8,11 @@ from typing import Callable
 from udev_rule_generator.devices import Joystick
 from udev_rule_generator.hidden import HiddenDevices
 from udev_rule_generator.host import Host
+from udev_rule_generator.i18n import tr
 from udev_rule_generator.privileged import install_rule_files
 from udev_rule_generator.rules import RuleAction, RuleSpec, build_rule
 
-from .gi_compat import Adw, Gdk, GLib, Gtk
+from .gi_compat import Adw, Gdk, GLib, Gtk, Pango
 
 
 class DeviceDialog(Adw.Dialog):
@@ -37,9 +38,9 @@ class DeviceDialog(Adw.Dialog):
         self._spec: RuleSpec | None = None
         self._busy = False
 
-        self.set_title("Configurar joystick")
-        self.set_content_width(720)
-        self.set_content_height(780)
+        self.set_title(tr("Configurar joystick"))
+        self.set_content_width(800)
+        self.set_content_height(820)
         self._build_ui()
         self._update_preview()
 
@@ -49,13 +50,13 @@ class DeviceDialog(Adw.Dialog):
         header = Adw.HeaderBar()
         header.set_title_widget(
             Adw.WindowTitle(
-                title="Configurar joystick",
+                title=tr("Configurar joystick"),
                 subtitle=self.device.display_name,
             )
         )
         copy_button = Gtk.Button(
             icon_name="edit-copy-symbolic",
-            tooltip_text="Copiar la regla al portapapeles",
+            tooltip_text=tr("Copiar la regla al portapapeles"),
         )
         copy_button.add_css_class("flat")
         copy_button.connect("clicked", lambda *_: self._copy_rule())
@@ -63,7 +64,7 @@ class DeviceDialog(Adw.Dialog):
 
         close_button = Gtk.Button(
             icon_name="window-close-symbolic",
-            tooltip_text="Cerrar",
+            tooltip_text=tr("Cerrar"),
         )
         close_button.add_css_class("flat")
         close_button.connect("clicked", lambda *_: self.close())
@@ -71,7 +72,7 @@ class DeviceDialog(Adw.Dialog):
         toolbar.add_top_bar(header)
 
         self.banner = Adw.Banner(
-            title=(
+            title=tr(
                 "En Bluetooth no se puede desautorizar el USB.  La regla de "
                 "ignorar deniega el acceso a los nodos de entrada, pero el "
                 "dispositivo puede seguir apareciendo para root."
@@ -92,55 +93,65 @@ class DeviceDialog(Adw.Dialog):
         toolbar.set_content(content)
 
         bottom = Gtk.Box(
-            orientation=Gtk.Orientation.HORIZONTAL,
-            spacing=10,
+            orientation=Gtk.Orientation.VERTICAL,
+            spacing=8,
         )
         bottom.set_margin_top(10)
         bottom.set_margin_bottom(10)
         bottom.set_margin_start(14)
         bottom.set_margin_end(14)
 
+        status_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         self.status_label = Gtk.Label(label="", xalign=0)
         self.status_label.set_hexpand(True)
+        self.status_label.set_wrap(True)
+        self.status_label.set_wrap_mode(Pango.WrapMode.WORD_CHAR)
         self.status_label.add_css_class("dim-label")
         self.spinner = Gtk.Spinner()
         self.spinner.set_visible(False)
-        cancel = Gtk.Button(label="Cancelar")
+        status_row.append(self.status_label)
+        status_row.append(self.spinner)
+
+        buttons = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        buttons.set_halign(Gtk.Align.END)
+        cancel = Gtk.Button(label=tr("Cancelar"))
         cancel.connect("clicked", lambda *_: self.close())
-        self.install_button = Gtk.Button(label="Instalar regla")
+        self.install_button = Gtk.Button(label=tr("Instalar regla"))
         self.install_button.add_css_class("suggested-action")
         self.install_button.connect("clicked", lambda *_: self._install())
+        buttons.append(cancel)
+        buttons.append(self.install_button)
 
-        bottom.append(self.status_label)
-        bottom.append(self.spinner)
-        bottom.append(cancel)
-        bottom.append(self.install_button)
+        bottom.append(status_row)
+        bottom.append(buttons)
         toolbar.add_bottom_bar(bottom)
         self.set_child(toolbar)
 
     def _build_info_group(self) -> Adw.PreferencesGroup:
         group = Adw.PreferencesGroup(
-            title="Dispositivo",
-            description="Datos leídos de udev para identificar el mando.",
+            title=tr("Dispositivo"),
+            description=tr("Datos leídos de udev para identificar el mando."),
         )
-        group.add(Adw.ActionRow(title="Nombre", subtitle=self.device.display_name))
+        group.add(Adw.ActionRow(title=tr("Nombre"), subtitle=self.device.display_name))
         hardware = " ".join(
             part for part in (self.device.vendor, self.device.model) if part
         )
         if hardware:
-            group.add(Adw.ActionRow(title="Fabricante y modelo", subtitle=hardware))
-        group.add(Adw.ActionRow(title="Bus", subtitle=self.device.bus_label))
+            group.add(
+                Adw.ActionRow(title=tr("Fabricante y modelo"), subtitle=hardware)
+            )
+        group.add(Adw.ActionRow(title=tr("Bus"), subtitle=self.device.bus_label))
         group.add(Adw.ActionRow(title="VID:PID", subtitle=self.device.identifier))
         if self.device.serial:
-            group.add(Adw.ActionRow(title="Serial", subtitle=self.device.serial))
+            group.add(Adw.ActionRow(title=tr("Serial"), subtitle=self.device.serial))
         if self.device.nodes:
             group.add(
-                Adw.ActionRow(title="Nodos", subtitle=", ".join(self.device.nodes))
+                Adw.ActionRow(title=tr("Nodos"), subtitle=", ".join(self.device.nodes))
             )
         if self.device.input_names:
             group.add(
                 Adw.ActionRow(
-                    title="Nombre de entrada",
+                    title=tr("Nombre de entrada"),
                     subtitle="\n".join(self.device.input_names),
                 )
             )
@@ -148,8 +159,8 @@ class DeviceDialog(Adw.Dialog):
 
     def _build_action_group(self) -> Adw.PreferencesGroup:
         group = Adw.PreferencesGroup(
-            title="Acción",
-            description=(
+            title=tr("Acción"),
+            description=tr(
                 "Permitir da acceso al usuario de la sesión y marca el "
                 "dispositivo como joystick.  Ignorar lo desautoriza (USB) o "
                 "deniega el acceso a sus nodos (Bluetooth)."
@@ -162,14 +173,14 @@ class DeviceDialog(Adw.Dialog):
 
         group.add(
             self._radio_row(
-                "Permitir / detectar",
+                tr("Permitir / detectar"),
                 RuleAction.ALLOW.description,
                 self.allow_radio,
             )
         )
         group.add(
             self._radio_row(
-                "Ignorar",
+                tr("Ignorar"),
                 RuleAction.IGNORE.description,
                 self.ignore_radio,
             )
@@ -190,15 +201,15 @@ class DeviceDialog(Adw.Dialog):
 
     def _build_visibility_group(self) -> Adw.PreferencesGroup:
         group = Adw.PreferencesGroup(
-            title="Visibilidad",
-            description=(
+            title=tr("Visibilidad"),
+            description=tr(
                 "Ocultar un dispositivo no borra sus reglas ni cambia permisos.  "
                 "Podés recuperarlo desde el menú → Dispositivos ocultos."
             ),
         )
         row = Adw.ActionRow(
-            title="Ocultar este dispositivo",
-            subtitle=(
+            title=tr("Ocultar este dispositivo"),
+            subtitle=tr(
                 "Se moverá a Dispositivos ocultos y dejará de aparecer en la "
                 "lista principal."
             ),
@@ -208,7 +219,7 @@ class DeviceDialog(Adw.Dialog):
         icon.set_valign(Gtk.Align.CENTER)
         row.add_prefix(icon)
 
-        button = Gtk.Button(label="Ocultar")
+        button = Gtk.Button(label=tr("Ocultar"))
         button.add_css_class("flat")
         button.set_valign(Gtk.Align.CENTER)
         button.connect("clicked", lambda *_: self._hide_device())
@@ -221,20 +232,23 @@ class DeviceDialog(Adw.Dialog):
             self.hidden_store.hide(self.device)
         except OSError as exc:
             dialog = Adw.AlertDialog(
-                heading="No se pudo ocultar el dispositivo",
-                body=f"No se pudo guardar la preferencia: {exc}",
+                heading=tr("No se pudo ocultar el dispositivo"),
+                body=tr(
+                    "No se pudo guardar la preferencia: {error}",
+                    error=exc,
+                ),
             )
-            dialog.add_response("close", "Cerrar")
+            dialog.add_response("close", tr("Cerrar"))
             root = self.get_root()
             dialog.present(root if root is not None else self.parent_window)
             return
-        self.on_hidden(f"Dispositivo oculto: {self.device.display_name}")
+        self.on_hidden(tr("Dispositivo oculto: {name}", name=self.device.display_name))
         self.close()
 
     def _build_preview_group(self) -> Adw.PreferencesGroup:
         group = Adw.PreferencesGroup(
-            title="Vista previa",
-            description=(
+            title=tr("Vista previa"),
+            description=tr(
                 "La regla se instalará en /etc/udev/rules.d: 10- para permitir "
                 "y 99- para ignorar (así la denegación se aplica al final)."
             ),
@@ -279,13 +293,18 @@ class DeviceDialog(Adw.Dialog):
             self._spec = build_rule(self.device, self._action())
         except ValueError as exc:
             self._spec = None
-            buffer.set_text(f"No se pudo generar la regla:\n{exc}")
-            self.status_label.set_text("No se puede instalar esta regla.")
+            buffer.set_text(
+                tr("No se pudo generar la regla:\n{error}", error=exc)
+            )
+            self.status_label.set_text(tr("No se puede instalar esta regla."))
             self.install_button.set_sensitive(False)
             return
         buffer.set_text(self._spec.content)
         self.status_label.set_text(
-            f"Se instalará como /etc/udev/rules.d/{self._spec.filename}"
+            tr(
+                "Se instalará como /etc/udev/rules.d/{filename}",
+                filename=self._spec.filename,
+            )
         )
         self.install_button.set_sensitive(not self._busy)
 
@@ -296,7 +315,7 @@ class DeviceDialog(Adw.Dialog):
         if display is None:
             return
         display.get_clipboard().set(self._spec.content)
-        self.status_label.set_text("Regla copiada al portapapeles.")
+        self.status_label.set_text(tr("Regla copiada al portapapeles."))
 
     def _install(self) -> None:
         if self._busy or self._spec is None:
@@ -325,17 +344,19 @@ class DeviceDialog(Adw.Dialog):
 
     def _install_succeeded(self, spec: RuleSpec, _result) -> bool:
         self._set_busy(False)
-        self.on_installed(f"Regla instalada: {spec.filename}")
+        self.on_installed(
+            tr("Regla instalada: {filename}", filename=spec.filename)
+        )
         self.close()
         return False
 
     def _install_failed(self, message: str) -> bool:
         self._set_busy(False)
         dialog = Adw.AlertDialog(
-            heading="No se pudo instalar la regla",
+            heading=tr("No se pudo instalar la regla"),
             body=message,
         )
-        dialog.add_response("close", "Cerrar")
+        dialog.add_response("close", tr("Cerrar"))
         root = self.get_root()
         dialog.present(root if root is not None else self.parent_window)
         return False
@@ -347,11 +368,14 @@ class DeviceDialog(Adw.Dialog):
         if busy:
             self.spinner.start()
             self.status_label.set_text(
-                "Esperando el diálogo de autenticación de GNOME/polkit…"
+                tr("Esperando el diálogo de autenticación de GNOME/polkit…")
             )
             return
         self.spinner.stop()
         if self._spec is not None:
             self.status_label.set_text(
-                f"Se instalará como /etc/udev/rules.d/{self._spec.filename}"
+                tr(
+                    "Se instalará como /etc/udev/rules.d/{filename}",
+                    filename=self._spec.filename,
+                )
             )

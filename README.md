@@ -168,6 +168,17 @@ de los avatares, las pills y la fuente monoespaciada de la vista previa.
 Las notificaciones usan `Gio.Notification`; en Flatpak GNOME las muestra a
 través del portal sin permisos extra.
 
+### Idioma
+
+La app detecta el locale al arrancar:
+
+- `en_US` o `en_GB` → inglés.
+- Cualquier variante de español (`es_ES`, `es_AR`, `es_MX`, etc.) → español.
+- Otros idiomas → español como respaldo.
+
+La detección se aplica a la GUI, la CLI, los diálogos, las notificaciones y las
+cabeceras de las reglas generadas.
+
 ## Flatpak
 
 El manifiesto está en la raíz:
@@ -237,7 +248,7 @@ Para un mando USB, el archivo se llama por ejemplo
 `10-gamepad-045e-0b12-microsoft-xbox-series-s-x-controller.rules` y contiene:
 
 ```udev
-# Generado por udev-rule-generator 0.4.0
+# Generado por udev-rule-generator 0.5.0
 # Generador de reglas udev
 # Dispositivo: Microsoft Xbox Series S|X Controller
 # Bus: USB · ID: 045e:0b12

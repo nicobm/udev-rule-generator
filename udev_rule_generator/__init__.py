@@ -7,7 +7,7 @@ El paquete no depende de bibliotecas externas: toda la detección se hace con
 
 from __future__ import annotations
 
-__version__ = "0.4.0"
+__version__ = "0.5.0"
 
 APP_ID = "io.github.nicobm.UdevRuleGenerator"
 APP_NAME = "Generador de reglas udev"
@@ -22,4 +22,6 @@ RULES_DIR = "/etc/udev/rules.d"
 
 def version_string() -> str:
     """Devuelve la versión con el nombre de la aplicación."""
-    return f"{APP_NAME} {__version__}"
+    from .i18n import tr
+
+    return f"{tr(APP_NAME)} {__version__}"

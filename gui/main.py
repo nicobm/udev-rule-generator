@@ -17,6 +17,8 @@ def _bootstrap() -> None:
 
 def main(argv=None) -> int:
     _bootstrap()
+    from udev_rule_generator.i18n import tr
+
     arguments = list(sys.argv if argv is None else argv)
 
     # La GUI también puede actuar como lanzador del CLI, útil dentro del
@@ -30,10 +32,13 @@ def main(argv=None) -> int:
         from gui.gi_compat import Adw, Gio, Gtk  # noqa: F401
     except (ImportError, ValueError) as exc:
         print(
-            "No se pudo cargar GTK4/libadwaita.\n"
-            "En Fedora instalá:\n"
-            "  sudo dnf install python3-gobject gtk4 libadwaita\n\n"
-            f"Detalle: {exc}",
+            tr(
+                "No se pudo cargar GTK4/libadwaita.\n"
+                "En Fedora instalá:\n"
+                "  sudo dnf install python3-gobject gtk4 libadwaita\n\n"
+                "Detalle: {error}",
+                error=exc,
+            ),
             file=sys.stderr,
         )
         return 1

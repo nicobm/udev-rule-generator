@@ -7,6 +7,7 @@ from typing import Callable
 
 from udev_rule_generator import PRESETS_URL, STEAM_DEVICES_URL
 from udev_rule_generator.host import Host
+from udev_rule_generator.i18n import tr
 from udev_rule_generator.presets import (
     OPTIONAL,
     RECOMMENDED,
@@ -43,7 +44,7 @@ class PresetsDialog(Adw.Dialog):
         self._updating = False
         self._busy = False
 
-        self.set_title("Reglas preconfiguradas")
+        self.set_title(tr("Reglas preconfiguradas"))
         self.set_content_width(760)
         self.set_content_height(820)
         self._build_ui()
@@ -55,13 +56,13 @@ class PresetsDialog(Adw.Dialog):
         header = Adw.HeaderBar()
         header.set_title_widget(
             Adw.WindowTitle(
-                title="Reglas preconfiguradas",
-                subtitle="Microsoft, ASRock/Steam opcionales y fabiscafe",
+                title=tr("Reglas preconfiguradas"),
+                subtitle=tr("Microsoft, ASRock/Steam opcionales y fabiscafe"),
             )
         )
         close_button = Gtk.Button(
             icon_name="window-close-symbolic",
-            tooltip_text="Cerrar",
+            tooltip_text=tr("Cerrar"),
         )
         close_button.add_css_class("flat")
         close_button.connect("clicked", lambda *_: self.close())
@@ -72,8 +73,8 @@ class PresetsDialog(Adw.Dialog):
         page.set_vexpand(True)
 
         intro = Adw.PreferencesGroup(
-            title="¿Qué se instala?",
-            description=(
+            title=tr("¿Qué se instala?"),
+            description=tr(
                 "Las reglas se copian a /etc/udev/rules.d con permisos de "
                 "administrador.  Se pedirá la contraseña con el diálogo de "
                 "polkit de GNOME."
@@ -82,8 +83,8 @@ class PresetsDialog(Adw.Dialog):
         page.add(intro)
 
         recommended = Adw.PreferencesGroup(
-            title="Recomendadas",
-            description=(
+            title=tr("Recomendadas"),
+            description=tr(
                 "Permisos para mandos Xbox.  Es la única regla que se ofrece "
                 "como recomendada; no se instala nada hasta que la actives."
             ),
@@ -95,8 +96,8 @@ class PresetsDialog(Adw.Dialog):
         page.add(recommended)
 
         optional = Adw.PreferencesGroup(
-            title="Opcionales / hardware específico",
-            description=(
+            title=tr("Opcionales / hardware específico"),
+            description=tr(
                 "Solo para quien tiene ese hardware.  La regla de ASRock "
                 "desautoriza el controlador de LEDs 26ce:01a2; no la actives "
                 "si no tenés una placa ASRock con ese dispositivo."
@@ -109,8 +110,8 @@ class PresetsDialog(Adw.Dialog):
         page.add(optional)
 
         steam = Adw.PreferencesGroup(
-            title="Steam / SteamVR (Valve)",
-            description=(
+            title=tr("Steam / SteamVR (Valve)"),
+            description=tr(
                 "Reglas oficiales de ValveSoftware/steam-devices (MIT).  Son "
                 "opcionales: no se activan por defecto y no forman parte de "
                 "«Todos los fabricantes»."
@@ -123,25 +124,26 @@ class PresetsDialog(Adw.Dialog):
         page.add(steam)
 
         upstream = Adw.PreferencesGroup(
-            title="game-devices-udev",
-            description=(
+            title=tr("game-devices-udev"),
+            description=tr(
                 "Biblioteca de Fabian Bornschein (fabiscafe), licencia MIT.  "
                 "Cada archivo agrupa los mandos de un fabricante."
             ),
         )
         self._all_row = Adw.SwitchRow(
-            title="Todos los fabricantes",
-            subtitle=(
-                f"Instala las {len(UPSTREAM)} reglas de la biblioteca upstream, "
-                "incluida la creación temprana de uinput."
+            title=tr("Todos los fabricantes"),
+            subtitle=tr(
+                "Instala las {count} reglas de la biblioteca upstream, "
+                "incluida la creación temprana de uinput.",
+                count=len(UPSTREAM),
             ),
         )
         self._all_row.connect("notify::active", self._on_all_toggled)
         upstream.add(self._all_row)
 
         expander = Adw.ExpanderRow(
-            title="Elegir fabricante",
-            subtitle="Desplegá para instalar solo algunos fabricantes.",
+            title=tr("Elegir fabricante"),
+            subtitle=tr("Desplegá para instalar solo algunos fabricantes."),
         )
         for preset in UPSTREAM:
             row = self._switch_row(preset)
@@ -150,24 +152,24 @@ class PresetsDialog(Adw.Dialog):
         upstream.add(expander)
         page.add(upstream)
 
-        license_group = Adw.PreferencesGroup(title="Licencia y origen")
+        license_group = Adw.PreferencesGroup(title=tr("Licencia y origen"))
         license_row = Adw.ActionRow(
-            title="game-devices-udev",
-            subtitle="MIT · Fabian Bornschein (fabiscafe) · Codeberg/GitHub",
+            title=tr("game-devices-udev"),
+            subtitle=tr("MIT · Fabian Bornschein (fabiscafe) · Codeberg/GitHub"),
         )
         link = Gtk.LinkButton(uri=PRESETS_URL)
-        link.set_label("Abrir")
+        link.set_label(tr("Abrir"))
         link.add_css_class("flat")
         link.set_valign(Gtk.Align.CENTER)
         license_row.add_suffix(link)
         license_group.add(license_row)
 
         steam_license_row = Adw.ActionRow(
-            title="steam-devices",
-            subtitle="MIT · Valve Software · GitHub",
+            title=tr("steam-devices"),
+            subtitle=tr("MIT · Valve Software · GitHub"),
         )
         steam_link = Gtk.LinkButton(uri=STEAM_DEVICES_URL)
-        steam_link.set_label("Abrir")
+        steam_link.set_label(tr("Abrir"))
         steam_link.add_css_class("flat")
         steam_link.set_valign(Gtk.Align.CENTER)
         steam_license_row.add_suffix(steam_link)
@@ -187,9 +189,9 @@ class PresetsDialog(Adw.Dialog):
         self.summary.add_css_class("dim-label")
         self.spinner = Gtk.Spinner()
         self.spinner.set_visible(False)
-        cancel = Gtk.Button(label="Cancelar")
+        cancel = Gtk.Button(label=tr("Cancelar"))
         cancel.connect("clicked", lambda *_: self.close())
-        self.install_button = Gtk.Button(label="Instalar seleccionadas")
+        self.install_button = Gtk.Button(label=tr("Instalar seleccionadas"))
         self.install_button.add_css_class("suggested-action")
         self.install_button.connect("clicked", lambda *_: self._install())
 
@@ -251,10 +253,14 @@ class PresetsDialog(Adw.Dialog):
     def _update_summary(self) -> None:
         selected = self._selected_presets()
         count = len(selected)
-        self.summary.set_text(
-            f"{count} archivo{'s' if count != 1 else ''} seleccionado"
-            f"{'s' if count != 1 else ''}"
-        )
+        if count == 1:
+            self.summary.set_text(
+                tr("{count} archivo seleccionado", count=count)
+            )
+        else:
+            self.summary.set_text(
+                tr("{count} archivos seleccionados", count=count)
+            )
         self.install_button.set_sensitive(count > 0 and not self._busy)
 
         if self._all_row is not None and self._upstream_rows:
@@ -289,19 +295,21 @@ class PresetsDialog(Adw.Dialog):
 
     def _install_succeeded(self, count: int) -> bool:
         self._set_busy(False)
-        self.on_installed(
-            f"Se instalaron {count} archivo{'s' if count != 1 else ''} de reglas."
-        )
+        if count == 1:
+            message = tr("Se instalaron {count} archivo de reglas.", count=count)
+        else:
+            message = tr("Se instalaron {count} archivos de reglas.", count=count)
+        self.on_installed(message)
         self.close()
         return False
 
     def _install_failed(self, message: str) -> bool:
         self._set_busy(False)
         dialog = Adw.AlertDialog(
-            heading="No se pudieron instalar las reglas",
+            heading=tr("No se pudieron instalar las reglas"),
             body=message,
         )
-        dialog.add_response("close", "Cerrar")
+        dialog.add_response("close", tr("Cerrar"))
         root = self.get_root()
         dialog.present(root if root is not None else self.parent_window)
         return False
@@ -315,7 +323,7 @@ class PresetsDialog(Adw.Dialog):
         if busy:
             self.spinner.start()
             self.summary.set_text(
-                "Esperando el diálogo de autenticación de GNOME/polkit…"
+                tr("Esperando el diálogo de autenticación de GNOME/polkit…")
             )
             return
         self.spinner.stop()

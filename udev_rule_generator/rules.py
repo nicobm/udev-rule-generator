@@ -10,6 +10,7 @@ from enum import Enum
 
 from . import APP_NAME, PROJECT_URL, __version__
 from .devices import Joystick
+from .i18n import tr
 
 _HEX_RE = re.compile(r"^[0-9a-f]{4}$")
 _FILENAME_RE = re.compile(r"^[0-9]{2}-[A-Za-z0-9._+-]+\.rules$")
@@ -23,24 +24,28 @@ class RuleAction(str, Enum):
 
     @property
     def label(self) -> str:
-        return {
-            RuleAction.ALLOW: "Permitir / detectar",
-            RuleAction.IGNORE: "Ignorar",
-        }[self]
+        return tr(
+            {
+                RuleAction.ALLOW: "Permitir / detectar",
+                RuleAction.IGNORE: "Ignorar",
+            }[self]
+        )
 
     @property
     def description(self) -> str:
-        return {
-            RuleAction.ALLOW: (
-                "Da permisos de lectura/escritura al usuario de la sesión "
-                "(MODE 0660 y TAG uaccess) y marca el dispositivo como joystick."
-            ),
-            RuleAction.IGNORE: (
-                "Impide que el dispositivo se use como joystick. En USB se "
-                "desautoriza el dispositivo; en Bluetooth se deniega el acceso "
-                "a los nodos de entrada."
-            ),
-        }[self]
+        return tr(
+            {
+                RuleAction.ALLOW: (
+                    "Da permisos de lectura/escritura al usuario de la sesión "
+                    "(MODE 0660 y TAG uaccess) y marca el dispositivo como joystick."
+                ),
+                RuleAction.IGNORE: (
+                    "Impide que el dispositivo se use como joystick. En USB se "
+                    "desautoriza el dispositivo; en Bluetooth se deniega el acceso "
+                    "a los nodos de entrada."
+                ),
+            }[self]
+        )
 
 
 @dataclass(frozen=True)
@@ -61,10 +66,15 @@ class RuleSpec:
 def validate_rule_filename(filename: str) -> None:
     """Valida el nombre de un archivo de reglas antes de escribir como root."""
     if "/" in filename or "\\" in filename or filename.startswith("."):
-        raise ValueError(f"Nombre de regla no válido: {filename!r}")
+        raise ValueError(
+            tr("Nombre de regla no válido: {filename!r}", filename=filename)
+        )
     if not _FILENAME_RE.fullmatch(filename):
         raise ValueError(
-            f"El nombre de regla debe tener la forma 10-nombre.rules: {filename!r}"
+            tr(
+                "El nombre de regla debe tener la forma 10-nombre.rules: {filename!r}",
+                filename=filename,
+            )
         )
 
 
@@ -96,20 +106,22 @@ def rule_filename(device: Joystick, action: RuleAction) -> str:
 
 
 def rule_title(device: Joystick, action: RuleAction) -> str:
-    verb = "Permitir" if action is RuleAction.ALLOW else "Ignorar"
+    verb = tr("Permitir") if action is RuleAction.ALLOW else tr("Ignorar")
     return f"{verb}: {device.display_name}"
 
 
 def _escape_rule_value(value: str) -> str:
     """Escapa un valor para una comparación ``ATTRS{name}=="..."``."""
     if "\n" in value or "\r" in value:
-        raise ValueError("El nombre del dispositivo contiene saltos de línea.")
+        raise ValueError(tr("El nombre del dispositivo contiene saltos de línea."))
     if '"' in value:
         # udev no tiene una forma inequívoca de escapar comillas dentro de un
         # valor entrecomillado; es mejor negarse que generar una regla rota.
         raise ValueError(
-            'El nombre del dispositivo contiene una comilla doble (") y no se '
-            "puede escribir de forma segura en una regla udev."
+            tr(
+                'El nombre del dispositivo contiene una comilla doble (") y no se '
+                "puede escribir de forma segura en una regla udev."
+            )
         )
     return value.replace("\\", "\\\\")
 
@@ -125,24 +137,36 @@ def _require_ids(device: Joystick) -> None:
         ("PID", device.product_id),
     ):
         if value and not _HEX_RE.fullmatch(value):
-            raise ValueError(f"El {label} detectado no es hexadecimal: {value!r}")
+            raise ValueError(
+                tr(
+                    "El {label} detectado no es hexadecimal: {value!r}",
+                    label=label,
+                    value=value,
+                )
+            )
 
 
 def _header(device: Joystick, action: RuleAction) -> list[str]:
     lines = [
-        f"# Generado por udev-rule-generator {__version__}",
-        f"# {APP_NAME}",
-        f"# Dispositivo: {_comment_value(device.display_name)}",
-        f"# Bus: {_comment_value(device.bus_label)} · ID: {_comment_value(device.identifier)}",
+        tr("# Generado por udev-rule-generator {version}", version=__version__),
+        tr("# {name}", name=tr(APP_NAME)),
+        tr("# Dispositivo: {name}", name=_comment_value(device.display_name)),
+        tr(
+            "# Bus: {bus} · ID: {identifier}",
+            bus=_comment_value(device.bus_label),
+            identifier=_comment_value(device.identifier),
+        ),
     ]
     if device.serial:
-        lines.append(f"# Serial: {_comment_value(device.serial)}")
+        lines.append(tr("# Serial: {serial}", serial=_comment_value(device.serial)))
     if device.nodes:
-        lines.append(f"# Nodos: {_comment_value(', '.join(device.nodes))}")
+        lines.append(
+            tr("# Nodos: {nodes}", nodes=_comment_value(", ".join(device.nodes)))
+        )
     lines.extend(
         [
-            f"# Acción: {action.label.lower()}",
-            f"# Proyecto: {PROJECT_URL}",
+            tr("# Acción: {action}", action=action.label.lower()),
+            tr("# Proyecto: {url}", url=PROJECT_URL),
             "",
         ]
     )
@@ -178,8 +202,10 @@ def _allow_input_line(device: Joystick) -> str:
             )
     else:
         raise ValueError(
-            "No se pudo obtener el nombre del dispositivo ni su VID/PID; no se "
-            "puede generar una regla de permiso fiable."
+            tr(
+                "No se pudo obtener el nombre del dispositivo ni su VID/PID; no se "
+                "puede generar una regla de permiso fiable."
+            )
         )
     return (
         f'ACTION!="remove", {match}, '
@@ -264,24 +290,26 @@ def build_rule(device: Joystick, action: RuleAction) -> RuleSpec:
     if action is RuleAction.ALLOW:
         body: list[str] = []
         if (device.is_usb or not device.bus) and device.vendor_id and device.product_id:
-            body.append("# Permisos del dispositivo USB")
+            body.append(tr("# Permisos del dispositivo USB"))
             body.append(_allow_usb_line(device))
-        body.append("# Permisos y detección del nodo de entrada")
+        body.append(tr("# Permisos y detección del nodo de entrada"))
         body.append(_allow_input_line(device))
         hidraw = _allow_hidraw_line(device)
         if hidraw:
-            body.append("# Permisos de hidraw (Steam, SDL y herramientas HID)")
+            body.append(tr("# Permisos de hidraw (Steam, SDL y herramientas HID)"))
             body.append(hidraw)
         lines.extend(body)
         trigger = "change"
     else:
         body = []
         if (device.is_usb or not device.bus) and device.vendor_id and device.product_id:
-            body.append("# Desautorizar el dispositivo USB antes de que se enumere")
+            body.append(tr("# Desautorizar el dispositivo USB antes de que se enumere"))
             body.append(_ignore_usb_line(device))
         if device.is_bluetooth:
             body.append(
-                "# Bluetooth no se puede desautorizar como USB; se deniega el acceso"
+                tr(
+                    "# Bluetooth no se puede desautorizar como USB; se deniega el acceso"
+                )
             )
         input_line = _ignore_input_line(device)
         hidraw_line = _ignore_hidraw_line(device)
@@ -291,7 +319,7 @@ def build_rule(device: Joystick, action: RuleAction) -> RuleSpec:
             body.append(hidraw_line)
         if not body:
             raise ValueError(
-                "No hay suficientes datos para generar una regla de ignorar."
+                tr("No hay suficientes datos para generar una regla de ignorar.")
             )
         lines.extend(body)
         trigger = (

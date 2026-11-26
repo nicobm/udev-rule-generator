@@ -21,6 +21,7 @@ from . import (
     STEAM_DEVICES_URL,
     __version__,
 )
+from .i18n import tr
 
 _PACKAGE = "udev_rule_generator"
 
@@ -92,8 +93,8 @@ class Preset:
 _PRESETS: list[Preset] = [
     Preset(
         id="asrock-led-disable",
-        title="ASRock LED Controller (ignorar)",
-        description=(
+        title=tr("ASRock LED Controller (ignorar)"),
+        description=tr(
             "Desautoriza el controlador de LEDs de algunas placas ASRock "
             "(26ce:01a2) que el kernel detecta erróneamente como joystick."
         ),
@@ -102,12 +103,12 @@ _PRESETS: list[Preset] = [
         category="optional",
         trigger="add",
         license="MIT",
-        upstream="Regla local de udev-rule-generator",
+        upstream=tr("Regla local de udev-rule-generator"),
     ),
     Preset(
         id="microsoft-xbox",
         title="Microsoft Xbox",
-        description=(
+        description=tr(
             "Permisos para mandos Xbox 360, Xbox One, Xbox Series S|X y "
             "receptores inalámbricos, por USB y Bluetooth."
         ),
@@ -118,7 +119,7 @@ _PRESETS: list[Preset] = [
     Preset(
         id="steam-input",
         title="Steam Input (Valve)",
-        description=(
+        description=tr(
             "Permisos de Valve para Steam Controller, DualShock/DualSense, "
             "mandos de Nintendo y otros dispositivos compatibles con Steam."
         ),
@@ -131,7 +132,7 @@ _PRESETS: list[Preset] = [
     Preset(
         id="steam-vr",
         title="SteamVR (Valve)",
-        description=(
+        description=tr(
             "Permisos de Valve para visores y controladores de SteamVR: "
             "Vive, Valve Index, Bigscreen Beyond y otros."
         ),
@@ -148,10 +149,11 @@ for _source in _UPSTREAM_ORDER:
     _PRESETS.append(
         Preset(
             id=_source.removesuffix(".rules").removesuffix("-gdu"),
-            title=_title,
-            description=(
-                f"Reglas de permisos para dispositivos {_title} de "
-                "game-devices-udev (fabiscafe)."
+            title=tr(_title),
+            description=tr(
+                "Reglas de permisos para dispositivos {name} de "
+                "game-devices-udev (fabiscafe).",
+                name=tr(_title),
             ),
             source=_source,
             install_name=f"71-{_source}",
@@ -198,7 +200,9 @@ def get_preset(preset_id: str) -> Preset:
     for preset in PRESETS:
         if preset.id == preset_id:
             return preset
-    raise KeyError(f"No existe la regla preconfigurada {preset_id!r}.")
+    raise KeyError(
+        tr("No existe la regla preconfigurada {id!r}.", id=preset_id)
+    )
 
 
 _GROUPS: dict[str, tuple[Preset, ...]] = {
@@ -241,7 +245,9 @@ def select_presets(selection: str) -> list[Preset]:
         if preset not in result:
             result.append(preset)
     if not result:
-        raise ValueError("No se seleccionó ninguna regla preconfigurada.")
+        raise ValueError(
+            tr("No se seleccionó ninguna regla preconfigurada.")
+        )
     return result
 
 
@@ -269,13 +275,17 @@ def read_license_text() -> str:
 def build_preset_content(preset: Preset) -> str:
     """Añade una cabecera de procedencia y devuelve el archivo final."""
     header = [
-        f"# Instalado por udev-rule-generator {__version__}",
-        f"# Preconfigurada: {preset.title}",
-        f"# Origen: {preset.upstream} ({preset.license})",
-        f"# Archivo original: {preset.source}",
+        tr("# Instalado por udev-rule-generator {version}", version=__version__),
+        tr("# Preconfigurada: {title}", title=preset.title),
+        tr(
+            "# Origen: {source} ({license})",
+            source=preset.upstream,
+            license=preset.license,
+        ),
+        tr("# Archivo original: {source}", source=preset.source),
     ]
     if preset.upstream == PRESETS_URL:
-        header.append(f"# Espejo: {PRESETS_GITHUB_URL}")
+        header.append(tr("# Espejo: {url}", url=PRESETS_GITHUB_URL))
     header.append("")
     return "\n".join(header) + read_preset_text(preset).lstrip("\n")
 

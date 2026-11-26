@@ -4,7 +4,9 @@
   <metadata_license>MIT</metadata_license>
   <project_license>MIT</project_license>
   <name>Generador de reglas udev</name>
+  <name xml:lang="en">udev rule generator</name>
   <summary>Permitir o ignorar joysticks y gamepads con reglas udev</summary>
+  <summary xml:lang="en">Allow or ignore joysticks and gamepads with udev rules</summary>
 
   <description>
     <p>
@@ -30,6 +32,29 @@
     </ul>
   </description>
 
+  <description xml:lang="en">
+    <p>
+      udev rule generator is a Linux tool that detects connected joysticks and
+      gamepads and creates rules in /etc/udev/rules.d to allow their use or to
+      ignore them.
+    </p>
+    <p>
+      It can generate a rule for a specific controller and optionally install
+      presets from Microsoft Xbox, the game-devices-udev library by fabiscafe,
+      Valve's Steam/SteamVR rules, or the ASRock LED controller
+      deauthorization.  None of those sources are installed by default.
+    </p>
+    <ul>
+      <li>USB and Bluetooth controller detection with udevadm.</li>
+      <li>Permission rules with MODE 0660 and the uaccess tag.</li>
+      <li>Ignore rules for USB or Bluetooth devices.</li>
+      <li>Automatic detection when a controller is connected and GNOME notifications.</li>
+      <li>Hidden devices recoverable from the menu without deleting rules.</li>
+      <li>Installation through the GNOME polkit authentication dialog.</li>
+      <li>Terminal interface and GTK4/libadwaita application.</li>
+    </ul>
+  </description>
+
   <launchable type="desktop-id">io.github.nicobm.UdevRuleGenerator.desktop</launchable>
 
   <url type="homepage">https://github.com/nicobm/udev-rule-generator</url>
@@ -42,6 +67,15 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.5.0" date="2026-11-26">
+      <description>
+        <p>
+          Añade autodetección de idioma español/inglés (en_US/en_GB), traduce
+          la interfaz, la CLI y las reglas generadas, y arregla el pie del
+          diálogo para que el texto largo no tape los botones.
+        </p>
+      </description>
+    </release>
     <release version="0.4.0" date="2026-11-26">
       <description>
         <p>

@@ -1,11 +1,15 @@
 [Desktop Entry]
 Type=Application
 Name=Generador de reglas udev
+Name[en]=udev rule generator
 GenericName=Generador de reglas udev
+GenericName[en]=udev rule generator
 Comment=Permitir o ignorar joysticks y gamepads con reglas udev
+Comment[en]=Allow or ignore joysticks and gamepads with udev rules
 Exec=udev-rule-generator-gui
 Icon=io.github.nicobm.UdevRuleGenerator
 Terminal=false
 Categories=Utility;System;Settings;
 Keywords=udev;joystick;gamepad;controller;mando;reglas;rules;
+Keywords[en]=udev;joystick;gamepad;controller;rules;permissions;input;
 StartupNotify=true

@@ -14,6 +14,7 @@ from dataclasses import dataclass
 
 from . import RULES_DIR
 from .host import Host, HostError
+from .i18n import tr
 from .rules import validate_rule_filename
 
 _POLKIT_CANCELLED = 126
@@ -119,7 +120,13 @@ def _install_as_root(files: dict[str, str], trigger: str) -> InstallResult:
             os.replace(temporary, target)
             installed.append(filename)
     except OSError as exc:
-        raise HostError(f"No se pudo escribir en {RULES_DIR}: {exc}") from exc
+        raise HostError(
+            tr(
+                "No se pudo escribir en {directory}: {error}",
+                directory=RULES_DIR,
+                error=exc,
+            )
+        ) from exc
     if shutil.which("restorecon"):
         try:
             subprocess.run(
@@ -132,7 +139,7 @@ def _install_as_root(files: dict[str, str], trigger: str) -> InstallResult:
         except (OSError, subprocess.TimeoutExpired):
             pass
     reloaded = _run_udevadm_local(trigger)
-    warning = None if reloaded else (
+    warning = None if reloaded else tr(
         "La regla se instaló, pero no se pudo ejecutar udevadm para recargarla."
     )
     return InstallResult(
@@ -150,14 +157,18 @@ def _install_with_pkexec(
     pkexec = host.which("pkexec")
     if not pkexec:
         raise HostError(
-            "No se encontró pkexec. Instalá polkit (en Fedora: sudo dnf install "
-            "polkit) o ejecutá la aplicación como root."
+            tr(
+                "No se encontró pkexec. Instalá polkit (en Fedora: sudo dnf install "
+                "polkit) o ejecutá la aplicación como root."
+            )
         )
 
     try:
         stage = host.stage_files(files)
     except OSError as exc:
-        raise HostError(f"No se pudo preparar el archivo temporal: {exc}") from exc
+        raise HostError(
+            tr("No se pudo preparar el archivo temporal: {error}", error=exc)
+        ) from exc
     try:
         script_lines = [
             "set -eu",
@@ -176,19 +187,24 @@ def _install_with_pkexec(
         if result.returncode != 0:
             detail = (result.stderr or result.stdout).strip()
             if result.returncode == _POLKIT_CANCELLED:
-                raise HostError("Autenticación cancelada. No se instaló nada.")
+                raise HostError(
+                    tr("Autenticación cancelada. No se instaló nada.")
+                )
             if result.returncode == _POLKIT_NOT_AUTHORIZED:
                 raise HostError(
-                    "polkit no autorizó la operación. No se instaló nada."
+                    tr("polkit no autorizó la operación. No se instaló nada.")
                     + (f"\n{detail}" if detail else "")
                 )
             if result.returncode == _POLKIT_ERROR:
                 raise HostError(
-                    "pkexec no pudo iniciar la autenticación."
+                    tr("pkexec no pudo iniciar la autenticación.")
                     + (f"\n{detail}" if detail else "")
                 )
             raise HostError(
-                f"La instalación falló (código {result.returncode})."
+                tr(
+                    "La instalación falló (código {code}).",
+                    code=result.returncode,
+                )
                 + (f"\n{detail}" if detail else "")
             )
         reloaded = host.which("udevadm") is not None
@@ -199,7 +215,9 @@ def _install_with_pkexec(
             trigger=trigger,
             warning=None
             if reloaded
-            else "La regla se instaló, pero no se encontró udevadm para recargarla.",
+            else tr(
+                "La regla se instaló, pero no se encontró udevadm para recargarla."
+            ),
         )
     finally:
         host.cleanup_stage(stage)
@@ -217,9 +235,11 @@ def install_rule_files(
     nombres se validan antes de pasarlos a root.
     """
     if not files:
-        raise ValueError("No hay reglas para instalar.")
+        raise ValueError(tr("No hay reglas para instalar."))
     if trigger not in {"change", "add"}:
-        raise ValueError(f"Trigger de udev no válido: {trigger!r}")
+        raise ValueError(
+            tr("Trigger de udev no válido: {trigger!r}", trigger=trigger)
+        )
     for filename in files:
         validate_rule_filename(filename)
 
@@ -239,13 +259,19 @@ def _remove_as_root(filenames: list[str]) -> InstallResult:
         except FileNotFoundError:
             continue
         except OSError as exc:
-            raise HostError(f"No se pudo eliminar {target}: {exc}") from exc
+            raise HostError(
+                tr(
+                    "No se pudo eliminar {path}: {error}",
+                    path=target,
+                    error=exc,
+                )
+            ) from exc
     reloaded = _run_udevadm_local("change")
     return InstallResult(
         filenames=tuple(removed),
         used_pkexec=False,
         reloaded=reloaded,
-        warning=None if reloaded else "No se pudo ejecutar udevadm.",
+        warning=None if reloaded else tr("No se pudo ejecutar udevadm."),
     )
 
 
@@ -253,7 +279,9 @@ def _remove_with_pkexec(host: Host, filenames: list[str]) -> InstallResult:
     pkexec = host.which("pkexec")
     if not pkexec:
         raise HostError(
-            "No se encontró pkexec. Instalá polkit o ejecutá la aplicación como root."
+            tr(
+                "No se encontró pkexec. Instalá polkit o ejecutá la aplicación como root."
+            )
         )
     script_lines = [
         "set -eu",
@@ -268,9 +296,14 @@ def _remove_with_pkexec(host: Host, filenames: list[str]) -> InstallResult:
     if result.returncode != 0:
         detail = (result.stderr or result.stdout).strip()
         if result.returncode == _POLKIT_CANCELLED:
-            raise HostError("Autenticación cancelada. No se eliminó nada.")
+            raise HostError(
+                tr("Autenticación cancelada. No se eliminó nada.")
+            )
         raise HostError(
-            f"No se pudieron eliminar las reglas (código {result.returncode})."
+            tr(
+                "No se pudieron eliminar las reglas (código {code}).",
+                code=result.returncode,
+            )
             + (f"\n{detail}" if detail else "")
         )
     return InstallResult(
@@ -284,7 +317,7 @@ def _remove_with_pkexec(host: Host, filenames: list[str]) -> InstallResult:
 def remove_rule_files(host: Host, filenames: list[str]) -> InstallResult:
     """Elimina reglas de ``/etc/udev/rules.d`` y recarga udev."""
     if not filenames:
-        raise ValueError("No hay reglas para eliminar.")
+        raise ValueError(tr("No hay reglas para eliminar."))
     for filename in filenames:
         validate_rule_filename(filename)
     if os.geteuid() == 0 and not host.in_flatpak:

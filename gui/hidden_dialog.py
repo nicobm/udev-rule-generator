@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Callable
 
 from udev_rule_generator.hidden import HiddenDevice, HiddenDevices
+from udev_rule_generator.i18n import tr
 
 from .gi_compat import Adw, Gtk
 
@@ -25,7 +26,7 @@ class HiddenDialog(Adw.Dialog):
         self.on_changed = on_changed
         self._rows: list[Adw.ActionRow] = []
 
-        self.set_title("Dispositivos ocultos")
+        self.set_title(tr("Dispositivos ocultos"))
         self.set_content_width(680)
         self.set_content_height(620)
         self._build_ui()
@@ -37,13 +38,13 @@ class HiddenDialog(Adw.Dialog):
         header = Adw.HeaderBar()
         header.set_title_widget(
             Adw.WindowTitle(
-                title="Dispositivos ocultos",
-                subtitle="No aparecen en la lista principal",
+                title=tr("Dispositivos ocultos"),
+                subtitle=tr("No aparecen en la lista principal"),
             )
         )
         close_button = Gtk.Button(
             icon_name="window-close-symbolic",
-            tooltip_text="Cerrar",
+            tooltip_text=tr("Cerrar"),
         )
         close_button.add_css_class("flat")
         close_button.connect("clicked", lambda *_: self.close())
@@ -56,8 +57,8 @@ class HiddenDialog(Adw.Dialog):
 
         self.empty_page = Adw.StatusPage(
             icon_name="view-conceal-symbolic",
-            title="No hay dispositivos ocultos",
-            description=(
+            title=tr("No hay dispositivos ocultos"),
+            description=tr(
                 "Cuando ocultes un dispositivo desde su ficha, va a aparecer "
                 "acá para que puedas recuperarlo."
             ),
@@ -80,8 +81,8 @@ class HiddenDialog(Adw.Dialog):
         content.set_margin_end(18)
 
         self.group = Adw.PreferencesGroup(
-            title="Dispositivos ocultos",
-            description=(
+            title=tr("Dispositivos ocultos"),
+            description=tr(
                 "Desocultá un dispositivo para que vuelva a aparecer en la "
                 "lista principal.  Las reglas udev no se modifican."
             ),
@@ -116,7 +117,7 @@ class HiddenDialog(Adw.Dialog):
         icon.set_valign(Gtk.Align.CENTER)
         row.add_prefix(icon)
 
-        button = Gtk.Button(label="Desocultar")
+        button = Gtk.Button(label=tr("Desocultar"))
         button.add_css_class("flat")
         button.set_valign(Gtk.Align.CENTER)
         button.connect(
@@ -132,12 +133,17 @@ class HiddenDialog(Adw.Dialog):
             self.store.unhide(device.id)
         except OSError as exc:
             dialog = Adw.AlertDialog(
-                heading="No se pudo desocultar el dispositivo",
-                body=f"No se pudo guardar la preferencia: {exc}",
+                heading=tr("No se pudo desocultar el dispositivo"),
+                body=tr(
+                    "No se pudo guardar la preferencia: {error}",
+                    error=exc,
+                ),
             )
-            dialog.add_response("close", "Cerrar")
+            dialog.add_response("close", tr("Cerrar"))
             root = self.get_root()
             dialog.present(root if root is not None else self.parent_window)
             return
-        self.on_changed(f"Dispositivo desocultado: {device.name}")
+        self.on_changed(
+            tr("Dispositivo desocultado: {name}", name=device.name)
+        )
         self._reload()

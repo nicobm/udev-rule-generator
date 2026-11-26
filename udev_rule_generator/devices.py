@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Iterable, Mapping
 
 from .host import CommandNotAvailable, Host, HostError
+from .i18n import tr
 
 _HEX_RE = re.compile(r"^[0-9a-fA-F]{4}$")
 
@@ -39,13 +40,13 @@ class Joystick:
 
     @property
     def display_name(self) -> str:
-        return self.name or self.model or "Dispositivo de entrada sin nombre"
+        return self.name or self.model or tr("Dispositivo de entrada sin nombre")
 
     @property
     def identifier(self) -> str:
         if self.vendor_id and self.product_id:
             return f"{self.vendor_id}:{self.product_id}"
-        return "VID/PID desconocido"
+        return tr("VID/PID desconocido")
 
     @property
     def bus_label(self) -> str:
@@ -55,7 +56,7 @@ class Joystick:
             "i2c": "I2C",
             "pci": "PCI",
             "platform": "Platform",
-        }.get(self.bus, self.bus.title() if self.bus else "Bus desconocido")
+        }.get(self.bus, self.bus.title() if self.bus else tr("Bus desconocido"))
 
     @property
     def is_usb(self) -> bool:
@@ -71,7 +72,7 @@ class Joystick:
 
     @property
     def nodes_label(self) -> str:
-        return ", ".join(self.nodes) if self.nodes else "sin nodos visibles"
+        return ", ".join(self.nodes) if self.nodes else tr("sin nodos visibles")
 
     @property
     def primary_input_name(self) -> str:

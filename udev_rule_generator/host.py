@@ -16,6 +16,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Mapping, Sequence
 
+from .i18n import tr
+
 
 class HostError(RuntimeError):
     """Error al ejecutar un comando en el host."""
@@ -46,7 +48,9 @@ class CommandResult:
 def _safe_filename(name: str) -> str:
     """Comprueba que un nombre de archivo temporal no contenga rutas."""
     if not name or name in {".", ".."} or Path(name).name != name:
-        raise ValueError(f"Nombre de archivo no válido: {name!r}")
+        raise ValueError(
+            tr("Nombre de archivo no válido: {name!r}", name=name)
+        )
     return name
 
 
@@ -67,8 +71,10 @@ class Host:
             return args
         if not self._flatpak_spawn:
             raise HostError(
-                "La aplicación se está ejecutando dentro de un Flatpak, pero no "
-                "se encontró flatpak-spawn. Revisá la instalación de Flatpak."
+                tr(
+                    "La aplicación se está ejecutando dentro de un Flatpak, pero no "
+                    "se encontró flatpak-spawn. Revisá la instalación de Flatpak."
+                )
             )
         return [self._flatpak_spawn, "--host", *args]
 
@@ -98,13 +104,25 @@ class Host:
                 env=None if env is None else dict(env),
             )
         except FileNotFoundError as exc:
-            raise CommandNotAvailable(f"No se encontró el comando {args[0]!r}.") from exc
+            raise CommandNotAvailable(
+                tr("No se encontró el comando {command!r}.", command=args[0])
+            ) from exc
         except subprocess.TimeoutExpired as exc:
             raise HostError(
-                f"El comando {' '.join(args)!r} tardó más de {timeout:g} segundos."
+                tr(
+                    "El comando {command!r} tardó más de {timeout:g} segundos.",
+                    command=" ".join(args),
+                    timeout=timeout,
+                )
             ) from exc
         except OSError as exc:
-            raise HostError(f"No se pudo ejecutar {args[0]!r}: {exc}") from exc
+            raise HostError(
+                tr(
+                    "No se pudo ejecutar {command!r}: {error}",
+                    command=args[0],
+                    error=exc,
+                )
+            ) from exc
 
         result = CommandResult(
             argv=tuple(args),
@@ -139,14 +157,26 @@ class Host:
                 bufsize=1,
             )
         except FileNotFoundError as exc:
-            raise CommandNotAvailable(f"No se encontró el comando {args[0]!r}.") from exc
+            raise CommandNotAvailable(
+                tr("No se encontró el comando {command!r}.", command=args[0])
+            ) from exc
         except OSError as exc:
-            raise HostError(f"No se pudo ejecutar {args[0]!r}: {exc}") from exc
+            raise HostError(
+                tr(
+                    "No se pudo ejecutar {command!r}: {error}",
+                    command=args[0],
+                    error=exc,
+                )
+            ) from exc
 
     @staticmethod
     def _format_error(result: CommandResult) -> str:
         detail = (result.stderr or result.stdout).strip()
-        message = f"El comando {result.argv[0]!r} falló (código {result.returncode})."
+        message = tr(
+            "El comando {command!r} falló (código {code}).",
+            command=result.argv[0],
+            code=result.returncode,
+        )
         if detail:
             message = f"{message}\n{detail}"
         return message
@@ -169,14 +199,19 @@ class Host:
             result = self.run(["cat", str(path)], timeout=timeout)
             if not result.ok:
                 raise HostError(
-                    f"No se pudo leer {path!s} en el host.\n"
-                    f"{(result.stderr or result.stdout).strip()}"
+                    tr(
+                        "No se pudo leer {path!s} en el host.\n{detail}",
+                        path=path,
+                        detail=(result.stderr or result.stdout).strip(),
+                    )
                 )
             return result.stdout
         try:
             return Path(path).read_text(encoding="utf-8")
         except OSError as exc:
-            raise HostError(f"No se pudo leer {path!s}: {exc}") from exc
+            raise HostError(
+                tr("No se pudo leer {path!s}: {error}", path=path, error=exc)
+            ) from exc
 
     def list_dir(self, path: str | Path) -> list[str]:
         """Lista un directorio del host sin lanzar excepción si no existe."""
@@ -200,7 +235,7 @@ class Host:
         archivos se pasan a ``pkexec`` que también corre en el host.
         """
         if not files:
-            raise ValueError("No hay archivos para preparar.")
+            raise ValueError(tr("No hay archivos para preparar."))
         for name in files:
             _safe_filename(name)
 

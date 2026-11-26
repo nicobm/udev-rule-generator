@@ -12,6 +12,7 @@ from udev_rule_generator import (
     PROJECT_URL,
     __version__,
 )
+from udev_rule_generator.i18n import tr
 
 from .gi_compat import Adw, Gdk, Gio, Gtk
 
@@ -108,7 +109,7 @@ class Application(Adw.Application):
             return
         license_type = getattr(Gtk.License, "MIT_X11", Gtk.License.MIT)
         dialog = Adw.AboutDialog(
-            application_name=APP_NAME,
+            application_name=tr(APP_NAME),
             application_icon=APP_ID,
             developer_name="Nicolás (nicobm)",
             version=__version__,
@@ -117,7 +118,7 @@ class Application(Adw.Application):
             license_type=license_type,
             website=PROJECT_URL,
             issue_url=ISSUE_URL,
-            comments=APP_SUMMARY,
+            comments=tr(APP_SUMMARY),
         )
         dialog.present(self.window)
 

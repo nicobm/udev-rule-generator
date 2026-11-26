@@ -8,6 +8,7 @@ from udev_rule_generator import APP_NAME
 from udev_rule_generator.devices import Joystick, detect_joysticks
 from udev_rule_generator.hidden import HiddenDevices
 from udev_rule_generator.host import Host
+from udev_rule_generator.i18n import tr
 from udev_rule_generator.monitor import UdevMonitor
 
 from .gi_compat import Adw, Gio, GLib, Gtk
@@ -33,7 +34,7 @@ class MainWindow(Adw.ApplicationWindow):
         self._poll_source = 0
         self._monitor: UdevMonitor | None = None
 
-        self.set_title(APP_NAME)
+        self.set_title(tr(APP_NAME))
         self.set_default_size(780, 760)
         self._build_ui()
         self.connect("close-request", self._on_close)
@@ -53,28 +54,28 @@ class MainWindow(Adw.ApplicationWindow):
 
         header = Adw.HeaderBar()
         self.window_title = Adw.WindowTitle(
-            title=APP_NAME,
-            subtitle="Buscando mandos…",
+            title=tr(APP_NAME),
+            subtitle=tr("Buscando mandos…"),
         )
         header.set_title_widget(self.window_title)
 
         refresh_button = Gtk.Button(
             icon_name="view-refresh-symbolic",
-            tooltip_text="Buscar joysticks de nuevo (Ctrl+R)",
+            tooltip_text=tr("Buscar joysticks de nuevo (Ctrl+R)"),
         )
         refresh_button.add_css_class("flat")
         refresh_button.connect("clicked", lambda *_: self.refresh())
         header.pack_start(refresh_button)
 
         menu = Gio.Menu()
-        menu.append("Reglas preconfiguradas", "app.presets")
-        menu.append("Reglas instaladas", "app.installed")
-        menu.append("Dispositivos ocultos", "app.hidden")
-        menu.append("Acerca de", "app.about")
+        menu.append(tr("Reglas preconfiguradas"), "app.presets")
+        menu.append(tr("Reglas instaladas"), "app.installed")
+        menu.append(tr("Dispositivos ocultos"), "app.hidden")
+        menu.append(tr("Acerca de"), "app.about")
         menu_button = Gtk.MenuButton(
             icon_name="open-menu-symbolic",
             menu_model=menu,
-            tooltip_text="Menú principal",
+            tooltip_text=tr("Menú principal"),
         )
         menu_button.add_css_class("flat")
         header.pack_end(menu_button)
@@ -99,14 +100,14 @@ class MainWindow(Adw.ApplicationWindow):
         spinner.start()
         page = Adw.StatusPage(
             icon_name="input-gaming-symbolic",
-            title="Buscando joysticks…",
-            description="Consultando udev y los dispositivos de entrada del sistema.",
+            title=tr("Buscando joysticks…"),
+            description=tr("Consultando udev y los dispositivos de entrada del sistema."),
         )
         page.set_child(spinner)
         self.stack.add_named(page, "loading")
 
     def _build_empty_page(self) -> None:
-        self._empty_description = (
+        self._empty_description = tr(
             "Conectá un mando por USB o Bluetooth.  La ventana se actualiza "
             "sola y te avisa con una notificación cuando aparece.  Si ya está "
             "conectado, revisá que el sistema lo detecte con "
@@ -114,10 +115,10 @@ class MainWindow(Adw.ApplicationWindow):
         )
         page = Adw.StatusPage(
             icon_name="input-gaming-symbolic",
-            title="No hay joysticks conectados",
+            title=tr("No hay joysticks conectados"),
             description=self._empty_description,
         )
-        button = Gtk.Button(label="Buscar de nuevo")
+        button = Gtk.Button(label=tr("Buscar de nuevo"))
         button.add_css_class("pill")
         button.add_css_class("suggested-action")
         button.set_halign(Gtk.Align.CENTER)
@@ -149,8 +150,8 @@ class MainWindow(Adw.ApplicationWindow):
         content.set_margin_end(18)
 
         self.devices_group = Adw.PreferencesGroup(
-            title="Joysticks conectados",
-            description=(
+            title=tr("Joysticks conectados"),
+            description=tr(
                 "La lista se actualiza sola al conectar o desconectar un mando.  "
                 "Elegí uno para crear su regla udev."
             ),
@@ -158,28 +159,28 @@ class MainWindow(Adw.ApplicationWindow):
         self.devices_group.set_hexpand(True)
         content.append(self.devices_group)
 
-        status_group = Adw.PreferencesGroup(title="Estado")
+        status_group = Adw.PreferencesGroup(title=tr("Estado"))
         status_group.set_hexpand(True)
         status_group.add(
             self._status_row(
-                "Detección automática",
-                "Los mandos aparecen solos y se avisa con una notificación.",
+                tr("Detección automática"),
+                tr("Los mandos aparecen solos y se avisa con una notificación."),
                 "object-select-symbolic",
                 success=True,
             )
         )
         status_group.add(
             self._action_row(
-                "Reglas preconfiguradas",
-                "Microsoft Xbox, fabiscafe, Steam/SteamVR y ASRock opcional.",
+                tr("Reglas preconfiguradas"),
+                tr("Microsoft Xbox, fabiscafe, Steam/SteamVR y ASRock opcional."),
                 "app.presets",
                 icon_name="application-x-addon-symbolic",
             )
         )
         status_group.add(
             self._action_row(
-                "Reglas instaladas",
-                "Ver o eliminar las reglas creadas por esta aplicación.",
+                tr("Reglas instaladas"),
+                tr("Ver o eliminar las reglas creadas por esta aplicación."),
                 "app.installed",
                 icon_name="document-open-symbolic",
             )
@@ -276,23 +277,31 @@ class MainWindow(Adw.ApplicationWindow):
     def _count_label(self, count: int) -> str:
         if count == 0:
             if len(self.hidden_store):
-                return "Sin mandos visibles"
-            return "Sin mandos conectados"
+                return tr("Sin mandos visibles")
+            return tr("Sin mandos conectados")
         if count == 1:
-            return "1 mando detectado"
-        return f"{count} mandos detectados"
+            return tr("1 mando detectado")
+        return tr("{count} mandos detectados", count=count)
 
     def _update_empty_page(self) -> None:
         count = len(self.hidden_store)
         if count:
-            noun = "dispositivo oculto" if count == 1 else "dispositivos ocultos"
-            self.empty_page.set_title("No hay joysticks visibles")
+            noun = (
+                tr("dispositivo oculto")
+                if count == 1
+                else tr("dispositivos ocultos")
+            )
+            self.empty_page.set_title(tr("No hay joysticks visibles"))
             self.empty_page.set_description(
-                f"Tenés {count} {noun}.  Podés desocultarlos desde el menú "
-                "→ Dispositivos ocultos."
+                tr(
+                    "Tenés {count} {noun}.  Podés desocultarlos desde el menú "
+                    "→ Dispositivos ocultos.",
+                    count=count,
+                    noun=noun,
+                )
             )
             return
-        self.empty_page.set_title("No hay joysticks conectados")
+        self.empty_page.set_title(tr("No hay joysticks conectados"))
         self.empty_page.set_description(self._empty_description)
 
     def _set_state(self, name: str) -> None:
@@ -334,9 +343,12 @@ class MainWindow(Adw.ApplicationWindow):
                 self._set_state("empty")
                 self._first_detection = False
                 self.show_error(
-                    "No se pudieron detectar joysticks",
-                    f"{exc}\n\nRevisá que udev esté funcionando y que la "
-                    "aplicación tenga acceso al host.",
+                    tr("No se pudieron detectar joysticks"),
+                    tr(
+                        "{error}\n\nRevisá que udev esté funcionando y que la "
+                        "aplicación tenga acceso al host.",
+                        error=exc,
+                    ),
                 )
             return False
 
@@ -383,7 +395,7 @@ class MainWindow(Adw.ApplicationWindow):
         if app is None:
             return
         display_name = " ".join(device.display_name.split())
-        notification = Gio.Notification.new("Joystick conectado")
+        notification = Gio.Notification.new(tr("Joystick conectado"))
         notification.set_body(
             f"{display_name} · {device.bus_label} · {device.identifier}"
         )
@@ -490,7 +502,7 @@ class MainWindow(Adw.ApplicationWindow):
 
     def show_error(self, heading: str, body: str) -> None:
         dialog = Adw.AlertDialog(heading=heading, body=body)
-        dialog.add_response("close", "Cerrar")
+        dialog.add_response("close", tr("Cerrar"))
         dialog.present(self)
 
     def _on_close(self, _window) -> bool:
