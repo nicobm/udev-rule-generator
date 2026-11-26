@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.0.0 - 2026-11-26
+
+First production release.
+
+- Primary GTK4/libadwaita GUI with a matching CLI for scripts and headless
+  systems.
+- Per-device udev rules to enable controllers, with only **enabled** and
+  **disabled** saved states.
+- Shows connected and saved-but-disconnected controllers in both interfaces.
+- Hide/restore saved devices without losing their metadata.
+- Optional Valve steam-devices rules with strict `.rules` and executable
+  directive validation.
+- English and Spanish localization across the GUI, CLI, dialogs, and errors.
+- Offline Flatpak build and GNOME 51 integration.
+
 ## 0.20.1 - 2026-11-26
 
 - Makes `--list` include all saved devices, including disconnected ones, and

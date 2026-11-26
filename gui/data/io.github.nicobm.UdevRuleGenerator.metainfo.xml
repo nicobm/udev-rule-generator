@@ -62,6 +62,15 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="1.0.0" date="2026-11-26">
+      <description>
+        <p>
+          First production release: primary GTK4/libadwaita GUI, matching
+          CLI, enabled/disabled device rules, hidden devices, validated
+          steam-devices presets, and English/Spanish localization.
+        </p>
+      </description>
+    </release>
     <release version="0.20.1" date="2026-11-26">
       <description>
         <p>
