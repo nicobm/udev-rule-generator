@@ -196,6 +196,7 @@ class DeviceManager(Gtk.Box):
         self.steam_switch.connect(
             "notify::active", self._on_steam_toggled
         )
+        self.steam_switch.add_css_class("device-card")
         self.external_group.add(self.steam_switch)
 
         self.gdu_switch = Adw.SwitchRow(
@@ -207,6 +208,7 @@ class DeviceManager(Gtk.Box):
             ),
         )
         self.gdu_switch.connect("notify::active", self._on_gdu_toggled)
+        self.gdu_switch.add_css_class("device-card")
         self.external_group.add(self.gdu_switch)
 
         self.blacklist_switch = Adw.SwitchRow(
@@ -221,6 +223,7 @@ class DeviceManager(Gtk.Box):
         self.blacklist_switch.connect(
             "notify::active", self._on_blacklist_toggled
         )
+        self.blacklist_switch.add_css_class("device-card")
         self.external_group.add(self.blacklist_switch)
 
         self.append(self.external_group)
@@ -509,6 +512,7 @@ class DeviceManager(Gtk.Box):
                 ),
             )
             row.set_activatable(False)
+            row.add_css_class("device-card")
             self._append(self.devices_group, row)
 
         ignored_known = [
@@ -820,7 +824,6 @@ class DeviceManager(Gtk.Box):
 
         entry: Gtk.Entry | None = None
         editing = False
-        hovered = False
         visible_opacity = 0.55
         suspended_activatable: bool | None = None
 
@@ -837,10 +840,9 @@ class DeviceManager(Gtk.Box):
                 suspended_activatable = None
 
         def refresh_visibility() -> None:
-            visible = hovered or editing
-            button.set_opacity(visible_opacity if visible else 0.0)
-            button.set_can_target(visible)
-            button.set_focusable(visible)
+            button.set_opacity(visible_opacity)
+            button.set_can_target(True)
+            button.set_focusable(True)
 
         def update_state() -> None:
             nonlocal visible_opacity
@@ -987,69 +989,9 @@ class DeviceManager(Gtk.Box):
             else:
                 start_edit()
 
-        def on_enter(*_args) -> None:
-            nonlocal hovered
-            hovered = True
-            refresh_visibility()
-
-        def on_leave(*_args) -> None:
-            nonlocal hovered
-            hovered = False
-            refresh_visibility()
-
-        motion = Gtk.EventControllerMotion()
-        motion.connect("enter", on_enter)
-        motion.connect("leave", on_leave)
-        row.add_controller(motion)
-
         button.connect("clicked", on_clicked)
         update_state()
         return lambda: editing or suspended_activatable is not None
-
-    def _add_hover_button(
-        self,
-        row: Adw.ActionRow,
-        button: Gtk.Button,
-    ) -> None:
-        """Muestra un botón solo mientras el puntero está sobre la fila."""
-        def update(visible: bool) -> None:
-            button.set_opacity(1.0 if visible else 0.0)
-            button.set_can_target(visible)
-            button.set_focusable(visible)
-
-        def on_enter(*_args) -> None:
-            update(True)
-
-        def on_leave(*_args) -> None:
-            update(False)
-
-        motion = Gtk.EventControllerMotion()
-        motion.connect("enter", on_enter)
-        motion.connect("leave", on_leave)
-        row.add_controller(motion)
-        update(False)
-
-    def _add_hover_opacity(
-        self,
-        row: Adw.ActionRow,
-        widget: Gtk.Widget,
-        normal: float,
-        hovered: float,
-    ) -> None:
-        def update(active: bool) -> None:
-            widget.set_opacity(hovered if active else normal)
-
-        def on_enter(*_args) -> None:
-            update(True)
-
-        def on_leave(*_args) -> None:
-            update(False)
-
-        motion = Gtk.EventControllerMotion()
-        motion.connect("enter", on_enter)
-        motion.connect("leave", on_leave)
-        row.add_controller(motion)
-        update(False)
 
     def _add_drag_handle(
         self,
@@ -1240,7 +1182,7 @@ class DeviceManager(Gtk.Box):
         )
         row.add_controller(target)
         row.add_prefix(handle)
-        self._add_hover_opacity(row, visual, 0.25, 0.85)
+        visual.set_opacity(0.85)
 
     def _live_target_under_pointer(
         self,
@@ -1504,6 +1446,7 @@ class DeviceManager(Gtk.Box):
         )
         self._row_identities[row] = device.id
         row.set_activatable(True)
+        row.add_css_class("device-card")
         row.set_tooltip_text(tr("Hacé clic para activar o desactivar"))
         self._add_device_icon(row, device.id)
         self._add_drag_handle(row, device.id)
@@ -1527,7 +1470,6 @@ class DeviceManager(Gtk.Box):
                 ),
             )
             row.add_suffix(hide)
-            self._add_hover_button(row, hide)
 
         if connected_device is not None:
             row.add_suffix(self._connected_badge(connected_device))
@@ -1563,6 +1505,7 @@ class DeviceManager(Gtk.Box):
         )
         self._row_identities[row] = key
         row.set_activatable(True)
+        row.add_css_class("device-card")
         row.set_tooltip_text(tr("Hacé clic para activar o desactivar"))
         self._add_device_icon(row, key)
         self._add_drag_handle(row, key)
@@ -1639,6 +1582,7 @@ class DeviceManager(Gtk.Box):
         )
         self._row_identities[row] = device_id
         row.set_activatable(True)
+        row.add_css_class("device-card")
         row.set_tooltip_text(
             tr("Hacé clic para deshabilitar o habilitar el dispositivo")
         )

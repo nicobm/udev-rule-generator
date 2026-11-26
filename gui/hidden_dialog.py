@@ -75,6 +75,7 @@ class HiddenDevicesDialog(Adw.Window):
                 ),
             )
             row.set_activatable(False)
+            row.add_css_class("device-card")
 
             show = Gtk.Button(
                 icon_name="view-reveal-symbolic",

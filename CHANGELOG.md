@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.13.2 - 2026-11-26
+
+- Removes the hover highlight from device, external-rule, and hidden-device
+  cards.
+- Keeps the alias, hide, and drag controls always visible instead of
+  revealing them only while hovering a row.
+
 ## 1.13.1 - 2026-11-26
 
 - Clicking anywhere on a saved, connected, or ignored device card now toggles

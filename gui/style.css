@@ -65,6 +65,14 @@
   box-shadow: none;
 }
 
+/* Las tarjetas son clickeables, pero no cambian al pasar el puntero. */
+.device-card:hover,
+.device-card:active {
+  background-color: @card_bg_color;
+  background-image: none;
+  box-shadow: none;
+}
+
 .device-icon-color {
   min-width: 34px;
   min-height: 34px;
