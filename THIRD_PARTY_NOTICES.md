@@ -6,6 +6,7 @@ Las reglas de **game-devices-udev** que están en
 `udev_rule_generator/data/presets/` provienen de Fabian Bornschein
 (fabiscafe):
 
+- Autor: https://codeberg.org/fabiscafe/
 - Codeberg: https://codeberg.org/fabiscafe/game-devices-udev
 - GitHub (espejo): https://github.com/fabiscafe/game-devices-udev
 - Licencia: MIT

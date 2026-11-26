@@ -64,6 +64,14 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.9.3" date="2026-11-26">
+      <description>
+        <p>
+          Adds tools/update_presets.py to refresh bundled rules from Codeberg
+          and GitHub, and links the README to the upstream projects and author.
+        </p>
+      </description>
+    </release>
     <release version="0.9.2" date="2026-11-26">
       <description>
         <p>

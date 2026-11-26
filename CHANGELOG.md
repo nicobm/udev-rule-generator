@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.9.3 - 2026-11-26
+
+- Adds `tools/update_presets.py`, a development tool that refreshes the bundled
+  preset snapshots from codeberg.org/fabiscafe/game-devices-udev and
+  github.com/ValveSoftware/steam-devices. The app itself still runs offline and
+  never downloads rules at runtime.
+- Links the README and website to the upstream projects and to Fabian
+  Bornschein's Codeberg profile.
+- Documents how the bundled snapshots are sourced and updated.
+
 ## 0.9.2 - 2026-11-26
 
 - Generated rules no longer include the transient `# Nodos:`/`# Nodes:` line.
