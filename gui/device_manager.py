@@ -23,6 +23,18 @@ from udev_rule_generator.userconfig import device_identity
 from .gi_compat import Adw, GLib, Gtk
 
 
+def _js_nodes_label(device: Joystick | None) -> str:
+    """Devuelve los nombres cortos de los nodos js, por ejemplo ``js0``."""
+    if device is None:
+        return ""
+    names: list[str] = []
+    for node in device.js_devices:
+        name = node.rsplit("/", 1)[-1]
+        if name and name not in names:
+            names.append(name)
+    return ", ".join(names)
+
+
 class DeviceManager(Gtk.Box):
     """Gestiona reglas guardadas, dispositivos ocultos y reglas externas."""
 
@@ -220,7 +232,9 @@ class DeviceManager(Gtk.Box):
             if device.action == "allow" and not device.hidden
         ]
         connected = self._connected
-        connected_ids = {device_identity(device) for device in connected}
+        connected_by_id = {
+            device_identity(device): device for device in connected
+        }
 
         regular_connected = [
             device
@@ -233,7 +247,7 @@ class DeviceManager(Gtk.Box):
                 self.devices_group,
                 self._known_row(
                     record,
-                    record.id in connected_ids,
+                    connected_by_id.get(record.id),
                     removable=True,
                 ),
             )
@@ -263,18 +277,22 @@ class DeviceManager(Gtk.Box):
     def _known_row(
         self,
         device: KnownDevice,
-        connected: bool,
+        connected_device: Joystick | None,
         *,
         removable: bool = False,
     ) -> Adw.ActionRow:
+        details = [device.bus_label, device.identifier]
+        js_label = _js_nodes_label(connected_device)
+        if js_label:
+            details.append(js_label)
         row = Adw.ActionRow(
             title=device.name,
-            subtitle=f"{device.bus_label} · {device.identifier}",
+            subtitle=" · ".join(details),
         )
         row.set_activatable(False)
         row.set_tooltip_text(device.filename)
 
-        if connected:
+        if connected_device is not None:
             row.add_suffix(self._connected_badge())
 
         if removable:
@@ -308,10 +326,14 @@ class DeviceManager(Gtk.Box):
 
     def _unknown_row(self, device: Joystick) -> Adw.ActionRow:
         key = device_identity(device)
+        details = [device.bus_label, device.identifier]
+        js_label = _js_nodes_label(device)
+        if js_label:
+            details.append(js_label)
+        details.append(tr("Sin regla guardada"))
         row = Adw.ActionRow(
             title=device.display_name,
-            subtitle=f"{device.bus_label} · {device.identifier} · "
-            f"{tr('Sin regla guardada')}",
+            subtitle=" · ".join(details),
         )
         row.set_activatable(False)
         row.add_suffix(self._connected_badge())

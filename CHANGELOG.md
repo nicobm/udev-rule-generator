@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.4 - 2026-11-26
+
+- Shows the active `js` node (for example `js0`) in the subtitle of connected
+  saved devices and connected devices without a saved rule.
+
 ## 1.1.3 - 2026-11-26
 
 - Fixes game-devices-udev installation names: they now use the required `71-`
