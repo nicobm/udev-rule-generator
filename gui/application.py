@@ -57,6 +57,7 @@ class Application(Adw.Application):
             ("refresh", self._on_refresh),
             ("presets", self._on_presets),
             ("installed", self._on_installed),
+            ("hidden", self._on_hidden),
             ("about", self._on_about),
             ("show", self._on_show),
             ("quit", self._on_quit),
@@ -93,6 +94,10 @@ class Application(Adw.Application):
     def _on_installed(self, _action, _parameter) -> None:
         if self.window is not None:
             self.window.show_installed()
+
+    def _on_hidden(self, _action, _parameter) -> None:
+        if self.window is not None:
+            self.window.show_hidden()
 
     def _on_show(self, _action, _parameter) -> None:
         if self.window is not None:

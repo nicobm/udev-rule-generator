@@ -6,6 +6,7 @@ import threading
 from typing import Callable
 
 from udev_rule_generator.devices import Joystick
+from udev_rule_generator.hidden import HiddenDevices
 from udev_rule_generator.host import Host
 from udev_rule_generator.privileged import install_rule_files
 from udev_rule_generator.rules import RuleAction, RuleSpec, build_rule
@@ -22,13 +23,17 @@ class DeviceDialog(Adw.Dialog):
         device: Joystick,
         host: Host,
         parent: Gtk.Window,
+        hidden_store: HiddenDevices,
         on_installed: Callable[[str], None],
+        on_hidden: Callable[[str], None],
     ) -> None:
         super().__init__()
         self.parent_window = parent
         self.device = device
         self.host = host
+        self.hidden_store = hidden_store
         self.on_installed = on_installed
+        self.on_hidden = on_hidden
         self._spec: RuleSpec | None = None
         self._busy = False
 
@@ -78,6 +83,7 @@ class DeviceDialog(Adw.Dialog):
         page.set_vexpand(True)
         page.add(self._build_info_group())
         page.add(self._build_action_group())
+        page.add(self._build_visibility_group())
         page.add(self._build_preview_group())
 
         content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
@@ -181,6 +187,49 @@ class DeviceDialog(Adw.Dialog):
         row.add_prefix(radio)
         row.connect("activated", lambda *_: radio.set_active(True))
         return row
+
+    def _build_visibility_group(self) -> Adw.PreferencesGroup:
+        group = Adw.PreferencesGroup(
+            title="Visibilidad",
+            description=(
+                "Ocultar un dispositivo no borra sus reglas ni cambia permisos.  "
+                "Podés recuperarlo desde el menú → Dispositivos ocultos."
+            ),
+        )
+        row = Adw.ActionRow(
+            title="Ocultar este dispositivo",
+            subtitle=(
+                "Se moverá a Dispositivos ocultos y dejará de aparecer en la "
+                "lista principal."
+            ),
+        )
+        icon = Gtk.Image(icon_name="view-conceal-symbolic")
+        icon.add_css_class("dim-label")
+        icon.set_valign(Gtk.Align.CENTER)
+        row.add_prefix(icon)
+
+        button = Gtk.Button(label="Ocultar")
+        button.add_css_class("flat")
+        button.set_valign(Gtk.Align.CENTER)
+        button.connect("clicked", lambda *_: self._hide_device())
+        row.add_suffix(button)
+        group.add(row)
+        return group
+
+    def _hide_device(self) -> None:
+        try:
+            self.hidden_store.hide(self.device)
+        except OSError as exc:
+            dialog = Adw.AlertDialog(
+                heading="No se pudo ocultar el dispositivo",
+                body=f"No se pudo guardar la preferencia: {exc}",
+            )
+            dialog.add_response("close", "Cerrar")
+            root = self.get_root()
+            dialog.present(root if root is not None else self.parent_window)
+            return
+        self.on_hidden(f"Dispositivo oculto: {self.device.display_name}")
+        self.close()
 
     def _build_preview_group(self) -> Adw.PreferencesGroup:
         group = Adw.PreferencesGroup(

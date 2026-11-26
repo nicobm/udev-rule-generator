@@ -31,6 +31,8 @@ contraseña.
 - Reglas preconfiguradas con licencia y procedencia, incluidas las opcionales
   de Steam/SteamVR de Valve.
 - Listado y eliminación de las reglas que administra la aplicación.
+- Ocultar dispositivos de la lista y recuperarlos desde “Dispositivos
+  ocultos”, sin borrar sus reglas.
 - GUI GTK4/libadwaita con detección automática al conectar un mando,
   notificaciones de GNOME y tarjetas centradas al estilo de Pika Backup.
 - Sin dependencias Python externas para el núcleo.
@@ -152,6 +154,8 @@ diálogo con:
 
 - Datos del dispositivo.
 - Acción **Permitir / detectar** o **Ignorar**.
+- **Ocultar este dispositivo**: se mueve a “Dispositivos ocultos” sin borrar
+  ninguna regla.
 - Vista previa de la regla.
 - Botón para copiar la regla y botón para instalarla.
 
@@ -159,7 +163,9 @@ La GUI monitorea `udevadm monitor` mientras está abierta, además de un sondeo
 de respaldo cada 5 segundos.  Al conectar un mando, la lista se actualiza sola
 y se envía una **notificación de GNOME**; al hacer clic en ella se abre la
 ventana.  El menú de la cabecera permite abrir las reglas preconfiguradas, las
-reglas instaladas y “Acerca de”.
+reglas instaladas, **Dispositivos ocultos** y “Acerca de”.  En “Dispositivos
+ocultos” cada fila tiene un botón **Desocultar**; la preferencia se guarda en
+`$XDG_CONFIG_HOME/udev-rule-generator/hidden.json`.
 
 La GUI usa `Adw.HeaderBar`, `Adw.Clamp`, `Adw.PreferencesGroup`,
 `Adw.SwitchRow`, `Adw.Banner`, `Adw.AlertDialog` y `Adw.ToastOverlay`, por lo
@@ -237,7 +243,7 @@ Para un mando USB, el archivo se llama por ejemplo
 `10-gamepad-045e-0b12-microsoft-xbox-series-s-x-controller.rules` y contiene:
 
 ```udev
-# Generado por udev-rule-generator 0.3.1
+# Generado por udev-rule-generator 0.4.0
 # Generador de reglas udev
 # Dispositivo: Microsoft Xbox Series S|X Controller
 # Bus: USB · ID: 045e:0b12
@@ -431,6 +437,7 @@ udev_rule_generator/
   presets.py      # reglas preconfiguradas
   privileged.py   # pkexec, instalación y recarga de udev
   installed.py    # lectura de reglas administradas
+  hidden.py       # dispositivos ocultos persistidos en la configuración
   host.py         # comandos nativos o flatpak-spawn --host
   monitor.py      # udevadm monitor para la detección automática de la GUI
 gui/
@@ -439,6 +446,7 @@ gui/
   device_dialog.py
   presets_dialog.py
   installed_dialog.py
+  hidden_dialog.py
   data/           # .desktop, metainfo e icono
 tests/
 ```

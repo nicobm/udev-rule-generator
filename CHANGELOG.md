@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.4.0 - 2026-11-26
+
+- Centra correctamente el icono dentro del avatar de cada dispositivo.
+- Añade “Ocultar este dispositivo” en la ficha de cada mando.
+- Los dispositivos ocultos se guardan en
+  `$XDG_CONFIG_HOME/udev-rule-generator/hidden.json`.
+- Añade “Dispositivos ocultos” al menú, entre Reglas instaladas y Acerca de.
+- El diálogo de ocultos permite desocultar cada dispositivo sin tocar sus
+  reglas udev.
+
 ## 0.3.1 - 2026-11-26
 
 - Añade `--gui` a `udev-rule-generator` para abrir la interfaz gráfica desde

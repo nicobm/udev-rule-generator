@@ -24,6 +24,7 @@
       <li>Reglas de permiso con MODE 0660 y TAG uaccess.</li>
       <li>Reglas para ignorar dispositivos USB o Bluetooth.</li>
       <li>Detección automática al conectar un mando y notificaciones de GNOME.</li>
+      <li>Dispositivos ocultos recuperables desde el menú, sin borrar reglas.</li>
       <li>Instalación con el diálogo de autenticación de polkit de GNOME.</li>
       <li>Interfaz de terminal y aplicación GTK4/libadwaita.</li>
     </ul>
@@ -41,6 +42,14 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.4.0" date="2026-11-26">
+      <description>
+        <p>
+          Centra el icono de los dispositivos, añade la opción de ocultarlos y
+          un diálogo de Dispositivos ocultos con botón para desocultarlos.
+        </p>
+      </description>
+    </release>
     <release version="0.3.1" date="2026-11-26">
       <description>
         <p>

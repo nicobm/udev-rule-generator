@@ -6,6 +6,7 @@ from concurrent.futures import Future, ThreadPoolExecutor
 
 from udev_rule_generator import APP_NAME
 from udev_rule_generator.devices import Joystick, detect_joysticks
+from udev_rule_generator.hidden import HiddenDevices
 from udev_rule_generator.host import Host
 from udev_rule_generator.monitor import UdevMonitor
 
@@ -18,6 +19,7 @@ class MainWindow(Adw.ApplicationWindow):
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
         self.host = Host()
+        self.hidden_store = HiddenDevices()
         self._executor = ThreadPoolExecutor(
             max_workers=3, thread_name_prefix="udev-rule-generator"
         )
@@ -67,6 +69,7 @@ class MainWindow(Adw.ApplicationWindow):
         menu = Gio.Menu()
         menu.append("Reglas preconfiguradas", "app.presets")
         menu.append("Reglas instaladas", "app.installed")
+        menu.append("Dispositivos ocultos", "app.hidden")
         menu.append("Acerca de", "app.about")
         menu_button = Gtk.MenuButton(
             icon_name="open-menu-symbolic",
@@ -103,15 +106,16 @@ class MainWindow(Adw.ApplicationWindow):
         self.stack.add_named(page, "loading")
 
     def _build_empty_page(self) -> None:
+        self._empty_description = (
+            "Conectá un mando por USB o Bluetooth.  La ventana se actualiza "
+            "sola y te avisa con una notificación cuando aparece.  Si ya está "
+            "conectado, revisá que el sistema lo detecte con "
+            "«udevadm info --export-db»."
+        )
         page = Adw.StatusPage(
             icon_name="input-gaming-symbolic",
             title="No hay joysticks conectados",
-            description=(
-                "Conectá un mando por USB o Bluetooth.  La ventana se actualiza "
-                "sola y te avisa con una notificación cuando aparece.  Si ya está "
-                "conectado, revisá que el sistema lo detecte con "
-                "«udevadm info --export-db»."
-            ),
+            description=self._empty_description,
         )
         button = Gtk.Button(label="Buscar de nuevo")
         button.add_css_class("pill")
@@ -246,7 +250,7 @@ class MainWindow(Adw.ApplicationWindow):
             lambda _row, selected=device: self._open_device(selected),
         )
 
-        avatar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        avatar = Gtk.CenterBox()
         avatar.set_size_request(46, 46)
         avatar.set_halign(Gtk.Align.CENTER)
         avatar.set_valign(Gtk.Align.CENTER)
@@ -255,7 +259,7 @@ class MainWindow(Adw.ApplicationWindow):
         icon.set_pixel_size(24)
         icon.set_halign(Gtk.Align.CENTER)
         icon.set_valign(Gtk.Align.CENTER)
-        avatar.append(icon)
+        avatar.set_center_widget(icon)
         row.add_prefix(avatar)
 
         for text in self._device_badges(device):
@@ -269,18 +273,32 @@ class MainWindow(Adw.ApplicationWindow):
         row.add_suffix(arrow)
         return row
 
-    @staticmethod
-    def _count_label(count: int) -> str:
+    def _count_label(self, count: int) -> str:
         if count == 0:
+            if len(self.hidden_store):
+                return "Sin mandos visibles"
             return "Sin mandos conectados"
         if count == 1:
             return "1 mando detectado"
         return f"{count} mandos detectados"
 
+    def _update_empty_page(self) -> None:
+        count = len(self.hidden_store)
+        if count:
+            noun = "dispositivo oculto" if count == 1 else "dispositivos ocultos"
+            self.empty_page.set_title("No hay joysticks visibles")
+            self.empty_page.set_description(
+                f"Tenés {count} {noun}.  Podés desocultarlos desde el menú "
+                "→ Dispositivos ocultos."
+            )
+            return
+        self.empty_page.set_title("No hay joysticks conectados")
+        self.empty_page.set_description(self._empty_description)
+
     def _set_state(self, name: str) -> None:
         self.stack.set_visible_child_name(name)
 
-    def refresh(self, *, silent: bool = False) -> None:
+    def refresh(self, *, silent: bool = False, notify: bool = True) -> None:
         """Vuelve a detectar joysticks en segundo plano."""
         if self._closed:
             return
@@ -295,7 +313,7 @@ class MainWindow(Adw.ApplicationWindow):
         future = self._executor.submit(detect_joysticks, self.host)
         future.add_done_callback(
             lambda completed: GLib.idle_add(
-                self._apply_detection, completed, generation, silent
+                self._apply_detection, completed, generation, silent, notify
             )
         )
 
@@ -304,6 +322,7 @@ class MainWindow(Adw.ApplicationWindow):
         future: Future,
         generation: int,
         silent: bool,
+        notify: bool = True,
     ) -> bool:
         if self._closed or generation != self._refresh_generation:
             return False
@@ -321,6 +340,9 @@ class MainWindow(Adw.ApplicationWindow):
                 )
             return False
 
+        devices = [
+            device for device in devices if not self.hidden_store.is_hidden(device)
+        ]
         previous_keys = {device.key for device in self._devices}
         previous_fingerprint = {
             (device.key, device.display_name, device.identifier)
@@ -336,8 +358,9 @@ class MainWindow(Adw.ApplicationWindow):
         if not silent or fingerprint != previous_fingerprint:
             self._populate(devices)
             self._set_state("list" if devices else "empty")
+        self._update_empty_page()
 
-        if not self._first_detection:
+        if notify and not self._first_detection:
             for device in added:
                 self._notify_device(device)
         self._first_detection = False
@@ -408,7 +431,9 @@ class MainWindow(Adw.ApplicationWindow):
             device=device,
             host=self.host,
             parent=self,
+            hidden_store=self.hidden_store,
             on_installed=self._on_rule_installed,
+            on_hidden=self._on_device_hidden,
         )
         dialog.present(self)
 
@@ -432,6 +457,24 @@ class MainWindow(Adw.ApplicationWindow):
         )
         dialog.present(self)
 
+    def show_hidden(self) -> None:
+        from .hidden_dialog import HiddenDialog
+
+        dialog = HiddenDialog(
+            store=self.hidden_store,
+            parent=self,
+            on_changed=self._on_hidden_changed,
+        )
+        dialog.present(self)
+
+    def _on_device_hidden(self, message: str) -> None:
+        self.toast_overlay.add_toast(Adw.Toast(title=message, timeout=5))
+        self.refresh(silent=True, notify=False)
+
+    def _on_hidden_changed(self, message: str) -> None:
+        self.toast_overlay.add_toast(Adw.Toast(title=message, timeout=5))
+        self.refresh(silent=True, notify=False)
+
     def _on_rule_installed(self, message: str) -> None:
         self.toast_overlay.add_toast(Adw.Toast(title=message, timeout=5))
         # Si se ignoró un dispositivo, udev puede tardar un instante en
@@ -439,7 +482,7 @@ class MainWindow(Adw.ApplicationWindow):
         GLib.timeout_add(1200, self._refresh_after_change)
 
     def _refresh_after_change(self) -> bool:
-        self.refresh(silent=True)
+        self.refresh(silent=True, notify=False)
         return False
 
     def add_toast(self, message: str) -> None:
