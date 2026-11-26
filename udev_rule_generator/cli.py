@@ -15,6 +15,7 @@ from .installed import list_installed_rules
 from .presets import (
     ALL_PRESETS,
     RECOMMENDED,
+    STEAM,
     UPSTREAM,
     Preset,
     get_preset,
@@ -290,18 +291,19 @@ def _cmd_presets(
     if selection in {"menu", "interactive"}:
         if not sys.stdin.isatty():
             raise ValueError(
-                "Elegí una selección: recommended, optional, all o el id de "
-                "una regla."
+                "Elegí una selección: recommended, optional, steam, all o el "
+                "id de una regla."
             )
         print()
         print(colors.bold("Reglas preconfiguradas"))
         print("  1) Microsoft Xbox (recomendada)")
         print("  2) ASRock LED (opcional; solo si tenés ese hardware)")
-        print("  3) Todos los fabricantes de game-devices-udev")
-        print("  4) Elegir fabricantes de la biblioteca")
-        print("  5) Volver")
+        print("  3) Toda la biblioteca game-devices-udev (fabiscafe)")
+        print("  4) Steam / SteamVR (Valve)")
+        print("  5) Elegir fabricantes de fabiscafe")
+        print("  6) Volver")
         choice = _ask("\nSelección: ")
-        if choice in {"5", "q", ""}:
+        if choice in {"6", "q", ""}:
             return 0
         if choice == "1":
             presets = list(RECOMMENDED)
@@ -310,6 +312,8 @@ def _cmd_presets(
         elif choice == "3":
             presets = list(ALL_PRESETS)
         elif choice == "4":
+            presets = list(STEAM)
+        elif choice == "5":
             _print_presets(UPSTREAM, colors)
             raw = _ask(
                 "\nNúmeros separados por coma (por ejemplo 1,3,7): "
@@ -553,6 +557,8 @@ def build_parser() -> argparse.ArgumentParser:
             "  udev-rule-generator --device 1 --action allow\n"
             "  udev-rule-generator --device 045e:0b12 --action ignore --dry-run\n"
             "  udev-rule-generator --presets recommended\n"
+            "  udev-rule-generator --presets steam\n"
+            "  udev-rule-generator --presets recommended,steam\n"
             "  udev-rule-generator --presets asrock-led-disable\n"
             "  udev-rule-generator --presets all --yes\n"
             "  udev-rule-generator --installed\n\n"
@@ -591,8 +597,8 @@ def build_parser() -> argparse.ArgumentParser:
         const="menu",
         metavar="SELECCIÓN",
         help=(
-            "instala reglas preconfiguradas: recommended, optional, all o un "
-            "id (por ejemplo asrock-led-disable).  Sin valor abre el menú"
+            "instala reglas preconfiguradas: recommended, optional, steam, all "
+            "o un id (por ejemplo steam-input).  Sin valor abre el menú"
         ),
     )
     parser.add_argument(

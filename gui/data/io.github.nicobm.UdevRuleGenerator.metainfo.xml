@@ -14,9 +14,10 @@
     </p>
     <p>
       Permite generar una regla para un mando concreto, instalar reglas
-      preconfiguradas de Microsoft Xbox y añadir la biblioteca
-      game-devices-udev de fabiscafe.  La desautorización opcional del
-      controlador de LEDs ASRock solo se ofrece para quien tiene ese hardware.
+      preconfiguradas de Microsoft Xbox y añadir, de forma opcional, la
+      biblioteca game-devices-udev de fabiscafe, las reglas de Steam/SteamVR
+      de Valve o la desautorización del controlador de LEDs ASRock.  Ninguna
+      de esas fuentes se instala por defecto.
     </p>
     <ul>
       <li>Detección de mandos USB y Bluetooth con udevadm.</li>
@@ -39,6 +40,15 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.2.0" date="2026-11-26">
+      <description>
+        <p>
+          Añade las reglas opcionales de steam-devices (Steam Input y
+          SteamVR), separa ASRock de las reglas recomendadas y deja todas las
+          fuentes opcionales desactivadas por defecto.
+        </p>
+      </description>
+    </release>
     <release version="0.1.0" date="2026-11-25">
       <description>
         <p>Primera versión: detección, reglas de permitir/ignorar, presets y GUI.</p>

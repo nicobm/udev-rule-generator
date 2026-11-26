@@ -19,6 +19,7 @@ from udev_rule_generator.presets import (
     OPTIONAL,
     PRESETS,
     RECOMMENDED,
+    STEAM,
     UPSTREAM,
     build_preset_content,
     preset_files,
@@ -185,17 +186,23 @@ class RuleTests(unittest.TestCase):
 class PresetTests(unittest.TestCase):
     def test_presets_are_packaged(self) -> None:
         self.assertEqual(len(UPSTREAM), 27)
-        self.assertEqual(len(PRESETS), 28)
+        self.assertEqual(len(PRESETS), 30)
         self.assertEqual(len(RECOMMENDED), 1)
         self.assertEqual(len(OPTIONAL), 1)
+        self.assertEqual(len(STEAM), 2)
         self.assertNotIn("asrock-led-disable", {p.id for p in RECOMMENDED})
         self.assertEqual(RECOMMENDED[0].id, "microsoft-xbox")
         self.assertEqual(OPTIONAL[0].id, "asrock-led-disable")
+        self.assertEqual({p.id for p in STEAM}, {"steam-input", "steam-vr"})
         self.assertEqual(len(ALL_PRESETS), 27)
         self.assertNotIn("asrock-led-disable", {p.id for p in ALL_PRESETS})
+        self.assertNotIn("steam-input", {p.id for p in ALL_PRESETS})
+        self.assertNotIn("steam-vr", {p.id for p in ALL_PRESETS})
         ids = {preset.id for preset in PRESETS}
         self.assertIn("asrock-led-disable", ids)
         self.assertIn("microsoft-xbox", ids)
+        self.assertIn("steam-input", ids)
+        self.assertIn("steam-vr", ids)
 
     def test_microsoft_preset_includes_series_x(self) -> None:
         microsoft = next(preset for preset in RECOMMENDED if preset.id == "microsoft-xbox")
@@ -207,10 +214,14 @@ class PresetTests(unittest.TestCase):
         files = preset_files(PRESETS)
         self.assertIn("71-microsoft-gdu.rules", files)
         self.assertIn("10-asrock-led-disable.rules", files)
+        self.assertIn("71-steam-input.rules", files)
+        self.assertIn("71-steam-vr.rules", files)
+        self.assertEqual(len(files), len(PRESETS))
 
     def test_trigger_depends_on_hardware_specific_presets(self) -> None:
         self.assertEqual(presets_trigger(RECOMMENDED), "change")
         self.assertEqual(presets_trigger(OPTIONAL), "add")
+        self.assertEqual(presets_trigger(STEAM), "change")
         self.assertEqual(presets_trigger(ALL_PRESETS), "change")
         self.assertEqual(
             presets_trigger([*RECOMMENDED, *OPTIONAL]),
@@ -226,13 +237,29 @@ class PresetTests(unittest.TestCase):
             [p.id for p in select_presets("optional")],
             ["asrock-led-disable"],
         )
+        self.assertEqual(
+            {p.id for p in select_presets("steam")},
+            {"steam-input", "steam-vr"},
+        )
         self.assertNotIn(
             "asrock-led-disable",
+            {p.id for p in select_presets("all")},
+        )
+        self.assertNotIn(
+            "steam-input",
             {p.id for p in select_presets("all")},
         )
         self.assertEqual(
             [p.id for p in select_presets("asrock-led-disable")],
             ["asrock-led-disable"],
+        )
+        self.assertEqual(
+            [p.id for p in select_presets("steam-vr")],
+            ["steam-vr"],
+        )
+        self.assertEqual(
+            [p.id for p in select_presets("recommended,steam")],
+            ["microsoft-xbox", "steam-input", "steam-vr"],
         )
 
 

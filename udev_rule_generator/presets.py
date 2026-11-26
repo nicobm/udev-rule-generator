@@ -1,10 +1,12 @@
 """Reglas preconfiguradas incluidas en la aplicación.
 
 Las reglas de fabricantes vienen de ``game-devices-udev`` de Fabian
-Bornschein (fabiscafe), publicado bajo licencia MIT.  La regla de ASRock es
-una regla local opcional para el controlador de LEDs que algunas placas
-exponen como si fuera un joystick; no se instala como recomendada ni dentro
-de ``all``.
+Bornschein (fabiscafe), publicado bajo licencia MIT.  Las reglas de Steam y
+SteamVR vienen de ``steam-devices`` de Valve, también MIT.  La regla de ASRock
+es una regla local opcional para el controlador de LEDs que algunas placas
+exponen como si fuera un joystick.  Ninguna de estas fuentes se instala por
+defecto: ASRock, Steam y SteamVR solo se instalan si el usuario las elige, y
+``all`` se refiere únicamente a la biblioteca de fabiscafe.
 """
 
 from __future__ import annotations
@@ -16,6 +18,7 @@ from typing import Iterable
 from . import (
     PRESETS_GITHUB_URL,
     PRESETS_URL,
+    STEAM_DEVICES_URL,
     __version__,
 )
 
@@ -81,6 +84,10 @@ class Preset:
     def is_optional(self) -> bool:
         return self.category == "optional"
 
+    @property
+    def is_steam(self) -> bool:
+        return self.category == "steam"
+
 
 _PRESETS: list[Preset] = [
     Preset(
@@ -108,6 +115,32 @@ _PRESETS: list[Preset] = [
         install_name="71-microsoft-gdu.rules",
         category="recommended",
     ),
+    Preset(
+        id="steam-input",
+        title="Steam Input (Valve)",
+        description=(
+            "Permisos de Valve para Steam Controller, DualShock/DualSense, "
+            "mandos de Nintendo y otros dispositivos compatibles con Steam."
+        ),
+        source="60-steam-input.rules",
+        install_name="71-steam-input.rules",
+        category="steam",
+        license="MIT",
+        upstream=STEAM_DEVICES_URL,
+    ),
+    Preset(
+        id="steam-vr",
+        title="SteamVR (Valve)",
+        description=(
+            "Permisos de Valve para visores y controladores de SteamVR: "
+            "Vive, Valve Index, Bigscreen Beyond y otros."
+        ),
+        source="60-steam-vr.rules",
+        install_name="71-steam-vr.rules",
+        category="steam",
+        license="MIT",
+        upstream=STEAM_DEVICES_URL,
+    ),
 ]
 
 for _source in _UPSTREAM_ORDER:
@@ -126,15 +159,18 @@ for _source in _UPSTREAM_ORDER:
         )
     )
 
-# Recomendadas primero, luego las opcionales de hardware específico y por
-# último la biblioteca completa.  Se deduplica por el nombre con el que se
-# instala: Microsoft aparece como recomendada y también dentro del archivo
-# upstream, pero solo debe instalarse una vez.
+# Recomendadas primero, luego las opcionales de hardware específico, Steam y
+# por último la biblioteca de fabiscafe.  Se deduplica por el nombre con el
+# que se instala: Microsoft aparece como recomendada y también dentro del
+# archivo upstream, pero solo debe instalarse una vez.
 RECOMMENDED: tuple[Preset, ...] = tuple(
     preset for preset in _PRESETS if preset.is_recommended
 )
 OPTIONAL: tuple[Preset, ...] = tuple(
     preset for preset in _PRESETS if preset.is_optional
+)
+STEAM: tuple[Preset, ...] = tuple(
+    preset for preset in _PRESETS if preset.is_steam
 )
 UPSTREAM: tuple[Preset, ...] = tuple(
     preset for preset in _PRESETS if preset.is_upstream
@@ -142,17 +178,18 @@ UPSTREAM: tuple[Preset, ...] = tuple(
 
 _ordered: list[Preset] = []
 _seen_install_names: set[str] = set()
-for _preset in [*RECOMMENDED, *OPTIONAL, *UPSTREAM]:
+for _preset in [*RECOMMENDED, *OPTIONAL, *STEAM, *UPSTREAM]:
     if _preset.install_name in _seen_install_names:
         continue
     _seen_install_names.add(_preset.install_name)
     _ordered.append(_preset)
 PRESETS: tuple[Preset, ...] = tuple(_ordered)
 
-# "all" significa toda la biblioteca de fabricantes (incluido Microsoft), no
-# las reglas opcionales para hardware muy específico como el LED de ASRock.
+# "all" significa toda la biblioteca de fabricantes de fabiscafe (incluido
+# Microsoft).  No incluye la regla opcional de ASRock ni las de Steam/SteamVR:
+# esas son fuentes separadas y solo se instalan si el usuario las elige.
 ALL_PRESETS: tuple[Preset, ...] = tuple(
-    preset for preset in PRESETS if not preset.is_optional
+    preset for preset in PRESETS if not preset.is_optional and not preset.is_steam
 )
 
 
@@ -164,19 +201,41 @@ def get_preset(preset_id: str) -> Preset:
     raise KeyError(f"No existe la regla preconfigurada {preset_id!r}.")
 
 
+_GROUPS: dict[str, tuple[Preset, ...]] = {
+    "recommended": RECOMMENDED,
+    "recomendadas": RECOMMENDED,
+    "recomendado": RECOMMENDED,
+    "optional": OPTIONAL,
+    "opcionales": OPTIONAL,
+    "opcional": OPTIONAL,
+    "steam": STEAM,
+    "valve": STEAM,
+    "steam-devices": STEAM,
+    "fabiscafe": ALL_PRESETS,
+    "game-devices-udev": ALL_PRESETS,
+    "gdu": ALL_PRESETS,
+    "all": ALL_PRESETS,
+    "todas": ALL_PRESETS,
+    "todo": ALL_PRESETS,
+}
+
+
 def select_presets(selection: str) -> list[Preset]:
-    """Resuelve ``recommended``, ``optional``, ``all`` o ids separados por coma."""
+    """Resuelve grupos y/o ids separados por coma.
+
+    Ejemplos: ``recommended``, ``steam``, ``all``, ``recommended,steam``.
+    """
     selection = selection.strip()
-    if selection in {"recommended", "recomendadas", "recomendado"}:
-        return list(RECOMMENDED)
-    if selection in {"optional", "opcionales", "opcional"}:
-        return list(OPTIONAL)
-    if selection in {"all", "todas", "todo"}:
-        return list(ALL_PRESETS)
     result: list[Preset] = []
     for item in selection.split(","):
         item = item.strip()
         if not item:
+            continue
+        group = _GROUPS.get(item)
+        if group is not None:
+            for preset in group:
+                if preset not in result:
+                    result.append(preset)
             continue
         preset = get_preset(item)
         if preset not in result:

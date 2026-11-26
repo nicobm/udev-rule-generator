@@ -12,6 +12,8 @@ También puede instalar reglas ya preparadas:
   ese hardware; no se incluye en las recomendadas ni en `all`.
 - La biblioteca **game-devices-udev** de Fabian Bornschein (fabiscafe), con
   reglas para 8BitDo, Sony, Nintendo, Logitech, Hori, Valve, Razer y más.
+- Las reglas opcionales de **steam-devices** de Valve para Steam Input y
+  SteamVR, en una fuente separada.
 
 La instalación se hace en `/etc/udev/rules.d` y usa `pkexec`, así que GNOME
 muestra su diálogo de autenticación de polkit.  No se guarda ninguna
@@ -102,7 +104,13 @@ ver/eliminar las reglas instaladas.
 # Opcional: solo si tenés el controlador de LEDs ASRock 26ce:01a2
 ./udev-rule-generator --presets asrock-led-disable
 
-# Toda la biblioteca game-devices-udev (sin la regla opcional de ASRock)
+# Opcional: reglas de Steam Input y SteamVR de Valve
+./udev-rule-generator --presets steam
+
+# Combinar Microsoft + Steam
+./udev-rule-generator --presets recommended,steam
+
+# Toda la biblioteca game-devices-udev (sin ASRock ni Steam)
 ./udev-rule-generator --presets all
 
 # Reglas instaladas por esta aplicación
@@ -201,7 +209,7 @@ Para un mando USB, el archivo se llama por ejemplo
 `10-gamepad-045e-0b12-microsoft-xbox-series-s-x-controller.rules` y contiene:
 
 ```udev
-# Generado por udev-rule-generator 0.1.0
+# Generado por udev-rule-generator 0.2.0
 # Generador de reglas udev
 # Dispositivo: Microsoft Xbox Series S|X Controller
 # Bus: USB · ID: 045e:0b12
@@ -260,17 +268,22 @@ sobrescribir con permisos.
 | `all` | Las 27 reglas de game-devices-udev (incluye Microsoft) |
 | `microsoft-xbox` | Solo Microsoft Xbox |
 | `asrock-led-disable` | Solo el controlador de LEDs ASRock (opcional) |
+| `steam` | `71-steam-input.rules` y `71-steam-vr.rules` (Valve) |
+| `steam-input` | Solo Steam Input (Valve) |
+| `steam-vr` | Solo SteamVR (Valve) |
 
 Ninguna regla se instala sola: la app no escribe en `/etc/udev/rules.d` hasta
-que elegís una acción y pasás por polkit.  La regla de ASRock es la única
-opcional de hardware específico y queda fuera de `recommended` y de `all`.
+que elegís una acción y pasás por polkit.  ASRock, Steam y SteamVR son
+fuentes opcionales: no están en `recommended` ni en `all`, y en la GUI sus
+interruptores empiezan apagados.
 
 En la CLI, `--presets` sin valor abre un menú.  En la GUI, el diálogo permite
-elegir la regla recomendada, la opcional de ASRock, todos los fabricantes o
-fabricantes sueltos.
+elegir la regla recomendada, la opcional de ASRock, Steam/SteamVR, todos los
+fabricantes de fabiscafe o fabricantes sueltos.
 
 Las reglas de fabricantes son de **game-devices-udev**, MIT, de Fabian
-Bornschein (fabiscafe).  El detalle y la licencia completa están en
+Bornschein (fabiscafe).  Las de Steam/SteamVR son de **steam-devices**, MIT,
+de Valve Software.  El detalle y las licencias completas están en
 [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
 
 ## Cómo funciona la autenticación
@@ -300,6 +313,8 @@ Todo va a `/etc/udev/rules.d`:
 - `71-microsoft-gdu.rules`
 - `71-<fabricante>-gdu.rules`
 - `71-uinput-dev-early-creation.rules`
+- `71-steam-input.rules` (opcional)
+- `71-steam-vr.rules` (opcional)
 
 Las reglas generadas llevan una cabecera `# Generado por
 udev-rule-generator`; las preconfiguradas, `# Instalado por
@@ -405,4 +420,5 @@ hardware ni permisos de root.
 ## Licencia
 
 El código de este proyecto es MIT.  Las reglas de game-devices-udev son MIT de
-Fabian Bornschein; ver [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
+Fabian Bornschein y las de steam-devices son MIT de Valve Software; ver
+[`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).

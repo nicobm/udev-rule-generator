@@ -5,11 +5,12 @@ from __future__ import annotations
 import threading
 from typing import Callable
 
-from udev_rule_generator import PRESETS_URL
+from udev_rule_generator import PRESETS_URL, STEAM_DEVICES_URL
 from udev_rule_generator.host import Host
 from udev_rule_generator.presets import (
     OPTIONAL,
     RECOMMENDED,
+    STEAM,
     UPSTREAM,
     Preset,
     preset_files,
@@ -36,6 +37,7 @@ class PresetsDialog(Adw.Dialog):
         self.on_installed = on_installed
         self._recommended_rows: dict[Preset, Adw.SwitchRow] = {}
         self._optional_rows: dict[Preset, Adw.SwitchRow] = {}
+        self._steam_rows: dict[Preset, Adw.SwitchRow] = {}
         self._upstream_rows: list[tuple[Preset, Adw.SwitchRow]] = []
         self._all_row: Adw.SwitchRow | None = None
         self._updating = False
@@ -54,7 +56,7 @@ class PresetsDialog(Adw.Dialog):
         header.set_title_widget(
             Adw.WindowTitle(
                 title="Reglas preconfiguradas",
-                subtitle="Microsoft, ASRock opcional y game-devices-udev",
+                subtitle="Microsoft, ASRock/Steam opcionales y fabiscafe",
             )
         )
         close_button = Gtk.Button(
@@ -106,6 +108,20 @@ class PresetsDialog(Adw.Dialog):
             optional.add(row)
         page.add(optional)
 
+        steam = Adw.PreferencesGroup(
+            title="Steam / SteamVR (Valve)",
+            description=(
+                "Reglas oficiales de ValveSoftware/steam-devices (MIT).  Son "
+                "opcionales: no se activan por defecto y no forman parte de "
+                "«Todos los fabricantes»."
+            ),
+        )
+        for preset in STEAM:
+            row = self._switch_row(preset)
+            self._steam_rows[preset] = row
+            steam.add(row)
+        page.add(steam)
+
         upstream = Adw.PreferencesGroup(
             title="game-devices-udev",
             description=(
@@ -145,6 +161,17 @@ class PresetsDialog(Adw.Dialog):
         link.set_valign(Gtk.Align.CENTER)
         license_row.add_suffix(link)
         license_group.add(license_row)
+
+        steam_license_row = Adw.ActionRow(
+            title="steam-devices",
+            subtitle="MIT · Valve Software · GitHub",
+        )
+        steam_link = Gtk.LinkButton(uri=STEAM_DEVICES_URL)
+        steam_link.set_label("Abrir")
+        steam_link.add_css_class("flat")
+        steam_link.set_valign(Gtk.Align.CENTER)
+        steam_license_row.add_suffix(steam_link)
+        license_group.add(steam_license_row)
         page.add(license_group)
 
         toolbar.set_content(page)
@@ -190,6 +217,9 @@ class PresetsDialog(Adw.Dialog):
         ]
         selected.extend(
             preset for preset, row in self._optional_rows.items() if row.get_active()
+        )
+        selected.extend(
+            preset for preset, row in self._steam_rows.items() if row.get_active()
         )
         selected.extend(
             preset for preset, row in self._upstream_rows if row.get_active()
