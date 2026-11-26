@@ -356,8 +356,17 @@ class DeviceManager(Gtk.Box):
 
         entry: Gtk.Entry | None = None
         editing = False
+        hovered = False
+        visible_opacity = 0.55
+
+        def refresh_visibility() -> None:
+            visible = hovered or editing
+            button.set_opacity(visible_opacity if visible else 0.0)
+            button.set_can_target(visible)
+            button.set_focusable(visible)
 
         def update_state() -> None:
+            nonlocal visible_opacity
             alias = self.store.alias_for(device_id)
             if editing:
                 has_text = entry is not None and bool(entry.get_text().strip())
@@ -371,18 +380,19 @@ class DeviceManager(Gtk.Box):
                     if has_text
                     else tr("Agregar alias")
                 )
-                button.set_opacity(1.0 if has_text else 0.55)
+                visible_opacity = 1.0 if has_text else 0.55
+                refresh_visibility()
                 return
             row.set_title(markup_escape(alias or original_name))
             title.set_visible(True)
             if alias:
                 button.set_icon_name("window-close-symbolic")
                 button.set_tooltip_text(tr("Eliminar alias"))
-                button.set_opacity(0.55)
             else:
                 button.set_icon_name("document-edit-symbolic")
                 button.set_tooltip_text(tr("Agregar alias"))
-                button.set_opacity(0.55)
+            visible_opacity = 0.55
+            refresh_visibility()
 
         def finish_edit(save: bool) -> None:
             nonlocal entry, editing
@@ -450,8 +460,46 @@ class DeviceManager(Gtk.Box):
             else:
                 start_edit()
 
+        def on_enter(*_args) -> None:
+            nonlocal hovered
+            hovered = True
+            refresh_visibility()
+
+        def on_leave(*_args) -> None:
+            nonlocal hovered
+            hovered = False
+            refresh_visibility()
+
+        motion = Gtk.EventControllerMotion()
+        motion.connect("enter", on_enter)
+        motion.connect("leave", on_leave)
+        row.add_controller(motion)
+
         button.connect("clicked", on_clicked)
         update_state()
+
+    def _add_hover_button(
+        self,
+        row: Adw.ActionRow,
+        button: Gtk.Button,
+    ) -> None:
+        """Muestra un botón solo mientras el puntero está sobre la fila."""
+        def update(visible: bool) -> None:
+            button.set_opacity(1.0 if visible else 0.0)
+            button.set_can_target(visible)
+            button.set_focusable(visible)
+
+        def on_enter(*_args) -> None:
+            update(True)
+
+        def on_leave(*_args) -> None:
+            update(False)
+
+        motion = Gtk.EventControllerMotion()
+        motion.connect("enter", on_enter)
+        motion.connect("leave", on_leave)
+        row.add_controller(motion)
+        update(False)
 
     def _known_row(
         self,
@@ -480,9 +528,6 @@ class DeviceManager(Gtk.Box):
         )
         self._add_alias_control(row, device.id, device.name)
 
-        if connected_device is not None:
-            row.add_suffix(self._connected_badge())
-
         if removable:
             hide = Gtk.Button(
                 icon_name="view-conceal-symbolic",
@@ -497,6 +542,10 @@ class DeviceManager(Gtk.Box):
                 ),
             )
             row.add_suffix(hide)
+            self._add_hover_button(row, hide)
+
+        if connected_device is not None:
+            row.add_suffix(self._connected_badge())
 
         switch = Gtk.Switch(
             active=self._pending_known.get(device.id, device.active)

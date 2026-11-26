@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.4.1 - 2026-11-26
+
+- Shows the hide, alias-edit, and alias-delete buttons only while hovering a
+  device row. The controls keep their space so the title and badges do not
+  move.
+- Moves the hide button to the left of the connected badge for a consistent
+  layout.
+
 ## 1.4.0 - 2026-11-26
 
 - Adds **Export** and **Import** actions to the header menu.
