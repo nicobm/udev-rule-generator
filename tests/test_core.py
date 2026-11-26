@@ -7,13 +7,14 @@ from pathlib import Path
 
 from udev_rule_generator.devices import (
     Joystick,
+    detect_joysticks,
     is_probable_fake_joystick,
     joysticks_from_export_db,
     joysticks_from_proc,
     parse_export_db,
     parse_proc_blocks,
 )
-from udev_rule_generator.host import HostError
+from udev_rule_generator.host import CommandResult, HostError
 from udev_rule_generator.installed import _parse_header
 from udev_rule_generator.presets import (
     PRESETS,
@@ -37,17 +38,33 @@ FIXTURES = Path(__file__).parent / "fixtures"
 class FakeHost:
     """Host mínimo para leer los fixtures sin tocar el sistema."""
 
-    def __init__(self, proc_text: str = "") -> None:
+    def __init__(
+        self,
+        proc_text: str = "",
+        export_text: str = "",
+        sysfs_text: dict[str, str] | None = None,
+    ) -> None:
         self.proc_text = proc_text
+        self.export_text = export_text
+        self.sysfs_text = sysfs_text or {}
 
     def read_text(self, path: str) -> str:
         if path == "/proc/bus/input/devices":
             if not self.proc_text:
                 raise HostError("sin proc")
             return self.proc_text
+        if path in self.sysfs_text:
+            return self.sysfs_text[path]
         raise HostError(f"archivo no disponible: {path}")
 
-    def run(self, *args, **kwargs):
+    def run(self, argv, **kwargs):
+        if self.export_text and tuple(argv[:2]) == ("udevadm", "info"):
+            return CommandResult(
+                argv=tuple(argv),
+                returncode=0,
+                stdout=self.export_text,
+                stderr="",
+            )
         raise HostError("comando no disponible")
 
 
@@ -144,6 +161,36 @@ class DetectionTests(unittest.TestCase):
         self.assertIn(314, device.key_codes)
         self.assertIn(0, device.abs_codes)
         self.assertTrue(is_probable_fake_joystick(device))
+
+    def test_detect_merges_proc_only_fake_device(self) -> None:
+        proc_text = (FIXTURES / "proc-bus-input-devices-fake.txt").read_text(
+            encoding="utf-8"
+        )
+        devices = detect_joysticks(FakeHost(proc_text, self.export_text))
+        self.assertEqual(len(devices), 3)
+        fake = next(
+            device for device in devices if device.display_name == "Generic HID"
+        )
+        self.assertTrue(is_probable_fake_joystick(fake))
+
+    def test_sysfs_capability_fallback(self) -> None:
+        text = (FIXTURES / "proc-bus-input-devices-fake.txt").read_text(
+            encoding="utf-8"
+        )
+        proc_text = "\n".join(
+            line
+            for line in text.splitlines()
+            if not line.startswith(("B: KEY=", "B: ABS="))
+        )
+        sysfs = {
+            "/sys/class/input/event99/device/capabilities/key": (
+                "c00000000000000 0 0 10168000000000 0"
+            ),
+            "/sys/class/input/event99/device/capabilities/abs": "3",
+        }
+        devices = joysticks_from_proc(FakeHost(proc_text, sysfs_text=sysfs))
+        self.assertEqual(len(devices), 1)
+        self.assertTrue(is_probable_fake_joystick(devices[0]))
 
 
 class FakeJoystickTests(unittest.TestCase):

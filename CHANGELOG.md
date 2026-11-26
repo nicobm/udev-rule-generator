@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.18.2 - 2026-11-26
+
+- Merges joysticks found only in `/proc` with the `udevadm` results, so a
+  `/dev/input/js*` node still appears when udev does not mark it with
+  `ID_INPUT_JOYSTICK`.
+- Shows probable fake devices in **Ignorar dispositivos** even when they have
+  an old saved allow rule. Enabling ignore removes that allow rule in the same
+  batch, so the two rules cannot conflict.
+- Falls back to `/sys/class/input/*/device/capabilities/{key,abs}` when
+  `/proc/bus/input/devices` does not expose the capability bitmaps.
+
 ## 0.18.1 - 2026-11-26
 
 - Replaces the hardcoded fake-joystick checks with generic evdev capability

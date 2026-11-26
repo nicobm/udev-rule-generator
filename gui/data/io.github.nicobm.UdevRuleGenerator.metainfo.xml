@@ -65,6 +65,15 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.18.2" date="2026-11-26">
+      <description>
+        <p>
+          Merges js devices found only in /proc, reads capabilities from /sys
+          as a fallback, and shows probable fake joysticks even when an old
+          allow rule is saved.
+        </p>
+      </description>
+    </release>
     <release version="0.18.1" date="2026-11-26">
       <description>
         <p>

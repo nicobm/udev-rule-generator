@@ -180,15 +180,18 @@ class DeviceManager(Gtk.Box):
         for key in list(self._pending_unknown):
             if key in known_ids:
                 self._pending_unknown.pop(key, None)
+        ignore_known = [
+            device for device in known if device.action == "ignore"
+        ]
+        ignore_known_ids = {device.id for device in ignore_known}
         for key in list(self._pending_ignore):
-            if key in known_ids:
+            if key in ignore_known_ids:
                 self._pending_ignore.pop(key, None)
 
         allow_known = [
-            device for device in known if device.action == "allow"
-        ]
-        ignore_known = [
-            device for device in known if device.action == "ignore"
+            device
+            for device in known
+            if device.action == "allow" and device.id not in ignore_known_ids
         ]
         connected = self._connected
         connected_ids = {device_identity(device) for device in connected}
@@ -203,7 +206,7 @@ class DeviceManager(Gtk.Box):
             device
             for device in connected
             if is_probable_fake_joystick(device)
-            and device_identity(device) not in known_ids
+            and device_identity(device) not in ignore_known_ids
         ]
 
         for record in allow_known:
@@ -395,9 +398,18 @@ class DeviceManager(Gtk.Box):
             updated: list[KnownDevice] = []
             removed: list[str] = []
             trigger_add = False
+            ignore_identities = {
+                device_identity(device)
+                for device in self._pending_ignore.values()
+            }
 
             for record in self.store.devices():
                 desired = self._pending_known.get(record.id)
+                # Si el usuario activa "ignorar" para un dispositivo que
+                # tenía una regla de permiso guardada, la regla de permiso se
+                # retira en el mismo lote para no dejar dos reglas opuestas.
+                if record.action == "allow" and record.id in ignore_identities:
+                    desired = False
                 if desired is None or desired == record.active:
                     continue
                 if desired:

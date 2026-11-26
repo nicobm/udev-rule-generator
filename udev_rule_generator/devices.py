@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import re
 import struct
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Iterable, Mapping
 
@@ -133,6 +133,9 @@ class Joystick:
             "input_names": list(self.input_names),
             "is_usb": self.is_usb,
             "is_bluetooth": self.is_bluetooth,
+            "key_codes": sorted(self.key_codes),
+            "abs_codes": sorted(self.abs_codes),
+            "probable_fake": is_probable_fake_joystick(self),
         }
 
 
@@ -331,6 +334,28 @@ def _proc_inputs_for_handlers(
     }
 
 
+def _capabilities_from_sysfs(
+    host: Host, event_devices: Iterable[str]
+) -> tuple[frozenset[int], frozenset[int]]:
+    """Lee ``KEY``/``ABS`` desde ``/sys`` si ``/proc`` no estaba disponible."""
+    key_codes: frozenset[int] = frozenset()
+    abs_codes: frozenset[int] = frozenset()
+    for device in sorted(event_devices):
+        handler = Path(device).name
+        for kind in ("key", "abs"):
+            path = f"/sys/class/input/{handler}/device/capabilities/{kind}"
+            try:
+                text = host.read_text(path)
+            except HostError:
+                continue
+            codes = _parse_bitmap(text)
+            if kind == "key":
+                key_codes |= codes
+            else:
+                abs_codes |= codes
+    return key_codes, abs_codes
+
+
 def _names_from_attribute_walk(host: Host, event_devices: Iterable[str]) -> dict[str, str]:
     names: dict[str, str] = {}
     for device in event_devices:
@@ -358,6 +383,7 @@ def _build_joystick(
     js_devices: set[str],
     names: Mapping[str, str],
     inputs: Mapping[str, ProcInput],
+    host: Host,
     fallback_names: Iterable[str] = (),
 ) -> Joystick:
     def name_for(device: str) -> str:
@@ -370,6 +396,10 @@ def _build_joystick(
     ]
     key_codes = frozenset().union(*(info.key_codes for info in input_infos))
     abs_codes = frozenset().union(*(info.abs_codes for info in input_infos))
+    if not key_codes or not abs_codes:
+        sysfs_key, sysfs_abs = _capabilities_from_sysfs(host, event_devices)
+        key_codes |= sysfs_key
+        abs_codes |= sysfs_abs
 
     js_names = [
         name_for(device) for device in sorted(js_devices) if name_for(device)
@@ -479,6 +509,7 @@ def joysticks_from_export_db(text: str, host: Host) -> list[Joystick]:
             js_devices=group["js"],  # type: ignore[arg-type]
             names=names,
             inputs=inputs,
+            host=host,
         )
         for key, group in groups.items()
     ]
@@ -518,6 +549,14 @@ def joysticks_from_proc(host: Host) -> list[Joystick]:
             if handler.startswith("js")
         }
         bus = _infer_bus_from_sysfs(info.sysfs or info.phys)
+        key_codes = info.key_codes
+        abs_codes = info.abs_codes
+        if not key_codes or not abs_codes:
+            sysfs_key, sysfs_abs = _capabilities_from_sysfs(
+                host, event_devices
+            )
+            key_codes |= sysfs_key
+            abs_codes |= sysfs_abs
         properties = {
             "ID_INPUT_JOYSTICK": "1",
             "ID_VENDOR_ID": info.vendor_id,
@@ -543,8 +582,8 @@ def joysticks_from_proc(host: Host) -> list[Joystick]:
                 js_devices=tuple(sorted(js_devices)),
                 input_names=(name,) if name else (),
                 properties=properties,
-                key_codes=info.key_codes,
-                abs_codes=info.abs_codes,
+                key_codes=key_codes,
+                abs_codes=abs_codes,
             )
         )
     return _deduplicate_and_sort(joysticks)
@@ -567,11 +606,27 @@ def _deduplicate_and_sort(joysticks: Iterable[Joystick]) -> list[Joystick]:
     )
 
 
+def _device_nodes(device: Joystick) -> set[str]:
+    return {*device.event_devices, *device.js_devices}
+
+
+def _merge_capabilities(device: Joystick, other: Joystick) -> Joystick:
+    """Completa las capacidades de ``udevadm`` con las de ``/proc``."""
+    key_codes = device.key_codes | other.key_codes
+    abs_codes = device.abs_codes | other.abs_codes
+    if key_codes == device.key_codes and abs_codes == device.abs_codes:
+        return device
+    return replace(device, key_codes=key_codes, abs_codes=abs_codes)
+
+
 def detect_joysticks(host: Host | None = None) -> list[Joystick]:
     """Detecta los joysticks conectados.
 
     Se intenta primero ``udevadm``.  Si no está instalado o no devuelve nada,
-    se usa el fallback de ``/proc``/``/sys``.
+    se usa el fallback de ``/proc``/``/sys``.  Los dispositivos que solo
+    aparecen en ``/proc`` se agregan al resultado de udevadm: algunos
+    controladores LED tienen un nodo ``js`` pero no llevan
+    ``ID_INPUT_JOYSTICK``.
     """
     host = host or Host()
     try:
@@ -581,12 +636,34 @@ def detect_joysticks(host: Host | None = None) -> list[Joystick]:
     except HostError:
         result = None
 
-    if result is not None and result.ok:
-        joysticks = joysticks_from_export_db(result.stdout, host)
-        if joysticks:
-            return joysticks
+    udev_devices = (
+        joysticks_from_export_db(result.stdout, host)
+        if result is not None and result.ok
+        else []
+    )
+    proc_devices = joysticks_from_proc(host)
+    if not udev_devices:
+        return _deduplicate_and_sort(proc_devices)
 
-    return joysticks_from_proc(host)
+    merged = list(udev_devices)
+    udev_nodes: dict[str, int] = {}
+    for index, device in enumerate(merged):
+        for node in _device_nodes(device):
+            udev_nodes[node] = index
+
+    for device in proc_devices:
+        indexes = {
+            udev_nodes[node]
+            for node in _device_nodes(device)
+            if node in udev_nodes
+        }
+        if indexes:
+            for index in indexes:
+                merged[index] = _merge_capabilities(merged[index], device)
+        else:
+            merged.append(device)
+
+    return _deduplicate_and_sort(merged)
 
 
 def find_joystick(joysticks: Iterable[Joystick], selector: str) -> Joystick | None:
