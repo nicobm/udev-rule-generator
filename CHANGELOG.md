@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.9 - 2026-11-26
+
+- Clicking a disabled saved device now shows a prompt to enable the rule
+  instead of using only a hover tooltip.
+
 ## 1.1.8 - 2026-11-26
 
 - Disables the rule-opening action for devices whose rule is not installed.

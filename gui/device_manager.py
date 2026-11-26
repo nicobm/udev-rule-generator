@@ -318,21 +318,15 @@ class DeviceManager(Gtk.Box):
             subtitle=" · ".join(details),
         )
         can_open = bool(device.active and device.filename)
-        row.set_activatable(can_open)
+        row.set_activatable(True)
         if can_open:
             row.set_tooltip_text(
                 tr("Abrir {filename}", filename=device.filename)
             )
-            row.connect(
-                "activated",
-                lambda _row, selected=device: self._open_known_rule(
-                    selected
-                ),
-            )
-        else:
-            row.set_tooltip_text(
-                tr("Activá el dispositivo para ver su regla.")
-            )
+        row.connect(
+            "activated",
+            lambda _row, selected=device: self._open_known_rule(selected),
+        )
 
         if connected_device is not None:
             row.add_suffix(self._connected_badge())
@@ -411,11 +405,8 @@ class DeviceManager(Gtk.Box):
     def _open_known_rule(self, device: KnownDevice) -> None:
         if not device.active or not device.filename:
             self._show_error(
-                tr("No se pudo abrir la regla"),
-                tr(
-                    "La regla no está instalada. Activá el dispositivo para "
-                    "crearla."
-                ),
+                tr("Regla no instalada"),
+                tr("Activá esta regla para poder leer el archivo."),
             )
             return
         try:
