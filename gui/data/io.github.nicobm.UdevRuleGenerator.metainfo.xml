@@ -62,12 +62,21 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.20.1" date="2026-11-26">
+      <description>
+        <p>
+          Lists saved but disconnected devices in the CLI, fixes reopening the
+          hidden-devices window, and keeps ignore rules removed.
+        </p>
+      </description>
+    </release>
     <release version="0.20.0" date="2026-11-26">
       <description>
         <p>
           Removes ignore rules; saved devices now have only enabled and
-          disabled states. Adds validation for downloaded and bundled Steam
-          rules.
+          disabled states. Shows saved but disconnected devices in the CLI,
+          fixes reopening the hidden-devices window, and validates downloaded
+          and bundled Steam rules.
         </p>
       </description>
     </release>

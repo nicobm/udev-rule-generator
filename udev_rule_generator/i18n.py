@@ -593,6 +593,24 @@ _EN.update(
         "No se detectaron joysticks conectados.": (
             "No connected joysticks were detected."
         ),
+        "No hay joysticks detectados ni guardados.": (
+            "There are no detected or saved joysticks."
+        ),
+        "Conectá un mando por USB o Bluetooth para crear su primera regla.": (
+            "Connect a controller over USB or Bluetooth to create its first "
+            "rule."
+        ),
+        "Conectado · sin regla guardada": "Connected · no saved rule",
+        "Guardado · desconectado": "Saved · disconnected",
+        "Habilitada": "Enabled",
+        "Deshabilitada": "Disabled",
+        "Joysticks detectados y guardados": "Detected and saved joysticks",
+        "Conectá un mando y actualizá para crear su primera regla.": (
+            "Connect a controller and refresh to create its first rule."
+        ),
+        "\nConectá un mando y actualizá para crear su primera regla.": (
+            "\nConnect a controller and refresh to create its first rule."
+        ),
         "Conectá un mando por USB o Bluetooth y volvé a intentarlo. "
         "Si ya está conectado, revisá que udev lo vea con: "
         "udevadm info --export-db": (
@@ -740,8 +758,8 @@ _EN.update(
         "abre la interfaz gráfica GTK4/libadwaita": (
             "open the GTK4/libadwaita graphical interface"
         ),
-        "lista los joysticks detectados y sale": (
-            "list detected joysticks and exit"
+        "lista los joysticks detectados y guardados y sale": (
+            "list detected and saved joysticks and exit"
         ),
         "salida JSON para --list o --installed": (
             "JSON output for --list or --installed"

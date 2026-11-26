@@ -1,11 +1,22 @@
 # Changelog
 
+## 0.20.1 - 2026-11-26
+
+- Makes `--list` include all saved devices, including disconnected ones, and
+  lets `--device` select them to install their enable rule.
+- Fixes reopening the hidden-devices window by creating a fresh window instead
+  of presenting a destroyed one.
+- Adds the current saved/disconnected state to the CLI list and JSON output.
+
 ## 0.20.0 - 2026-11-26
 
 - Removes the ignore action and ignore rules entirely. A saved device has only
   two states: **enabled** (its rule is installed) or **disabled** (no rule).
 - Updates the CLI and documentation to use enable/disable language and removes
   `--action`.
+- Makes `--list` include saved devices that are currently disconnected, so
+  their rules can be enabled without plugging them in.
+- Fixes a hidden-devices window freeze caused by reusing a destroyed window.
 - Validates Steam preset updates: only allowlisted `.rules` files and the
   license are accepted, and every executable udev directive must match the
   reviewed Valve command allowlist.

@@ -10,7 +10,10 @@ import tempfile
 import unittest
 from unittest import mock
 
-from udev_rule_generator.cli import build_parser, main
+from udev_rule_generator.cli import _collect_devices, build_parser, main
+from udev_rule_generator.devices import Joystick
+from udev_rule_generator.known import KnownDevices
+from udev_rule_generator.rules import RuleAction, build_rule
 
 
 class GuiArgumentTests(unittest.TestCase):
@@ -30,6 +33,46 @@ class GuiArgumentTests(unittest.TestCase):
             with self.assertRaises(SystemExit) as raised:
                 main(["--gui", "--list"])
         self.assertEqual(raised.exception.code, 2)
+
+
+class DeviceListTests(unittest.TestCase):
+    def test_saved_disconnected_device_is_listed(self) -> None:
+        device = Joystick(
+            key="saved-key",
+            name="Saved Pad",
+            vendor="Test",
+            model="Saved Pad",
+            vendor_id="045e",
+            product_id="0b12",
+            serial="saved-serial",
+            bus="usb",
+            devpaths=(),
+            event_devices=(),
+            js_devices=(),
+            input_names=("Saved Pad",),
+            properties={},
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            with (
+                mock.patch.dict(os.environ, {"XDG_CONFIG_HOME": directory}),
+                mock.patch(
+                    "udev_rule_generator.cli.detect_joysticks",
+                    return_value=[],
+                ),
+                mock.patch(
+                    "udev_rule_generator.cli.list_installed_rules",
+                    return_value=[],
+                ),
+            ):
+                store = KnownDevices()
+                spec = build_rule(device, RuleAction.ALLOW)
+                store.record_rule(device, spec)
+                entries = _collect_devices(None)  # type: ignore[arg-type]
+
+        self.assertEqual(len(entries), 1)
+        self.assertFalse(entries[0].connected)
+        self.assertIsNotNone(entries[0].saved)
+        self.assertEqual(entries[0].device.display_name, "Saved Pad")
 
 
 class KnownArgumentTests(unittest.TestCase):

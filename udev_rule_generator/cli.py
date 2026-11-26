@@ -6,6 +6,7 @@ import argparse
 import json
 import os
 import sys
+from dataclasses import dataclass
 from typing import Callable, Iterable, Sequence
 
 from . import ISSUE_URL, PROJECT_URL, __version__, version_string
@@ -14,6 +15,7 @@ from .host import CommandNotAvailable, Host, HostError
 from .i18n import is_english, tr
 from .installed import list_installed_rules
 from .known import KnownDevice, KnownDevices
+from .userconfig import device_identity
 from .presets import (
     STEAM,
     Preset,
@@ -84,29 +86,93 @@ def _print_banner(colors: Colors) -> None:
     print()
 
 
-def _print_devices(devices: Iterable[Joystick], colors: Colors) -> None:
+@dataclass(frozen=True)
+class CliDevice:
+    """Un dispositivo conectado o un registro guardado sin conectar."""
+
+    device: Joystick
+    connected: bool
+    saved: KnownDevice | None
+
+
+def _collect_devices(host: Host) -> list[CliDevice]:
+    """Combina los dispositivos conectados con todos los guardados."""
+    store = KnownDevices()
+    try:
+        store.reconcile(list_installed_rules(host))
+    except (HostError, OSError):
+        pass
+    connected = detect_joysticks(host)
+    by_identity = {
+        device_identity(device): device for device in connected
+    }
+    entries: list[CliDevice] = []
+    seen: set[str] = set()
+    for record in store.devices():
+        if record.action != "allow" or record.hidden:
+            continue
+        device = by_identity.get(record.id) or record.to_joystick()
+        entries.append(
+            CliDevice(
+                device=device,
+                connected=record.id in by_identity,
+                saved=record,
+            )
+        )
+        seen.add(record.id)
+    for device in connected:
+        identity = device_identity(device)
+        if identity not in seen:
+            entries.append(
+                CliDevice(device=device, connected=True, saved=None)
+            )
+    return entries
+
+
+def _print_devices(devices: Iterable[CliDevice], colors: Colors) -> None:
     items = list(devices)
     if not items:
-        print(colors.yellow(tr("No se detectaron joysticks conectados.")))
+        print(colors.yellow(tr("No hay joysticks detectados ni guardados.")))
         print(
             colors.dim(
                 tr(
-                    "Conectá un mando por USB o Bluetooth y volvé a intentarlo. "
-                    "Si ya está conectado, revisá que udev lo vea con: "
-                    "udevadm info --export-db"
+                    "Conectá un mando por USB o Bluetooth para crear su primera "
+                    "regla."
                 )
             )
         )
         return
-    for index, device in enumerate(items, start=1):
-        print(f"  {colors.bold(str(index).rjust(2))}) {colors.bold(device.display_name)}")
+    for index, entry in enumerate(items, start=1):
+        device = entry.device
+        print(
+            f"  {colors.bold(str(index).rjust(2))}) "
+            f"{colors.bold(device.display_name)}"
+        )
         serial = f" · serial {device.serial}" if device.serial else ""
-        print(f"      {colors.cyan(device.bus_label)} · {device.identifier}{serial}")
-        print(f"      {colors.dim(device.nodes_label)}")
-        if device.input_names and device.input_names[0] != device.display_name:
-            print(
-                f"      {colors.dim(tr('nombre de entrada: ') + device.input_names[0])}"
-            )
+        if entry.saved is None:
+            status = tr("Conectado · sin regla guardada")
+        elif entry.connected:
+            status = tr("Conectado")
+        else:
+            status = tr("Guardado · desconectado")
+        rule_state = (
+            tr("Habilitada")
+            if entry.saved is not None and entry.saved.active
+            else tr("Deshabilitada")
+        )
+        print(
+            f"      {colors.cyan(device.bus_label)} · "
+            f"{device.identifier}{serial} · {status} · {rule_state}"
+        )
+        if entry.connected:
+            print(f"      {colors.dim(device.nodes_label)}")
+            if (
+                device.input_names
+                and device.input_names[0] != device.display_name
+            ):
+                print(
+                    f"      {colors.dim(tr('nombre de entrada: ') + device.input_names[0])}"
+                )
 
 
 def _print_rule_preview(spec: RuleSpec, colors: Colors) -> None:
@@ -237,17 +303,24 @@ def _confirm_and_install(
 
 
 def _cmd_list(host: Host, *, as_json: bool, colors: Colors) -> int:
-    devices = detect_joysticks(host)
+    entries = _collect_devices(host)
     if as_json:
-        print(
-            json.dumps(
-                [device.to_dict() for device in devices],
-                ensure_ascii=False,
-                indent=2,
+        payload = []
+        for entry in entries:
+            item = entry.device.to_dict()
+            item.update(
+                {
+                    "connected": entry.connected,
+                    "saved": entry.saved is not None,
+                    "hidden": False,
+                    "active": bool(entry.saved and entry.saved.active),
+                    "filename": entry.saved.filename if entry.saved else "",
+                }
             )
-        )
+            payload.append(item)
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
         return 0
-    _print_devices(devices, colors)
+    _print_devices(entries, colors)
     return 0
 
 
@@ -652,11 +725,14 @@ def _cmd_device(
     dry_run: bool,
     colors: Colors,
 ) -> int:
-    devices = detect_joysticks(host)
+    entries = _collect_devices(host)
+    devices = [entry.device for entry in entries]
     device = find_joystick(devices, selector)
     if device is None:
         if not devices:
-            raise ValueError(tr("No se detectaron joysticks conectados."))
+            raise ValueError(
+                tr("No hay joysticks detectados ni guardados.")
+            )
         raise ValueError(
             tr(
                 "No se encontró un único joystick que coincida con {selector!r}. "
@@ -684,15 +760,16 @@ def _cmd_device(
 
 def _interactive_device(host: Host, args: argparse.Namespace, colors: Colors) -> None:
     while True:
-        devices = detect_joysticks(host)
+        entries = _collect_devices(host)
+        devices = [entry.device for entry in entries]
         print()
-        print(colors.bold(tr("Joysticks detectados")))
-        _print_devices(devices, colors)
-        if not devices:
+        print(colors.bold(tr("Joysticks detectados y guardados")))
+        _print_devices(entries, colors)
+        if not entries:
             print(
                 colors.dim(
                     tr(
-                        "\nVolvé al menú y actualizá después de conectar el mando."
+                        "\nConectá un mando y actualizá para crear su primera regla."
                     )
                 )
             )
@@ -929,7 +1006,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--list",
         action="store_true",
-        help=tr("lista los joysticks detectados y sale"),
+        help=tr("lista los joysticks detectados y guardados y sale"),
     )
     parser.add_argument(
         "--json",

@@ -218,18 +218,31 @@ class MainWindow(Adw.ApplicationWindow):
     def show_hidden_devices(self) -> None:
         if self._closed:
             return
-        if self._hidden_dialog is None:
-            from .hidden_dialog import HiddenDevicesDialog
+        # Create a fresh window every time. Reusing an Adw.Window after it
+        # has been destroyed leaves GTK in an inconsistent state and freezes.
+        previous = self._hidden_dialog
+        self._hidden_dialog = None
+        if previous is not None:
+            try:
+                if previous.get_realized():
+                    previous.destroy()
+            except Exception:
+                pass
+        from .hidden_dialog import HiddenDevicesDialog
 
-            self._hidden_dialog = HiddenDevicesDialog(
-                store=self.known_store,
-                parent=self,
-                on_changed=self._on_hidden_changed,
-            )
-            self._hidden_dialog.connect(
-                "destroy", self._on_hidden_destroyed
-            )
+        self._hidden_dialog = HiddenDevicesDialog(
+            store=self.known_store,
+            parent=self,
+            on_changed=self._on_hidden_changed,
+        )
+        self._hidden_dialog.connect("close-request", self._on_hidden_close)
+        self._hidden_dialog.connect("destroy", self._on_hidden_destroyed)
         self._hidden_dialog.present()
+
+    def _on_hidden_close(self, dialog) -> bool:
+        if self._hidden_dialog is dialog:
+            self._hidden_dialog = None
+        return False
 
     def _on_hidden_destroyed(self, _dialog) -> None:
         self._hidden_dialog = None
