@@ -832,7 +832,7 @@ class DeviceManager(Gtk.Box):
         """Añade el tirador de tres puntos para reordenar la fila."""
         handle = Gtk.Box()
         handle.add_css_class("device-drag-handle")
-        handle.set_size_request(40, 44)
+        handle.set_size_request(52, 52)
         handle.set_valign(Gtk.Align.CENTER)
         image = Gtk.Image.new_from_icon_name("view-more-symbolic")
         image.set_pixel_size(18)
@@ -861,12 +861,29 @@ class DeviceManager(Gtk.Box):
             if pointer is None:
                 return None
             result = surface.get_device_position(pointer)
-            if not result or not result[0]:
+            if not result:
                 return None
+            if len(result) >= 4:
+                if not result[0]:
+                    return None
+                pointer_x, pointer_y = result[1], result[2]
+            elif len(result) >= 2:
+                pointer_x, pointer_y = result[0], result[1]
+            else:
+                return None
+
             origin = row.translate_coordinates(root, 0, 0)
-            if not origin or not origin[0]:
+            if not origin:
                 return None
-            return result[1] - origin[1], result[2] - origin[2]
+            if len(origin) >= 3:
+                if not origin[0]:
+                    return None
+                origin_x, origin_y = origin[1], origin[2]
+            elif len(origin) >= 2:
+                origin_x, origin_y = origin[0], origin[1]
+            else:
+                return None
+            return pointer_x - origin_x, pointer_y - origin_y
 
         def update_hotspot() -> bool:
             drag = drag_state.get("drag")

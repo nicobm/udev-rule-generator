@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.11.3 - 2026-11-26
+
+- Fixes the drag-start crash caused by platform differences in GTK pointer
+  coordinate tuples.
+- Enlarges the three-dot drag handle to a `52×52` hit area.
+
 ## 1.11.2 - 2026-11-26
 
 - Outlines the held device card during drag and drop.
