@@ -284,7 +284,23 @@ def is_auxiliary_input(device: Joystick) -> bool:
     return any(hint in text for hint in _AUXILIARY_NAME_HINTS)
 
 
+def _is_input_interface(properties: Mapping[str, str]) -> bool:
+    """Comprueba que la entrada udev sea una interfaz de entrada real.
+
+    El nodo USB del mando también recibe ``ID_INPUT_JOYSTICK=1``, pero no es
+    un dispositivo de entrada y no tiene ``eventX``/``jsX``.
+    """
+    if (properties.get("SUBSYSTEM") or "").strip().lower() == "input":
+        return True
+    if _truthy_property(properties.get("ID_INPUT")):
+        return True
+    devname = properties.get("DEVNAME", "")
+    return Path(devname).name.startswith(("event", "js")) if devname else False
+
+
 def _is_joystick(properties: Mapping[str, str]) -> bool:
+    if not _is_input_interface(properties):
+        return False
     value = (properties.get("ID_INPUT_JOYSTICK") or "").strip().lower()
     if value in {"1", "true", "yes"}:
         return True

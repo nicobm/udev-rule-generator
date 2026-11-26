@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.10.3 - 2026-11-26
+
+- Requires a real input interface before treating a udev entry as a joystick.
+  The USB device parent also carries `ID_INPUT_JOYSTICK=1`, which made the
+  Switch Pro Controller appear twice.
+
 ## 1.10.2 - 2026-11-26
 
 - Drops duplicate joystick interfaces that have the same VID:PID and name but

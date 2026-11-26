@@ -8,6 +8,7 @@ from pathlib import Path
 from udev_rule_generator.devices import (
     Joystick,
     _drop_jsless_duplicates,
+    _is_joystick,
     is_auxiliary_input,
     joysticks_from_export_db,
     joysticks_from_proc,
@@ -136,6 +137,39 @@ class DetectionTests(unittest.TestCase):
 
 
 class DuplicateInterfaceTests(unittest.TestCase):
+    def test_usb_parent_is_not_a_joystick_interface(self) -> None:
+        self.assertFalse(
+            _is_joystick(
+                {
+                    "SUBSYSTEM": "usb",
+                    "DEVTYPE": "usb_device",
+                    "ID_INPUT_JOYSTICK": "1",
+                    "DEVNAME": "/dev/bus/usb/001/020",
+                }
+            )
+        )
+
+    def test_input_interface_is_a_joystick(self) -> None:
+        self.assertTrue(
+            _is_joystick(
+                {
+                    "SUBSYSTEM": "input",
+                    "ID_INPUT": "1",
+                    "ID_INPUT_JOYSTICK": "1",
+                    "DEVNAME": "/dev/input/event23",
+                }
+            )
+        )
+        self.assertTrue(
+            _is_joystick(
+                {
+                    "ID_INPUT": "1",
+                    "ID_INPUT_JOYSTICK": "1",
+                    "DEVNAME": "/dev/input/event30",
+                }
+            )
+        )
+
     def test_drops_jsless_duplicate_of_same_controller(self) -> None:
         primary = _device(name="Switch Pro Controller")
         duplicate = _device(name="Switch Pro Controller")
