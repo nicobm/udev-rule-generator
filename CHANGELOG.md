@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.3 - 2026-11-26
+
+- Removes the clipped status icon next to the Test buttons action in the
+  Rules test dialog.
+
 ## 1.3.2 - 2026-11-26
 
 - Stops axis jitter from filling the interactive test log. Buttons are logged

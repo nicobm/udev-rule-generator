@@ -138,9 +138,6 @@ class RulesTestDialog(Adw.Window):
                 )
                 row.set_activatable(False)
                 self._add_test_button(row, device)
-                row.add_suffix(
-                    Gtk.Image.new_from_icon_name("dialog-warning-symbolic")
-                )
                 self.group.add(row)
                 continue
 
@@ -167,7 +164,6 @@ class RulesTestDialog(Adw.Window):
                 if device.event_devices
                 else tr("sin nodo")
             )
-            ok = id_joystick and has_uaccess
             details = [
                 device.bus_label,
                 device.identifier,
@@ -182,13 +178,6 @@ class RulesTestDialog(Adw.Window):
             )
             row.set_activatable(False)
             self._add_test_button(row, device)
-            row.add_suffix(
-                Gtk.Image.new_from_icon_name(
-                    "emblem-ok-symbolic"
-                    if ok
-                    else "dialog-warning-symbolic"
-                )
-            )
             self.group.add(row)
         return False
 
