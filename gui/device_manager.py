@@ -24,7 +24,7 @@ from udev_rule_generator.rules import (
 )
 from udev_rule_generator.userconfig import device_identity
 
-from .gi_compat import Adw, GLib, Gtk, markup_escape
+from .gi_compat import Adw, Gdk, GLib, Gtk, markup_escape
 
 
 def _js_nodes_label(device: Joystick | None) -> str:
@@ -448,6 +448,21 @@ class DeviceManager(Gtk.Box):
             entry.add_css_class("alias-entry")
             entry.connect("changed", lambda *_: update_state())
             entry.connect("activate", lambda *_: finish_edit(True))
+
+            def on_key_pressed(
+                _controller,
+                keyval: int,
+                _keycode: int,
+                _state,
+            ) -> bool:
+                if keyval != Gdk.KEY_Escape:
+                    return False
+                finish_edit(False)
+                return True
+
+            key_controller = Gtk.EventControllerKey()
+            key_controller.connect("key-pressed", on_key_pressed)
+            entry.add_controller(key_controller)
             title_row.prepend(entry)
             update_state()
             GLib.idle_add(focus_entry)

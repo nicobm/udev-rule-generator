@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.5.2 - 2026-11-26
+
+- Pressing Escape while editing a device alias closes the inline field without
+  saving or changing the alias.
+
 ## 1.5.1 - 2026-11-26
 
 - Removes the "No saved rule" text from connected-device subtitles. The
