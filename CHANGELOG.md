@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.11.7 - 2026-11-26
+
+- Uses a static snapshot of the source card so the original can be hidden
+  during drag without making the preview transparent.
+- Reorders rows live as the pointer crosses the midpoint of another card, and
+  animates the displaced card into place.
+- Stretches the drag snapshot to the full row width instead of shrinking it.
+
 ## 1.11.6 - 2026-11-26
 
 - While dragging, the source card is masked by an opaque placeholder so only

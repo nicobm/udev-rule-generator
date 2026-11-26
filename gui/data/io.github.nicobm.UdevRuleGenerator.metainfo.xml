@@ -65,6 +65,14 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="1.11.7" date="2026-11-26">
+      <description>
+        <p>
+          Keeps the dragged card full-width, hides the source card cleanly, and
+          reorders and animates rows live while dragging.
+        </p>
+      </description>
+    </release>
     <release version="1.11.6" date="2026-11-26">
       <description>
         <p>

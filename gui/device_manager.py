@@ -116,6 +116,8 @@ class DeviceManager(Gtk.Box):
         self._uinput_available = True
         self._rows: list[tuple[Adw.PreferencesGroup, Gtk.Widget]] = []
         self._row_identities: dict[Gtk.Widget, str] = {}
+        self._live_order: list[str] = []
+        self._animating_rows: set[str] = set()
         self._controls: list[Gtk.Widget] = []
         self._busy = False
         self._updating = False
@@ -138,6 +140,9 @@ class DeviceManager(Gtk.Box):
         self.preview_layer.set_vexpand(True)
         self.devices_overlay.add_overlay(self.preview_layer)
         self.append(self.devices_overlay)
+        self.devices_listbox = self._find_listbox(self.devices_group)
+        if self.devices_listbox is not None:
+            self.devices_listbox.set_sort_func(self._sort_device_rows)
 
         self.external_group = Adw.PreferencesGroup(
             title=tr("Reglas externas"),
@@ -291,6 +296,40 @@ class DeviceManager(Gtk.Box):
             )
         )
 
+    @staticmethod
+    def _find_listbox(widget: Gtk.Widget) -> Gtk.ListBox | None:
+        if isinstance(widget, Gtk.ListBox):
+            return widget
+        child = widget.get_first_child()
+        while child is not None:
+            found = DeviceManager._find_listbox(child)
+            if found is not None:
+                return found
+            child = child.get_next_sibling()
+        return None
+
+    def _sort_device_rows(
+        self,
+        first: Gtk.ListBoxRow,
+        second: Gtk.ListBoxRow,
+    ) -> int:
+        order = {
+            device_id: index
+            for index, device_id in enumerate(self._live_order)
+        }
+        fallback = len(order)
+
+        def key(row: Gtk.ListBoxRow) -> int:
+            device_id = self._row_identities.get(row)
+            return order.get(device_id, fallback) if device_id else fallback
+
+        left, right = key(first), key(second)
+        return (left > right) - (left < right)
+
+    def _refresh_row_order(self) -> None:
+        if self.devices_listbox is not None:
+            self.devices_listbox.invalidate_sort()
+
     def reload(self) -> None:
         self._updating = True
         for group, row in self._rows:
@@ -344,6 +383,10 @@ class DeviceManager(Gtk.Box):
                 )
 
             entries.sort(key=entry_key)
+
+        self._live_order = [
+            device_id for _kind, device_id, _entry in entries
+        ]
 
         for kind, device_id, entry in entries:
             if kind == "known":
@@ -863,7 +906,6 @@ class DeviceManager(Gtk.Box):
         drag_state: dict[str, object] = {
             "timer": 0,
             "preview": None,
-            "placeholder": None,
             "origin": None,
             "hot_y": 0,
         }
@@ -941,29 +983,20 @@ class DeviceManager(Gtk.Box):
                 return
             width = max(1, row.get_width())
             height = max(1, row.get_height())
-            picture = Gtk.Picture.new_for_paintable(
-                Gtk.WidgetPaintable.new(row)
-            )
+            snapshot = Gtk.WidgetPaintable.new(row).get_current_image()
+            picture = Gtk.Picture.new_for_paintable(snapshot)
             picture.set_size_request(width, height)
+            picture.set_can_shrink(True)
+            picture.set_content_fit(Gtk.ContentFit.FILL)
             picture.set_can_target(False)
-            placeholder = Gtk.Box()
-            placeholder.add_css_class("device-drag-placeholder")
-            placeholder.set_size_request(width, height)
-            placeholder.set_can_target(False)
-            self.preview_layer.put(
-                placeholder,
-                int(origin[0]),
-                int(origin[1]),
-            )
-
             preview = Gtk.Box()
             preview.add_css_class("device-dragging-card")
             preview.set_size_request(width, height)
             preview.set_can_target(False)
             preview.append(picture)
             self.preview_layer.put(preview, int(origin[0]), int(origin[1]))
+            row.set_opacity(0.0)
             drag_state["preview"] = preview
-            drag_state["placeholder"] = placeholder
             drag_state["origin"] = origin
             drag_state["hot_y"] = min(20, max(0, int(position[1])))
             drag_state["timer"] = GLib.timeout_add(16, update_preview)
@@ -976,11 +1009,8 @@ class DeviceManager(Gtk.Box):
             preview = drag_state.get("preview")
             if preview is not None:
                 self.preview_layer.remove(preview)  # type: ignore[arg-type]
-            placeholder = drag_state.get("placeholder")
-            if placeholder is not None:
-                self.preview_layer.remove(placeholder)  # type: ignore[arg-type]
+            row.set_opacity(1.0)
             drag_state["preview"] = None
-            drag_state["placeholder"] = None
             drag_state["origin"] = None
 
         source = Gtk.DragSource()
@@ -1008,9 +1038,87 @@ class DeviceManager(Gtk.Box):
                 y,
             ),
         )
+        target.connect(
+            "motion",
+            lambda _target, _x, y: self._live_reorder(
+                device_id,
+                row,
+                y,
+            ),
+        )
         row.add_controller(target)
         row.add_prefix(handle)
         self._add_hover_opacity(row, visual, 0.25, 0.85)
+
+    def _live_reorder(
+        self,
+        dragged_id: str,
+        target_row: Adw.ActionRow,
+        y: float,
+    ) -> Gdk.DragAction:
+        target_id = self._row_identities.get(target_row)
+        if not target_id or dragged_id == target_id:
+            return Gdk.DragAction.MOVE
+
+        visible = {
+            row_id
+            for _group, row in self._rows
+            if (row_id := self._row_identities.get(row))
+        }
+        order = [
+            device_id
+            for device_id in self._live_order
+            if device_id in visible
+        ]
+        if dragged_id not in order or target_id not in order:
+            return Gdk.DragAction.MOVE
+
+        order.remove(dragged_id)
+        target_index = order.index(target_id)
+        if y >= target_row.get_height() / 2:
+            target_index += 1
+        order.insert(target_index, dragged_id)
+        if order == self._live_order:
+            return Gdk.DragAction.MOVE
+
+        animate = (
+            target_id not in self._animating_rows
+            and target_row.get_opacity() > 0
+        )
+        target_origin = (
+            self._origin_in_overlay(target_row) if animate else None
+        )
+        target_width = max(1, target_row.get_width())
+        target_height = max(1, target_row.get_height())
+        target_snapshot = (
+            Gtk.WidgetPaintable.new(target_row).get_current_image()
+            if animate
+            else None
+        )
+
+        self._live_order = order
+        try:
+            self.store.set_order(order)
+        except OSError as exc:
+            self._show_error(
+                tr("No se pudo guardar el orden"),
+                str(exc),
+            )
+            return Gdk.DragAction.MOVE
+        self._refresh_row_order()
+        if (
+            animate
+            and target_origin is not None
+            and target_snapshot is not None
+        ):
+            self._animate_dropped_row(
+                target_id,
+                target_origin[1],
+                target_width,
+                target_height,
+                target_snapshot,
+            )
+        return Gdk.DragAction.MOVE
 
     def _drop_row(
         self,
@@ -1024,11 +1132,22 @@ class DeviceManager(Gtk.Box):
         if not target_id or dragged_id == target_id:
             return False
 
-        order = [
+        visible = {
             row_id
             for _group, row in self._rows
             if (row_id := self._row_identities.get(row))
+        }
+        order = [
+            device_id
+            for device_id in self._live_order
+            if device_id in visible
         ]
+        if dragged_id not in order or target_id not in order:
+            order = [
+                row_id
+                for _group, row in self._rows
+                if (row_id := self._row_identities.get(row))
+            ]
         if dragged_id not in order or target_id not in order:
             return False
 
@@ -1041,7 +1160,9 @@ class DeviceManager(Gtk.Box):
         target_origin = self._origin_in_overlay(target_row)
         target_width = max(1, target_row.get_width())
         target_height = max(1, target_row.get_height())
-        target_snapshot = Gtk.WidgetPaintable.new(target_row)
+        target_snapshot = Gtk.WidgetPaintable.new(
+            target_row
+        ).get_current_image()
 
         try:
             self.store.set_order(order)
@@ -1088,10 +1209,17 @@ class DeviceManager(Gtk.Box):
         old_y: float,
         width: int,
         height: int,
-        snapshot: Gtk.WidgetPaintable,
+        snapshot: Gdk.Paintable,
     ) -> None:
         """Anima la fila que fue desplazada al soltar la tarjeta."""
+        if device_id in self._animating_rows:
+            return
+        self._animating_rows.add(device_id)
         attempts = 0
+
+        def finish() -> bool:
+            self._animating_rows.discard(device_id)
+            return False
 
         def start() -> bool:
             nonlocal attempts
@@ -1105,16 +1233,20 @@ class DeviceManager(Gtk.Box):
             )
             if row is None or row.get_width() == 0:
                 attempts += 1
-                return attempts < 8
+                if attempts >= 8:
+                    return finish()
+                return True
             origin = self._origin_in_overlay(row)
             if origin is None:
-                return False
+                return finish()
             new_y = origin[1]
             if abs(new_y - old_y) < 2:
-                return False
+                return finish()
 
             picture = Gtk.Picture.new_for_paintable(snapshot)
             picture.set_size_request(width, height)
+            picture.set_can_shrink(True)
+            picture.set_content_fit(Gtk.ContentFit.FILL)
             picture.set_can_target(False)
             card = Gtk.Box()
             card.add_css_class("device-reorder-card")
@@ -1140,7 +1272,7 @@ class DeviceManager(Gtk.Box):
                 if progress >= 1.0:
                     self.preview_layer.remove(card)
                     row.set_opacity(1.0)
-                    return False
+                    return finish()
                 return True
 
             GLib.timeout_add(16, tick)
