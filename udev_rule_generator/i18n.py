@@ -113,6 +113,24 @@ _EN.update(
         "No se pudieron probar las reglas: {error}": (
             "Could not test the rules: {error}"
         ),
+        "Probar botones": "Test buttons",
+        "No hay un nodo event visible para este dispositivo.": (
+            "There is no visible event node for this device."
+        ),
+        "sin nodo de evento": "no event node",
+        "Presioná un botón o mové un eje. Nodo: {node}": (
+            "Press a button or move an axis. Node: {node}"
+        ),
+        "Este dispositivo no tiene un nodo de evento visible.": (
+            "This device has no visible event node."
+        ),
+        "No se pudo abrir {path}: {error}": (
+            "Could not open {path}: {error}"
+        ),
+        "Error leyendo {path}: {error}": "Error reading {path}: {error}",
+        "liberado": "released",
+        "presionado": "pressed",
+        "repetido": "repeated",
         "No se pudo activar el dispositivo": (
             "Could not enable the device"
         ),

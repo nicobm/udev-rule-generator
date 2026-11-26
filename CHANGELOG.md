@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.0 - 2026-11-26
+
+- Adds an interactive **Test buttons** action to the Rules test dialog. It
+  reads evdev events from the connected device and shows pressed buttons and
+  axis values in real time.
+
 ## 1.2.0 - 2026-11-26
 
 - Adds a **Rules test** dialog to the header menu. It checks every connected

@@ -37,6 +37,7 @@ class RulesTestDialog(Adw.Window):
         self.host = host
         self.store = store
         self._loading_row: Adw.ActionRow | None = None
+        self._device_test_dialog = None
 
         toolbar = Adw.ToolbarView()
         header = Adw.HeaderBar()
@@ -136,6 +137,7 @@ class RulesTestDialog(Adw.Window):
                     subtitle=error or tr("No se pudo consultar udev."),
                 )
                 row.set_activatable(False)
+                self._add_test_button(row, device)
                 row.add_suffix(
                     Gtk.Image.new_from_icon_name("dialog-warning-symbolic")
                 )
@@ -179,6 +181,7 @@ class RulesTestDialog(Adw.Window):
                 subtitle=" · ".join(details),
             )
             row.set_activatable(False)
+            self._add_test_button(row, device)
             row.add_suffix(
                 Gtk.Image.new_from_icon_name(
                     "emblem-ok-symbolic"
@@ -188,6 +191,55 @@ class RulesTestDialog(Adw.Window):
             )
             self.group.add(row)
         return False
+
+    def _add_test_button(self, row: Adw.ActionRow, device: Joystick) -> None:
+        button = Gtk.Button(label=tr("Probar botones"))
+        button.add_css_class("flat")
+        button.set_valign(Gtk.Align.CENTER)
+        if not device.event_devices:
+            button.set_sensitive(False)
+            button.set_tooltip_text(
+                tr("No hay un nodo event visible para este dispositivo.")
+            )
+        else:
+            button.connect(
+                "clicked",
+                lambda _button, selected=device: self._open_device_test(
+                    selected
+                ),
+            )
+        row.add_suffix(button)
+
+    def _open_device_test(self, device: Joystick) -> None:
+        previous = self._device_test_dialog
+        self._device_test_dialog = None
+        if previous is not None:
+            try:
+                if previous.get_realized():
+                    previous.destroy()
+            except Exception:
+                pass
+        from .device_test_dialog import DeviceTestDialog
+
+        self._device_test_dialog = DeviceTestDialog(
+            device=device,
+            parent=self,
+        )
+        self._device_test_dialog.connect(
+            "close-request", self._on_device_test_close
+        )
+        self._device_test_dialog.connect(
+            "destroy", self._on_device_test_destroyed
+        )
+        self._device_test_dialog.present()
+
+    def _on_device_test_close(self, dialog) -> bool:
+        if self._device_test_dialog is dialog:
+            self._device_test_dialog = None
+        return False
+
+    def _on_device_test_destroyed(self, _dialog) -> None:
+        self._device_test_dialog = None
 
     def _show_error(self, message: str) -> bool:
         if self._loading_row is not None:
