@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.10.0 - 2026-11-26
+
+- Adds a JSON registry of **Saved devices** at
+  `$XDG_CONFIG_HOME/udev-rule-generator/devices.json`. It stores the device
+  metadata and the latest generated rule (content, SHA-256, action, filename,
+  and active state), so the rule can be enabled or disabled without connecting
+  the controller again.
+- Imports existing managed rules into the registry automatically, including
+  the rules installed by previous versions.
+- Adds the **Saved devices** dialog with one switch per device. Turning a switch
+  on installs the saved rule through polkit; turning it off removes it.
+- Records successful installs from the GUI and CLI, and marks saved rules as
+  inactive when they are removed from Installed rules, `--remove`, or the
+  interactive CLI.
+- Adds `--known`, `--enable-known ID`, and `--disable-known ID` to the CLI.
+- Keeps hidden devices in the existing separate `hidden.json` file.
+
 ## 0.9.3 - 2026-11-26
 
 - Adds `tools/update_presets.py`, a development tool that refreshes the bundled

@@ -6,10 +6,11 @@ from concurrent.futures import Future, ThreadPoolExecutor
 
 from udev_rule_generator import APP_NAME
 from udev_rule_generator.devices import Joystick, detect_joysticks
-from udev_rule_generator.hidden import HiddenDevices
+from udev_rule_generator.hidden import HiddenDevices, device_identity
 from udev_rule_generator.host import Host
 from udev_rule_generator.i18n import tr
 from udev_rule_generator.installed import list_installed_rules
+from udev_rule_generator.known import KnownDevices
 from udev_rule_generator.monitor import UdevMonitor
 
 from .gi_compat import Adw, Gio, GLib, Gtk
@@ -22,6 +23,7 @@ class MainWindow(Adw.ApplicationWindow):
         super().__init__(**kwargs)
         self.host = Host()
         self.hidden_store = HiddenDevices()
+        self.known_store = KnownDevices()
         self._executor = ThreadPoolExecutor(
             max_workers=3, thread_name_prefix="udev-rule-generator"
         )
@@ -30,6 +32,7 @@ class MainWindow(Adw.ApplicationWindow):
         self._detection_pending = False
         self._first_detection = True
         self._devices: list[Joystick] = []
+        self._all_devices: list[Joystick] = []
         self._device_rows: list[Adw.ActionRow] = []
         self._auto_refresh_source = 0
         self._poll_source = 0
@@ -49,7 +52,7 @@ class MainWindow(Adw.ApplicationWindow):
         # Respaldo por si udevadm monitor no está disponible en el host.
         self._poll_source = GLib.timeout_add_seconds(5, self._poll_devices)
         self.refresh()
-        self._refresh_rule_count()
+        self._refresh_rule_metadata()
 
     def _build_ui(self) -> None:
         toolbar = Adw.ToolbarView()
@@ -71,6 +74,7 @@ class MainWindow(Adw.ApplicationWindow):
 
         menu = Gio.Menu()
         menu.append(tr("Reglas preconfiguradas"), "app.presets")
+        menu.append(tr("Dispositivos guardados"), "app.known")
         menu.append(tr("Reglas instaladas"), "app.installed")
         menu.append(tr("Dispositivos ocultos"), "app.hidden")
         menu.append(tr("Acerca de"), "app.about")
@@ -169,6 +173,23 @@ class MainWindow(Adw.ApplicationWindow):
                 tr("fabiscafe y Steam/SteamVR opcionales."),
                 "app.presets",
                 icon_name="application-x-addon-symbolic",
+            )
+        )
+        self.known_count_label = Gtk.Label(label="…")
+        self.known_count_label.add_css_class("device-badge")
+        self.known_count_label.set_valign(Gtk.Align.CENTER)
+        self.known_count_label.set_width_chars(2)
+        self.known_count_label.set_xalign(0.5)
+        status_group.add(
+            self._action_row(
+                tr("Dispositivos guardados"),
+                tr(
+                    "Activá o desactivá sus reglas aunque el mando no esté "
+                    "conectado."
+                ),
+                "app.known",
+                icon_name="input-gaming-symbolic",
+                badge=self.known_count_label,
             )
         )
         self.rules_count_label = Gtk.Label(label="…")
@@ -339,6 +360,7 @@ class MainWindow(Adw.ApplicationWindow):
                 )
             return False
 
+        self._all_devices = devices
         devices = [
             device for device in devices if not self.hidden_store.is_hidden(device)
         ]
@@ -431,6 +453,7 @@ class MainWindow(Adw.ApplicationWindow):
             host=self.host,
             parent=self,
             hidden_store=self.hidden_store,
+            known_store=self.known_store,
             on_installed=self._on_rule_installed,
             on_hidden=self._on_device_hidden,
         )
@@ -449,11 +472,28 @@ class MainWindow(Adw.ApplicationWindow):
     def show_installed(self) -> None:
         from .installed_dialog import InstalledDialog
 
-        self._refresh_rule_count()
+        self._refresh_rule_metadata()
         dialog = InstalledDialog(
             host=self.host,
             parent=self,
+            known_store=self.known_store,
             on_changed=self._on_rule_installed,
+        )
+        dialog.present(self)
+
+    def show_known(self) -> None:
+        from .known_dialog import KnownDialog
+
+        self._refresh_rule_metadata()
+        connected_ids = {
+            device_identity(device) for device in self._all_devices
+        }
+        dialog = KnownDialog(
+            host=self.host,
+            store=self.known_store,
+            parent=self,
+            connected_ids=connected_ids,
+            on_changed=self._on_known_changed,
         )
         dialog.present(self)
 
@@ -475,20 +515,25 @@ class MainWindow(Adw.ApplicationWindow):
         self.toast_overlay.add_toast(Adw.Toast(title=message, timeout=5))
         self.refresh(silent=True, notify=False)
 
-    def _refresh_rule_count(self) -> None:
+    def _on_known_changed(self, message: str) -> None:
+        self.toast_overlay.add_toast(Adw.Toast(title=message, timeout=5))
+        self._refresh_rule_metadata()
+        GLib.timeout_add(1200, self._refresh_after_change)
+
+    def _refresh_rule_metadata(self) -> None:
         if self._closed:
             return
         future = self._executor.submit(list_installed_rules, self.host)
         future.add_done_callback(
-            lambda completed: GLib.idle_add(self._apply_rule_count, completed)
+            lambda completed: GLib.idle_add(self._apply_rule_metadata, completed)
         )
 
-    def _apply_rule_count(self, future: Future) -> bool:
+    def _apply_rule_metadata(self, future: Future) -> bool:
         if self._closed:
             return False
         try:
             rules = future.result()
-        except Exception:  # noqa: BLE001 (contador no crítico)
+        except Exception:  # noqa: BLE001 (contadores no críticos)
             return False
         count = len(rules)
         self.rules_count_label.set_text(str(count))
@@ -497,11 +542,25 @@ class MainWindow(Adw.ApplicationWindow):
         else:
             tooltip = tr("{count} reglas instaladas", count=count)
         self.rules_count_label.set_tooltip_text(tooltip)
+
+        try:
+            self.known_store.reconcile(rules)
+        except OSError:
+            # El registro es auxiliar; un fallo de escritura no debe romper la
+            # ventana principal.
+            pass
+        known_count = len(self.known_store)
+        self.known_count_label.set_text(str(known_count))
+        if known_count == 1:
+            tooltip = tr("{count} dispositivo guardado", count=known_count)
+        else:
+            tooltip = tr("{count} dispositivos guardados", count=known_count)
+        self.known_count_label.set_tooltip_text(tooltip)
         return False
 
     def _on_rule_installed(self, message: str) -> None:
         self.toast_overlay.add_toast(Adw.Toast(title=message, timeout=5))
-        self._refresh_rule_count()
+        self._refresh_rule_metadata()
         # Si se ignoró un dispositivo, udev puede tardar un instante en
         # retirarlo; refrescar un poco después da una lista más realista.
         GLib.timeout_add(1200, self._refresh_after_change)

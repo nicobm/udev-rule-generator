@@ -57,6 +57,7 @@ class Application(Adw.Application):
         actions = (
             ("refresh", self._on_refresh),
             ("presets", self._on_presets),
+            ("known", self._on_known),
             ("installed", self._on_installed),
             ("hidden", self._on_hidden),
             ("about", self._on_about),
@@ -70,6 +71,7 @@ class Application(Adw.Application):
 
         self.set_accels_for_action("app.refresh", ["<Primary>r"])
         self.set_accels_for_action("app.presets", ["<Primary>p"])
+        self.set_accels_for_action("app.known", ["<Primary>k"])
         self.set_accels_for_action("app.installed", ["<Primary>i"])
         self.set_accels_for_action("app.quit", ["<Primary>q"])
 
@@ -91,6 +93,10 @@ class Application(Adw.Application):
     def _on_presets(self, _action, _parameter) -> None:
         if self.window is not None:
             self.window.show_presets()
+
+    def _on_known(self, _action, _parameter) -> None:
+        if self.window is not None:
+            self.window.show_known()
 
     def _on_installed(self, _action, _parameter) -> None:
         if self.window is not None:

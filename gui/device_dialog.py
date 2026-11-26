@@ -9,6 +9,7 @@ from udev_rule_generator.devices import Joystick
 from udev_rule_generator.hidden import HiddenDevices
 from udev_rule_generator.host import Host
 from udev_rule_generator.i18n import tr
+from udev_rule_generator.known import KnownDevices
 from udev_rule_generator.privileged import install_rule_files
 from udev_rule_generator.rules import RuleAction, RuleSpec, build_rule
 
@@ -25,6 +26,7 @@ class DeviceDialog(Adw.Dialog):
         host: Host,
         parent: Gtk.Window,
         hidden_store: HiddenDevices,
+        known_store: KnownDevices,
         on_installed: Callable[[str], None],
         on_hidden: Callable[[str], None],
     ) -> None:
@@ -33,6 +35,7 @@ class DeviceDialog(Adw.Dialog):
         self.device = device
         self.host = host
         self.hidden_store = hidden_store
+        self.known_store = known_store
         self.on_installed = on_installed
         self.on_hidden = on_hidden
         self._spec: RuleSpec | None = None
@@ -344,9 +347,20 @@ class DeviceDialog(Adw.Dialog):
 
     def _install_succeeded(self, spec: RuleSpec, _result) -> bool:
         self._set_busy(False)
-        self.on_installed(
-            tr("Regla instalada: {filename}", filename=spec.filename)
-        )
+        try:
+            self.known_store.record_rule(self.device, spec)
+        except OSError as exc:
+            message = tr(
+                "Regla instalada: {filename}.  No se pudo guardar en "
+                "Dispositivos guardados: {error}",
+                filename=spec.filename,
+                error=exc,
+            )
+        else:
+            message = tr(
+                "Regla instalada: {filename}", filename=spec.filename
+            )
+        self.on_installed(message)
         self.close()
         return False
 

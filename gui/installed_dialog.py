@@ -8,6 +8,7 @@ from typing import Callable
 from udev_rule_generator.host import Host
 from udev_rule_generator.i18n import tr
 from udev_rule_generator.installed import InstalledRule, list_installed_rules
+from udev_rule_generator.known import KnownDevices
 from udev_rule_generator.privileged import remove_rule_files
 
 from .gi_compat import Adw, GLib, Gtk
@@ -21,11 +22,13 @@ class InstalledDialog(Adw.Dialog):
         *,
         host: Host,
         parent: Gtk.Window,
+        known_store: KnownDevices,
         on_changed: Callable[[str], None],
     ) -> None:
         super().__init__()
         self.parent_window = parent
         self.host = host
+        self.known_store = known_store
         self.on_changed = on_changed
         self._rules: list[InstalledRule] = []
         self._delete_buttons: list[Gtk.Button] = []
@@ -218,6 +221,11 @@ class InstalledDialog(Adw.Dialog):
     def _remove_succeeded(self, result) -> bool:
         self._set_busy(False)
         for filename in result.filenames:
+            try:
+                self.known_store.mark_inactive_by_filename(filename)
+            except OSError:
+                # El registro es auxiliar; la regla ya se eliminó.
+                pass
             self.on_changed(
                 tr("Regla eliminada: {filename}", filename=filename)
             )

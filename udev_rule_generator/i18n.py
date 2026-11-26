@@ -630,7 +630,9 @@ _EN.update(
         "  udev-rule-generator --presets steam\n"
         "  udev-rule-generator --presets all\n"
         "  udev-rule-generator --presets all,steam --yes\n"
-        "  udev-rule-generator --installed\n\n"
+        "  udev-rule-generator --installed\n"
+        "  udev-rule-generator --known\n"
+        "  udev-rule-generator --disable-known 045e:02fd --yes\n\n"
         "Proyecto: {project}\n"
         "Problemas: {issues}": (
             "Examples:\n"
@@ -641,7 +643,9 @@ _EN.update(
             "  udev-rule-generator --presets steam\n"
             "  udev-rule-generator --presets all\n"
             "  udev-rule-generator --presets all,steam --yes\n"
-            "  udev-rule-generator --installed\n\n"
+            "  udev-rule-generator --installed\n"
+            "  udev-rule-generator --known\n"
+            "  udev-rule-generator --disable-known 045e:02fd --yes\n\n"
             "Project: {project}\n"
             "Issues: {issues}"
         ),
@@ -750,5 +754,118 @@ _EN.update(
     {
         "{count} regla instalada": "{count} installed rule",
         "{count} reglas instaladas": "{count} installed rules",
+    }
+)
+
+_EN.update(
+    {
+        # Dispositivos guardados
+        "Dispositivos guardados": "Saved devices",
+        "Activá o desactivá sus reglas sin conectar el mando": (
+            "Enable or disable their rules without connecting the controller"
+        ),
+        "Activá o desactivá sus reglas aunque el mando no esté conectado.": (
+            "Enable or disable their rules even when the controller is not "
+            "connected."
+        ),
+        "No hay dispositivos guardados": "No saved devices",
+        "Leyendo dispositivos guardados…": "Reading saved devices…",
+        "No se pudieron leer las reglas instaladas: {error}": (
+            "Could not read the installed rules: {error}"
+        ),
+        "Cuando instales una regla para un mando, la aplicación guarda "
+        "su última regla acá.  Después podés activarla o desactivarla "
+        "sin volver a conectarlo.": (
+            "When you install a rule for a controller, the application saves "
+            "its latest rule here.  You can then enable or disable it without "
+            "connecting the controller again."
+        ),
+        "El interruptor instala o elimina la última regla guardada.  "
+        "La metadata y el contenido se conservan en "
+        "devices.json aunque el mando esté desconectado.": (
+            "The switch installs or removes the latest saved rule.  The "
+            "metadata and content are kept in devices.json even when the "
+            "controller is disconnected."
+        ),
+        "Activa": "Active",
+        "Desactivada": "Disabled",
+        "Conectado": "Connected",
+        "No conectado": "Not connected",
+        "No hay una regla guardada para activar.": (
+            "There is no saved rule to enable."
+        ),
+        "No hay una regla guardada para desactivar.": (
+            "There is no saved rule to disable."
+        ),
+        "No se pudo cambiar la regla guardada": (
+            "Could not change the saved rule"
+        ),
+        "Regla activada: {name}": "Rule enabled: {name}",
+        "Regla desactivada: {name}": "Rule disabled: {name}",
+        "Regla activada: {name}.  No se pudo guardar el estado: {error}": (
+            "Rule enabled: {name}.  The state could not be saved: {error}"
+        ),
+        "Regla desactivada: {name}.  No se pudo guardar el estado: {error}": (
+            "Rule disabled: {name}.  The state could not be saved: {error}"
+        ),
+        "{count} dispositivo guardado": "{count} saved device",
+        "{count} dispositivos guardados": "{count} saved devices",
+        "Regla instalada: {filename}.  No se pudo guardar en "
+        "Dispositivos guardados: {error}": (
+            "Rule installed: {filename}.  Could not save it to Saved devices: "
+            "{error}"
+        ),
+        "La regla se instaló, pero no se pudo guardar en "
+        "Dispositivos guardados: {error}": (
+            "The rule was installed, but it could not be saved to Saved "
+            "devices: {error}"
+        ),
+        "La regla se eliminó, pero no se pudo actualizar "
+        "Dispositivos guardados: {error}": (
+            "The rule was removed, but Saved devices could not be updated: "
+            "{error}"
+        ),
+        # CLI de dispositivos guardados
+        "lista los dispositivos guardados": "list saved devices",
+        "activa la regla guardada de un dispositivo": (
+            "enable the saved rule for a device"
+        ),
+        "desactiva la regla guardada de un dispositivo": (
+            "disable the saved rule for a device"
+        ),
+        "salida JSON para --list, --installed o --known": (
+            "JSON output for --list, --installed or --known"
+        ),
+        "No se encontró un único dispositivo guardado que coincida "
+        "con {selector!r}.  Usá --known para ver la lista.": (
+            "No unique saved device matching {selector!r} was found.  Use "
+            "--known to see the list."
+        ),
+        "activa": "active",
+        "desactivada": "disabled",
+        "La regla de {name} ya está {state}.": (
+            "The rule for {name} is already {state}."
+        ),
+        "Para activar o desactivar sin interacción usá --yes.": (
+            "To enable or disable non-interactively, use --yes."
+        ),
+        "¿Activar la regla guardada de {name}?": (
+            "Enable the saved rule for {name}?"
+        ),
+        "¿Desactivar la regla guardada de {name}?": (
+            "Disable the saved rule for {name}?"
+        ),
+        "No se modificó nada.": "Nothing was changed.",
+        "Se eliminaría /etc/udev/rules.d/{filename}": (
+            "It would remove /etc/udev/rules.d/{filename}"
+        ),
+        "No hay dispositivos guardados.  Instalá una regla para "
+        "un mando y va a aparecer acá.": (
+            "There are no saved devices.  Install a rule for a controller and "
+            "it will appear here."
+        ),
+        "--enable-known y --disable-known no se pueden combinar.": (
+            "--enable-known and --disable-known cannot be combined."
+        ),
     }
 )

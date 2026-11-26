@@ -764,6 +764,15 @@
                 </span>
               </div>
               <div class="status-card">
+                <span class="status-icon">◎</span>
+                <span>
+                  <span class="status-title">Saved devices</span>
+                  <span class="status-meta">Enable or disable rules without the controller</span>
+                </span>
+                <span class="spacer"></span>
+                <span class="tag">3</span>
+              </div>
+              <div class="status-card">
                 <span class="status-icon">▤</span>
                 <span>
                   <span class="status-title">Installed rules</span>
@@ -813,7 +822,8 @@
               <h3>Inspect</h3>
               <p>
                 Preview the exact rule before installing it, use
-                <code>--dry-run</code>, and view or remove managed rules later.
+                <code>--dry-run</code>, and enable, disable, or remove managed
+                rules later.
               </p>
             </div>
           </div>
@@ -834,6 +844,10 @@
               <code>udevadm monitor</code> and a periodic fallback.
             </li>
             <li>Sends a GNOME notification when a controller connects.</li>
+            <li>
+              Saves each configured device and its latest rule, so you can
+              enable or disable it without plugging it in again.
+            </li>
             <li>
               Lets you hide devices and restore them later without deleting
               rules.

@@ -24,6 +24,7 @@
       <li>Reglas de permiso con MODE 0660 y TAG uaccess.</li>
       <li>Reglas para ignorar dispositivos USB o Bluetooth.</li>
       <li>Detección automática al conectar un mando y notificaciones de GNOME.</li>
+      <li>Dispositivos guardados para activar o desactivar sus reglas sin conectarlos.</li>
       <li>Dispositivos ocultos recuperables desde el menú, sin borrar reglas.</li>
       <li>Instalación con el diálogo de autenticación de polkit de GNOME.</li>
       <li>Interfaz de terminal y aplicación GTK4/libadwaita.</li>
@@ -46,6 +47,7 @@
       <li>Permission rules with MODE 0660 and the uaccess tag.</li>
       <li>Ignore rules for USB or Bluetooth devices.</li>
       <li>Automatic detection when a controller is connected and GNOME notifications.</li>
+      <li>Saved devices whose rules can be enabled or disabled without connecting them.</li>
       <li>Hidden devices recoverable from the menu without deleting rules.</li>
       <li>Installation through the GNOME polkit authentication dialog.</li>
       <li>Terminal interface and GTK4/libadwaita application.</li>
@@ -64,6 +66,17 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.10.0" date="2026-11-26">
+      <description>
+        <p>
+          Adds a JSON registry of saved devices with their latest generated
+          rule.  Existing managed rules are imported automatically, and each
+          saved rule can be enabled or disabled from the GUI or the new
+          --known/--enable-known/--disable-known CLI options without plugging
+          in the controller.
+        </p>
+      </description>
+    </release>
     <release version="0.9.3" date="2026-11-26">
       <description>
         <p>

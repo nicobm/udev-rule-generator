@@ -6,13 +6,14 @@ import argparse
 import json
 import os
 import sys
-from typing import Iterable, Sequence
+from typing import Callable, Iterable, Sequence
 
 from . import ISSUE_URL, PROJECT_URL, __version__, version_string
 from .devices import Joystick, detect_joysticks, find_joystick
 from .host import CommandNotAvailable, Host, HostError
 from .i18n import tr
 from .installed import list_installed_rules
+from .known import KnownDevice, KnownDevices
 from .presets import (
     ALL_PRESETS,
     STEAM,
@@ -154,6 +155,42 @@ def _resolve_action(value: str | None, device: Joystick) -> RuleAction:
     return RuleAction.ALLOW
 
 
+def _save_known_device(
+    device: Joystick, spec: RuleSpec, colors: Colors
+) -> None:
+    try:
+        KnownDevices().record_rule(device, spec)
+    except OSError as exc:
+        print(
+            colors.yellow(
+                tr(
+                    "La regla se instaló, pero no se pudo guardar en "
+                    "Dispositivos guardados: {error}",
+                    error=exc,
+                )
+            ),
+            file=sys.stderr,
+        )
+
+
+def _mark_known_inactive(
+    store: KnownDevices, filename: str, colors: Colors
+) -> None:
+    try:
+        store.mark_inactive_by_filename(filename)
+    except OSError as exc:
+        print(
+            colors.yellow(
+                tr(
+                    "La regla se eliminó, pero no se pudo actualizar "
+                    "Dispositivos guardados: {error}",
+                    error=exc,
+                )
+            ),
+            file=sys.stderr,
+        )
+
+
 def _confirm_and_install(
     host: Host,
     files: dict[str, str],
@@ -162,6 +199,7 @@ def _confirm_and_install(
     colors: Colors,
     assume_yes: bool,
     dry_run: bool,
+    on_installed: Callable[[InstallResult], None] | None = None,
 ) -> int:
     if dry_run:
         for filename, content in files.items():
@@ -201,6 +239,8 @@ def _confirm_and_install(
     )
     result = install_rule_files(host, files, trigger=trigger)
     _print_install_result(result, colors)
+    if on_installed is not None:
+        on_installed(result)
     return 0
 
 
@@ -257,7 +297,9 @@ def _cmd_installed(
             )
         )
         result = remove_rule_files(host, list(remove))
+        known_store = KnownDevices()
         for filename in result.filenames:
+            _mark_known_inactive(known_store, filename, colors)
             print(
                 colors.green(
                     tr(
@@ -287,6 +329,179 @@ def _cmd_installed(
         print(f"      {rule.title} · {colors.dim(kind)}")
         if rule.source:
             print(f"      {colors.dim(rule.source)}")
+    return 0
+
+
+def _find_known_device(
+    store: KnownDevices, selector: str
+) -> KnownDevice | None:
+    selector = selector.strip()
+    if not selector:
+        return None
+    if selector.isdigit():
+        index = int(selector) - 1
+        devices = store.devices()
+        if 0 <= index < len(devices):
+            return devices[index]
+        return None
+    exact = [
+        device
+        for device in store.devices()
+        if selector in {device.id, device.filename}
+    ]
+    if exact:
+        return exact[0]
+    lowered = selector.casefold()
+    matches = [
+        device
+        for device in store.devices()
+        if lowered in device.name.casefold()
+        or lowered in device.id.casefold()
+        or lowered in device.filename.casefold()
+        or lowered in device.identifier.casefold()
+    ]
+    return matches[0] if len(matches) == 1 else None
+
+
+def _cmd_known(
+    host: Host,
+    *,
+    as_json: bool,
+    enable: str | None,
+    disable: str | None,
+    assume_yes: bool,
+    dry_run: bool,
+    colors: Colors,
+) -> int:
+    store = KnownDevices()
+    try:
+        store.reconcile(list_installed_rules(host))
+    except (HostError, OSError):
+        # La lista de reglas es auxiliar; el registro todavía se puede usar.
+        pass
+    selector = enable or disable
+    if selector:
+        device = _find_known_device(store, selector)
+        if device is None:
+            raise ValueError(
+                tr(
+                    "No se encontró un único dispositivo guardado que coincida "
+                    "con {selector!r}.  Usá --known para ver la lista.",
+                    selector=selector,
+                )
+            )
+        active = enable is not None
+        if device.active == active:
+            state = tr("activa") if active else tr("desactivada")
+            print(
+                colors.dim(
+                    tr(
+                        "La regla de {name} ya está {state}.",
+                        name=device.name,
+                        state=state,
+                    )
+                )
+            )
+            return 0
+        if dry_run:
+            if active:
+                spec = device.build_spec()
+                _print_rule_preview(spec, colors)
+            else:
+                print(
+                    colors.bold(
+                        tr(
+                            "Se eliminaría /etc/udev/rules.d/{filename}",
+                            filename=device.filename,
+                        )
+                    )
+                )
+            print(colors.dim(tr("Modo --dry-run: no se escribió nada.")))
+            return 0
+        if not assume_yes:
+            if not sys.stdin.isatty():
+                raise ValueError(
+                    tr(
+                        "Para activar o desactivar sin interacción usá --yes."
+                    )
+                )
+            question = (
+                tr("¿Activar la regla guardada de {name}?", name=device.name)
+                if active
+                else tr(
+                    "¿Desactivar la regla guardada de {name}?", name=device.name
+                )
+            )
+            if not _confirm(question):
+                print(colors.dim(tr("No se modificó nada.")))
+                return 0
+        if active:
+            spec = device.build_spec()
+            result = install_rule_files(
+                host,
+                {spec.filename: spec.content},
+                trigger=spec.trigger,
+            )
+            try:
+                store.update(device.update_from_spec(spec))
+            except OSError as exc:
+                print(
+                    colors.yellow(
+                        tr(
+                            "La regla se instaló, pero no se pudo guardar en "
+                            "Dispositivos guardados: {error}",
+                            error=exc,
+                        )
+                    ),
+                    file=sys.stderr,
+                )
+            _print_install_result(result, colors)
+        else:
+            result = remove_rule_files(host, [device.filename])
+            _mark_known_inactive(store, device.filename, colors)
+            for filename in result.filenames:
+                print(
+                    colors.green(
+                        tr(
+                            "✓ Eliminada: {path}/{filename}",
+                            path=result.target_dir,
+                            filename=filename,
+                        )
+                    )
+                )
+            if result.reloaded:
+                print(colors.dim(tr("  Reglas recargadas con udevadm.")))
+        return 0
+
+    devices = store.devices()
+    if as_json:
+        print(
+            json.dumps(
+                [device.to_dict() for device in devices],
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
+        return 0
+    if not devices:
+        print(
+            colors.dim(
+                tr(
+                    "No hay dispositivos guardados.  Instalá una regla para "
+                    "un mando y va a aparecer acá."
+                )
+            )
+        )
+        return 0
+    for index, device in enumerate(devices, start=1):
+        state = tr("Activa") if device.active else tr("Desactivada")
+        print(f"  {colors.bold(str(index).rjust(2))}) {colors.bold(device.name)}")
+        print(
+            f"      {colors.cyan(device.bus_label)} · {device.identifier} · "
+            f"{device.action_label} · {state}"
+        )
+        print(f"      {colors.dim(device.filename)}")
+        print(f"      {colors.dim(device.id)}")
     return 0
 
 
@@ -428,6 +643,7 @@ def _cmd_device(
         colors=colors,
         assume_yes=assume_yes,
         dry_run=False,
+        on_installed=lambda _result: _save_known_device(device, spec, colors),
     )
 
 
@@ -532,6 +748,7 @@ def _interactive_device(host: Host, args: argparse.Namespace, colors: Colors) ->
                 print(colors.red(tr("Error: {error}", error=exc)))
                 return
             _print_install_result(result, colors)
+            _save_known_device(device, spec, colors)
         else:
             print(colors.dim(tr("No se instaló nada.")))
         return
@@ -586,7 +803,9 @@ def _interactive_installed(host: Host, colors: Colors) -> None:
     except (HostError, CommandNotAvailable) as exc:
         print(colors.red(tr("Error: {error}", error=exc)))
         return
+    known_store = KnownDevices()
     for filename in result.filenames:
+        _mark_known_inactive(known_store, filename, colors)
         print(
             colors.green(
                 tr(
@@ -638,7 +857,9 @@ def build_parser() -> argparse.ArgumentParser:
             "  udev-rule-generator --presets steam\n"
             "  udev-rule-generator --presets all\n"
             "  udev-rule-generator --presets all,steam --yes\n"
-            "  udev-rule-generator --installed\n\n"
+            "  udev-rule-generator --installed\n"
+            "  udev-rule-generator --known\n"
+            "  udev-rule-generator --disable-known 045e:02fd --yes\n\n"
             "Proyecto: {project}\n"
             "Problemas: {issues}",
             project=PROJECT_URL,
@@ -663,7 +884,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--json",
         action="store_true",
-        help=tr("salida JSON para --list o --installed"),
+        help=tr("salida JSON para --list, --installed o --known"),
     )
     parser.add_argument(
         "--device",
@@ -689,6 +910,21 @@ def build_parser() -> argparse.ArgumentParser:
         "--installed",
         action="store_true",
         help=tr("lista las reglas instaladas por esta aplicación"),
+    )
+    parser.add_argument(
+        "--known",
+        action="store_true",
+        help=tr("lista los dispositivos guardados"),
+    )
+    parser.add_argument(
+        "--enable-known",
+        metavar="ID",
+        help=tr("activa la regla guardada de un dispositivo"),
+    )
+    parser.add_argument(
+        "--disable-known",
+        metavar="ID",
+        help=tr("desactiva la regla guardada de un dispositivo"),
     )
     parser.add_argument(
         "--remove",
@@ -726,6 +962,9 @@ def main(argv: Sequence[str] | None = None) -> int:
                     args.action,
                     args.presets is not None,
                     args.installed,
+                    args.known,
+                    args.enable_known,
+                    args.disable_known,
                     args.remove,
                     args.json,
                     args.dry_run,
@@ -748,6 +987,20 @@ def main(argv: Sequence[str] | None = None) -> int:
 
         if args.list:
             return _cmd_list(host, as_json=args.json, colors=colors)
+        if args.enable_known and args.disable_known:
+            parser.error(
+                tr("--enable-known y --disable-known no se pueden combinar.")
+            )
+        if args.known or args.enable_known or args.disable_known:
+            return _cmd_known(
+                host,
+                as_json=args.json,
+                enable=args.enable_known,
+                disable=args.disable_known,
+                assume_yes=args.yes,
+                dry_run=args.dry_run,
+                colors=colors,
+            )
         if args.installed or args.remove:
             return _cmd_installed(
                 host,
