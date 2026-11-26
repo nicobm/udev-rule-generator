@@ -130,7 +130,14 @@ class DeviceManager(Gtk.Box):
         )
         self.devices_group.set_separate_rows(True)
         self.devices_group.set_hexpand(True)
-        self.append(self.devices_group)
+        self.devices_overlay = Gtk.Overlay()
+        self.devices_overlay.set_child(self.devices_group)
+        self.preview_layer = Gtk.Fixed()
+        self.preview_layer.set_can_target(False)
+        self.preview_layer.set_hexpand(True)
+        self.preview_layer.set_vexpand(True)
+        self.devices_overlay.add_overlay(self.preview_layer)
+        self.append(self.devices_overlay)
 
         self.external_group = Adw.PreferencesGroup(
             title=tr("Reglas externas"),
@@ -830,22 +837,46 @@ class DeviceManager(Gtk.Box):
         device_id: str,
     ) -> None:
         """Añade el tirador de tres puntos para reordenar la fila."""
-        handle = Gtk.Box()
-        handle.add_css_class("device-drag-handle")
-        handle.set_size_request(52, 52)
-        handle.set_valign(Gtk.Align.CENTER)
+        visual = Gtk.Box()
+        visual.add_css_class("device-drag-handle")
+        visual.set_size_request(24, 44)
+        visual.set_valign(Gtk.Align.CENTER)
         image = Gtk.Image.new_from_icon_name("view-more-symbolic")
         image.set_pixel_size(18)
         image.set_halign(Gtk.Align.CENTER)
         image.set_valign(Gtk.Align.CENTER)
-        handle.append(image)
-        handle.set_tooltip_text(tr("Arrastrar para reordenar"))
+        visual.append(image)
+        visual.set_tooltip_text(tr("Arrastrar para reordenar"))
+
+        handle = Gtk.Overlay()
+        handle.set_size_request(24, 44)
+        handle.set_valign(Gtk.Align.CENTER)
+        handle.set_overflow(Gtk.Overflow.VISIBLE)
+        handle.set_child(visual)
+        hitbox = Gtk.Box()
+        hitbox.set_size_request(52, 52)
+        hitbox.set_halign(Gtk.Align.END)
+        hitbox.set_valign(Gtk.Align.CENTER)
+        hitbox.set_tooltip_text(tr("Arrastrar para reordenar"))
+        handle.add_overlay(hitbox)
 
         drag_state: dict[str, object] = {
-            "drag": None,
             "timer": 0,
+            "preview": None,
+            "origin": None,
             "hot_y": 0,
         }
+
+        def tuple_xy(value: object) -> tuple[float, float] | None:
+            if not value:
+                return None
+            if len(value) >= 3:  # type: ignore[arg-type]
+                if not value[0]:  # type: ignore[index]
+                    return None
+                return float(value[1]), float(value[2])  # type: ignore[index]
+            if len(value) >= 2:  # type: ignore[arg-type]
+                return float(value[0]), float(value[1])  # type: ignore[index]
+            return None
 
         def pointer_position() -> tuple[float, float] | None:
             root = row.get_root()
@@ -860,65 +891,83 @@ class DeviceManager(Gtk.Box):
             pointer = seat.get_pointer() if seat is not None else None
             if pointer is None:
                 return None
-            result = surface.get_device_position(pointer)
-            if not result:
+            pointer_xy = tuple_xy(surface.get_device_position(pointer))
+            origin_xy = tuple_xy(row.translate_coordinates(root, 0, 0))
+            if pointer_xy is None or origin_xy is None:
                 return None
-            if len(result) >= 4:
-                if not result[0]:
-                    return None
-                pointer_x, pointer_y = result[1], result[2]
-            elif len(result) >= 2:
-                pointer_x, pointer_y = result[0], result[1]
-            else:
-                return None
+            return (
+                pointer_xy[0] - origin_xy[0],
+                pointer_xy[1] - origin_xy[1],
+            )
 
-            origin = row.translate_coordinates(root, 0, 0)
-            if not origin:
-                return None
-            if len(origin) >= 3:
-                if not origin[0]:
-                    return None
-                origin_x, origin_y = origin[1], origin[2]
-            elif len(origin) >= 2:
-                origin_x, origin_y = origin[0], origin[1]
-            else:
-                return None
-            return pointer_x - origin_x, pointer_y - origin_y
+        def overlay_origin() -> tuple[float, float] | None:
+            return tuple_xy(
+                row.translate_coordinates(self.devices_overlay, 0, 0)
+            )
 
-        def update_hotspot() -> bool:
-            drag = drag_state.get("drag")
-            if drag is None:
+        def update_preview() -> bool:
+            preview = drag_state.get("preview")
+            origin = drag_state.get("origin")
+            if preview is None or origin is None:
                 return False
             position = pointer_position()
             if position is not None:
-                pointer_x, _pointer_y = position
-                drag.set_hotspot(
-                    int(pointer_x),
-                    int(drag_state["hot_y"]),
+                self.preview_layer.move(
+                    preview,  # type: ignore[arg-type]
+                    int(origin[0]),  # type: ignore[index]
+                    int(origin[1] + position[1] - drag_state["hot_y"]),  # type: ignore[index,operator]
                 )
             return True
 
-        def on_drag_begin(drag_source, drag) -> None:
-            row.add_css_class("device-dragging")
-            drag_source.set_icon(Gtk.WidgetPaintable.new(row), 0, 0)
-            drag_state["drag"] = drag
+        def on_drag_begin(drag_source, _drag) -> None:
+            try:
+                drag_source.set_icon(
+                    Gdk.MemoryTexture.new(
+                        1,
+                        1,
+                        Gdk.MemoryFormat.R8G8B8A8_PREMULTIPLIED,
+                        GLib.Bytes.new(b"\x00\x00\x00\x00"),
+                        4,
+                    ),
+                    0,
+                    0,
+                )
+            except Exception:
+                pass
+            origin = overlay_origin()
             position = pointer_position()
-            if position is not None:
-                pointer_x, pointer_y = position
-                # Keep the card's left edge fixed to the row, but let its
-                # vertical offset follow the pointer.
-                hot_y = min(20, max(0, int(pointer_y)))
-                drag_state["hot_y"] = hot_y
-                drag.set_hotspot(int(pointer_x), hot_y)
-                drag_state["timer"] = GLib.timeout_add(16, update_hotspot)
+            if origin is None or position is None:
+                return
+            width = max(1, row.get_width())
+            height = max(1, row.get_height())
+            picture = Gtk.Picture.new_for_paintable(
+                Gtk.WidgetPaintable.new(row)
+            )
+            picture.set_size_request(width, height)
+            picture.set_can_target(False)
+            preview = Gtk.Box()
+            preview.add_css_class("device-dragging-card")
+            preview.set_size_request(width, height)
+            preview.set_can_target(False)
+            preview.append(picture)
+            self.preview_layer.put(preview, int(origin[0]), int(origin[1]))
+            row.set_opacity(0.35)
+            drag_state["preview"] = preview
+            drag_state["origin"] = origin
+            drag_state["hot_y"] = min(20, max(0, int(position[1])))
+            drag_state["timer"] = GLib.timeout_add(16, update_preview)
 
         def on_drag_end(*_args) -> None:
-            row.remove_css_class("device-dragging")
+            row.set_opacity(1.0)
             timer = drag_state.get("timer")
             if timer:
                 GLib.source_remove(timer)
                 drag_state["timer"] = 0
-            drag_state["drag"] = None
+            preview = drag_state.get("preview")
+            if preview is not None:
+                self.preview_layer.remove(preview)  # type: ignore[arg-type]
+            drag_state["preview"] = None
+            drag_state["origin"] = None
 
         source = Gtk.DragSource()
         source.set_actions(Gdk.DragAction.MOVE)
@@ -931,7 +980,7 @@ class DeviceManager(Gtk.Box):
         source.connect("drag-begin", on_drag_begin)
         source.connect("drag-end", on_drag_end)
         source.connect("drag-cancel", lambda *_args: on_drag_end())
-        handle.add_controller(source)
+        hitbox.add_controller(source)
 
         target = Gtk.DropTarget.new(
             GObject.TYPE_STRING,
@@ -947,7 +996,7 @@ class DeviceManager(Gtk.Box):
         )
         row.add_controller(target)
         row.add_prefix(handle)
-        self._add_hover_opacity(row, handle, 0.25, 0.85)
+        self._add_hover_opacity(row, visual, 0.25, 0.85)
 
     def _drop_row(
         self,

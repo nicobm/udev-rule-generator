@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.11.4 - 2026-11-26
+
+- Replaces the native drag icon with an overlay preview fixed to the vertical
+  rail, avoiding the bouncing and horizontal drift.
+- Keeps the drag handle layout width unchanged while providing a larger
+  invisible hit area, so the rest of the row no longer shifts to the right.
+
 ## 1.11.3 - 2026-11-26
 
 - Fixes the drag-start crash caused by platform differences in GTK pointer

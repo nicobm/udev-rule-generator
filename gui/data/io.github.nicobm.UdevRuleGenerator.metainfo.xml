@@ -65,6 +65,14 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="1.11.4" date="2026-11-26">
+      <description>
+        <p>
+          Uses a fixed vertical drag preview overlay and keeps the drag handle
+          from shifting the row layout.
+        </p>
+      </description>
+    </release>
     <release version="1.11.3" date="2026-11-26">
       <description>
         <p>
