@@ -58,6 +58,10 @@ class DeviceManager(Gtk.Box):
         self._pending_gdu: bool | None = None
         self._steam_installed = False
         self._gdu_installed = False
+        self._steam_rule_count = 0
+        self._gdu_rule_count = 0
+        self._steam_rule_total = len(STEAM)
+        self._gdu_rule_total = len(GAME_DEVICES)
         self._uinput_available = True
         self._rows: list[tuple[Adw.PreferencesGroup, Gtk.Widget]] = []
         self._controls: list[Gtk.Widget] = []
@@ -112,6 +116,7 @@ class DeviceManager(Gtk.Box):
         self.external_group.add(self.gdu_switch)
 
         self.append(self.external_group)
+        self._update_preset_tooltips()
 
         self.action_bar = Gtk.Box(
             orientation=Gtk.Orientation.HORIZONTAL,
@@ -153,12 +158,6 @@ class DeviceManager(Gtk.Box):
         self._uinput_available = available
         if not available:
             self._pending_steam = None
-        tooltip = (
-            ""
-            if available
-            else tr("Requiere el módulo uinput del kernel.")
-        )
-        self.steam_switch.set_tooltip_text(tooltip)
         if available:
             self.steam_switch.remove_css_class("uinput-error")
             self.steam_switch.set_subtitle(self._steam_subtitle)
@@ -171,14 +170,20 @@ class DeviceManager(Gtk.Box):
                 )
             )
         self._update_preset_switches()
+        self._update_preset_tooltips()
         self._apply_sensitivity()
 
     def set_installed_rules(self, rules: list) -> None:
         filenames = {
             rule.filename for rule in rules if rule.kind == "preset"
         }
-        self._steam_installed = set(preset_files(STEAM)) <= filenames
-        self._gdu_installed = set(preset_files(GAME_DEVICES)) <= filenames
+        steam_files = set(preset_files(STEAM))
+        gdu_files = set(preset_files(GAME_DEVICES))
+        self._steam_installed = steam_files <= filenames
+        self._gdu_installed = gdu_files <= filenames
+        self._steam_rule_count = len(steam_files & filenames)
+        self._gdu_rule_count = len(gdu_files & filenames)
+        self._update_preset_tooltips()
         if (
             self._pending_steam is not None
             and self._pending_steam == self._steam_installed
@@ -207,6 +212,25 @@ class DeviceManager(Gtk.Box):
         )
         self._updating = False
         self._update_pending_ui()
+
+    def _update_preset_tooltips(self) -> None:
+        steam_lines = [
+            tr(
+                "{count} de {total} reglas instaladas",
+                count=self._steam_rule_count,
+                total=self._steam_rule_total,
+            )
+        ]
+        if not self._uinput_available:
+            steam_lines.append(tr("Requiere el módulo uinput del kernel."))
+        self.steam_switch.set_tooltip_text("\n".join(steam_lines))
+        self.gdu_switch.set_tooltip_text(
+            tr(
+                "{count} de {total} reglas instaladas",
+                count=self._gdu_rule_count,
+                total=self._gdu_rule_total,
+            )
+        )
 
     def reload(self) -> None:
         self._updating = True

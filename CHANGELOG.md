@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.5 - 2026-11-26
+
+- Shows how many preset rules are installed when hovering over the
+  steam-devices and game-devices-udev switches.
+
 ## 1.1.4 - 2026-11-26
 
 - Shows the active `js` node (for example `js0`) in the subtitle of connected

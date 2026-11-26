@@ -65,6 +65,14 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="1.1.5" date="2026-11-26">
+      <description>
+        <p>
+          Shows the number of installed rules when hovering over external
+          rule switches.
+        </p>
+      </description>
+    </release>
     <release version="1.1.4" date="2026-11-26">
       <description>
         <p>

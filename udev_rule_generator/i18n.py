@@ -116,6 +116,9 @@ _EN.update(
         "Requiere el módulo uinput del kernel.": (
             "Requires the uinput kernel module."
         ),
+        "{count} de {total} reglas instaladas": (
+            "{count} of {total} rules installed"
+        ),
         "uinput no está activo. Para habilitar estas reglas udev, "
         "activá el módulo uinput en tu sistema operativo.": (
             "uinput is not active. To enable these udev rules, enable the "
