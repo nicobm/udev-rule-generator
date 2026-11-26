@@ -1,0 +1,85 @@
+"""Lectura de las reglas instaladas que administra esta aplicación."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Iterable
+
+from . import RULES_DIR
+from .host import Host, HostError
+
+
+@dataclass(frozen=True)
+class InstalledRule:
+    """Una regla instalada en ``/etc/udev/rules.d``."""
+
+    filename: str
+    kind: str
+    title: str
+    source: str
+    content: str
+
+    @property
+    def path(self) -> str:
+        return f"{RULES_DIR}/{self.filename}"
+
+    def to_dict(self) -> dict[str, str]:
+        return {
+            "filename": self.filename,
+            "path": self.path,
+            "kind": self.kind,
+            "title": self.title,
+            "source": self.source,
+        }
+
+
+def _parse_header(filename: str, content: str) -> InstalledRule | None:
+    lines = content.splitlines()
+    first = "\n".join(lines[:12])
+    if "# Generado por udev-rule-generator" in first:
+        kind = "generated"
+    elif "# Instalado por udev-rule-generator" in first:
+        kind = "preset"
+    else:
+        return None
+
+    title = filename
+    source = ""
+    for line in lines:
+        if line.startswith("# Dispositivo: "):
+            title = line.removeprefix("# Dispositivo: ").strip()
+        elif line.startswith("# Preconfigurada: "):
+            title = line.removeprefix("# Preconfigurada: ").strip()
+        elif line.startswith("# Origen: "):
+            source = line.removeprefix("# Origen: ").strip()
+    return InstalledRule(
+        filename=filename,
+        kind=kind,
+        title=title,
+        source=source,
+        content=content,
+    )
+
+
+def list_installed_rules(host: Host | None = None) -> list[InstalledRule]:
+    """Lista las reglas de esta aplicación, ignorando las ajenas."""
+    host = host or Host()
+    rules: list[InstalledRule] = []
+    for filename in host.list_dir(RULES_DIR):
+        if not filename.endswith(".rules"):
+            continue
+        try:
+            content = host.read_text(f"{RULES_DIR}/{filename}")
+        except HostError:
+            continue
+        parsed = _parse_header(filename, content)
+        if parsed:
+            rules.append(parsed)
+    return sorted(rules, key=lambda rule: (rule.kind, rule.filename))
+
+
+def find_installed_rules(
+    rules: Iterable[InstalledRule], filenames: Iterable[str]
+) -> list[InstalledRule]:
+    wanted = set(filenames)
+    return [rule for rule in rules if rule.filename in wanted]

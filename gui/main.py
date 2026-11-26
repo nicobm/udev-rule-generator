@@ -1,0 +1,48 @@
+"""Punto de entrada de la GUI."""
+
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+
+def _bootstrap() -> None:
+    """Permite ejecutar ``python3 gui/main.py`` desde el repositorio."""
+    if __package__:
+        return
+    root = str(Path(__file__).resolve().parent.parent)
+    if root not in sys.path:
+        sys.path.insert(0, root)
+
+
+def main(argv=None) -> int:
+    _bootstrap()
+    arguments = list(sys.argv if argv is None else argv)
+
+    # La GUI también puede actuar como lanzador del CLI, útil dentro del
+    # Flatpak: ``flatpak run ... --cli``.
+    if "--cli" in arguments[1:]:
+        from udev_rule_generator.cli import main as cli_main
+
+        return cli_main([argument for argument in arguments[1:] if argument != "--cli"])
+
+    try:
+        from gui.gi_compat import Adw, Gio, Gtk  # noqa: F401
+    except (ImportError, ValueError) as exc:
+        print(
+            "No se pudo cargar GTK4/libadwaita.\n"
+            "En Fedora instalá:\n"
+            "  sudo dnf install python3-gobject gtk4 libadwaita\n\n"
+            f"Detalle: {exc}",
+            file=sys.stderr,
+        )
+        return 1
+
+    from gui.application import Application
+
+    application = Application()
+    return application.run(arguments)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

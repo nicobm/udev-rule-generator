@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "udev-rule-generator"
+version = "0.1.0"
+description = "Crea reglas udev para permitir o ignorar joysticks y gamepads"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Nicolás (nicobm)" }]
+keywords = ["udev", "joystick", "gamepad", "controller", "linux"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Environment :: X11 Applications :: GTK",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Topic :: System :: Hardware",
+    "Topic :: Utilities",
+]
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/nicobm/udev-rule-generator"
+Issues = "https://github.com/nicobm/udev-rule-generator/issues"
+
+[project.scripts]
+udev-rule-generator = "udev_rule_generator.cli:main"
+udev-rule-generator-gui = "gui.main:main"
+
+[tool.setuptools]
+packages = ["udev_rule_generator", "gui"]
+
+[tool.setuptools.package-data]
+udev_rule_generator = [
+    "data/presets/*.rules",
+    "data/presets/LICENSE.game-devices-udev",
+]
+gui = [
+    "style.css",
+    "data/*.desktop",
+    "data/*.metainfo.xml",
+    "data/icons/hicolor/scalable/apps/*.svg",
+]

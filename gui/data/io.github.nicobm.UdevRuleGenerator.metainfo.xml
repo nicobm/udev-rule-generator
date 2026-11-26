@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.nicobm.UdevRuleGenerator</id>
+  <metadata_license>MIT</metadata_license>
+  <project_license>MIT</project_license>
+  <name>Generador de reglas udev</name>
+  <summary>Permitir o ignorar joysticks y gamepads con reglas udev</summary>
+
+  <description>
+    <p>
+      Generador de reglas udev es una herramienta para Linux que detecta los
+      joysticks y gamepads conectados y crea reglas en /etc/udev/rules.d para
+      permitir su uso o para ignorarlos.
+    </p>
+    <p>
+      Permite generar una regla con prioridad 10- para un mando concreto,
+      instalar reglas preconfiguradas de Microsoft Xbox, desautorizar el
+      controlador de LEDs ASRock que algunas placas exponen como joystick y
+      añadir la biblioteca game-devices-udev de fabiscafe.
+    </p>
+    <ul>
+      <li>Detección de mandos USB y Bluetooth con udevadm.</li>
+      <li>Reglas de permiso con MODE 0660 y TAG uaccess.</li>
+      <li>Reglas para ignorar dispositivos USB o Bluetooth.</li>
+      <li>Instalación con el diálogo de autenticación de polkit de GNOME.</li>
+      <li>Interfaz de terminal y aplicación GTK4/libadwaita.</li>
+    </ul>
+  </description>
+
+  <launchable type="desktop-id">io.github.nicobm.UdevRuleGenerator.desktop</launchable>
+
+  <url type="homepage">https://github.com/nicobm/udev-rule-generator</url>
+  <url type="bugtracker">https://github.com/nicobm/udev-rule-generator/issues</url>
+
+  <developer id="io.github.nicobm">
+    <name>Nicolás (nicobm)</name>
+  </developer>
+
+  <content_rating type="oars-1.1"/>
+
+  <releases>
+    <release version="0.1.0" date="2026-11-25">
+      <description>
+        <p>Primera versión: detección, reglas de permitir/ignorar, presets y GUI.</p>
+      </description>
+    </release>
+  </releases>
+</component>

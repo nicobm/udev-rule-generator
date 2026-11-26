@@ -1,0 +1,88 @@
+"""Pruebas de instalación/eliminación sin tocar el sistema real."""
+
+from __future__ import annotations
+
+import tempfile
+import unittest
+from pathlib import Path
+from unittest import mock
+
+from udev_rule_generator import privileged
+from udev_rule_generator.host import Host
+from udev_rule_generator.installed import list_installed_rules
+from udev_rule_generator.privileged import (
+    install_rule_files,
+    remove_rule_files,
+)
+
+
+class FakeInstalledHost:
+    def __init__(self, files: dict[str, str]) -> None:
+        self.files = files
+
+    def list_dir(self, _path: str) -> list[str]:
+        return sorted(self.files)
+
+    def read_text(self, path: str) -> str:
+        return self.files[Path(path).name]
+
+
+class RootInstallTests(unittest.TestCase):
+    def test_install_writes_and_removes_rules(self) -> None:
+        content = "# Generado por udev-rule-generator 0.1.0\n# Dispositivo: Test\n"
+        with tempfile.TemporaryDirectory() as directory:
+            with (
+                mock.patch.object(privileged, "RULES_DIR", directory),
+                mock.patch.object(privileged.os, "geteuid", return_value=0),
+                mock.patch.object(
+                    privileged, "_run_udevadm_local", return_value=False
+                ),
+            ):
+                host = Host(in_flatpak=False)
+                result = install_rule_files(
+                    host,
+                    {"10-test-device.rules": content},
+                    trigger="change",
+                )
+                target = Path(directory) / "10-test-device.rules"
+                self.assertTrue(target.exists())
+                self.assertEqual(target.read_text(encoding="utf-8"), content)
+                self.assertEqual(result.filenames, ("10-test-device.rules",))
+                self.assertFalse(result.reloaded)
+                self.assertIsNotNone(result.warning)
+
+                removed = remove_rule_files(host, ["10-test-device.rules"])
+                self.assertFalse(target.exists())
+                self.assertEqual(removed.filenames, ("10-test-device.rules",))
+
+
+class InstalledParsingTests(unittest.TestCase):
+    def test_only_managed_rules_are_listed(self) -> None:
+        generated = (
+            "# Generado por udev-rule-generator 0.1.0\n"
+            "# Dispositivo: Test Pad\n"
+            "ACTION!=\"remove\"\n"
+        )
+        preset = (
+            "# Instalado por udev-rule-generator 0.1.0\n"
+            "# Preconfigurada: Microsoft Xbox\n"
+            "# Origen: https://example.invalid (MIT)\n"
+        )
+        files = {
+            "10-generated.rules": generated,
+            "71-preset.rules": preset,
+            "99-other.rules": "# regla ajena\n",
+        }
+        rules = list_installed_rules(FakeInstalledHost(files))
+        self.assertEqual(
+            [rule.filename for rule in rules],
+            ["10-generated.rules", "71-preset.rules"],
+        )
+        self.assertEqual(rules[0].kind, "generated")
+        self.assertEqual(rules[0].title, "Test Pad")
+        self.assertEqual(rules[1].kind, "preset")
+        self.assertEqual(rules[1].title, "Microsoft Xbox")
+
+
+if __name__ == "__main__":
+    unittest.main()

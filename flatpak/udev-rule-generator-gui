@@ -1,0 +1,3 @@
+#!/bin/sh
+export PYTHONPATH="/app/lib/udev-rule-generator${PYTHONPATH:+:$PYTHONPATH}"
+exec python3 -m gui "$@"

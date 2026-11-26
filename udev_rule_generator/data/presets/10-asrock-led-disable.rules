@@ -1,0 +1,6 @@
+# ASRock LED Controller (often falsely detected as a joystick/js0); USB
+#
+# Este dispositivo no es un gamepad: es el controlador de LEDs de algunas
+# placas ASRock.  Al desautorizarlo a nivel USB desaparece de /dev/input/js*
+# y deja de molestar en Steam, SDL y otras aplicaciones.
+ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="26ce", ATTR{idProduct}=="01a2", ATTR{authorized}="0"
