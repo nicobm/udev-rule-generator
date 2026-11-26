@@ -24,6 +24,7 @@ from udev_rule_generator.uinput import uinput_available
 
 from .device_manager import DeviceManager
 from .gi_compat import Adw, Gio, GLib, Gtk, markup_escape
+from .test_mode import test_mode_enabled
 
 
 class MainWindow(Adw.ApplicationWindow):
@@ -43,6 +44,7 @@ class MainWindow(Adw.ApplicationWindow):
         self._monitor: UdevMonitor | None = None
         self._hidden_dialog = None
         self._test_dialog = None
+        self._emoji_dialog = None
         self._file_dialog = None
         self._backup_busy = False
 
@@ -74,6 +76,8 @@ class MainWindow(Adw.ApplicationWindow):
         menu.append(tr("Importar"), "app.import")
         menu.append(tr("Dispositivos ocultos"), "app.hidden")
         menu.append(tr("Test de reglas"), "app.test")
+        if test_mode_enabled():
+            menu.append(tr("Ver emoji"), "app.emoji")
         menu.append(tr("Acerca de"), "app.about")
         menu.append(tr("Eliminar todos los datos"), "app.clear")
         menu_button = Gtk.MenuButton(
@@ -293,6 +297,34 @@ class MainWindow(Adw.ApplicationWindow):
 
     def _on_test_destroyed(self, _dialog) -> None:
         self._test_dialog = None
+
+    def show_emoji_catalog(self) -> None:
+        if self._closed:
+            return
+        previous = self._emoji_dialog
+        self._emoji_dialog = None
+        if previous is not None:
+            try:
+                if previous.get_realized():
+                    previous.destroy()
+            except Exception:
+                pass
+        from .emoji_dialog import EmojiCatalogDialog
+
+        self._emoji_dialog = EmojiCatalogDialog(parent=self)
+        self._emoji_dialog.connect(
+            "close-request", self._on_emoji_close
+        )
+        self._emoji_dialog.connect("destroy", self._on_emoji_destroyed)
+        self._emoji_dialog.present()
+
+    def _on_emoji_close(self, dialog) -> bool:
+        if self._emoji_dialog is dialog:
+            self._emoji_dialog = None
+        return False
+
+    def _on_emoji_destroyed(self, _dialog) -> None:
+        self._emoji_dialog = None
 
     def _on_hidden_changed(self, message: str) -> None:
         self.add_toast(message)

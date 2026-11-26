@@ -65,6 +65,14 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="1.9.0" date="2026-11-26">
+      <description>
+        <p>
+          Uses white as the default device color and adds a TEST-only
+          symbolic icon catalog.
+        </p>
+      </description>
+    </release>
     <release version="1.8.1" date="2026-11-26">
       <description>
         <p>

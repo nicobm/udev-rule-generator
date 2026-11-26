@@ -59,7 +59,7 @@ _DEVICE_COLOR_ALIASES = {
     "bright-cyan": "cyan",
     "bright-white": "white",
 }
-_DEFAULT_DEVICE_COLOR = "blue"
+_DEFAULT_DEVICE_COLOR = "white"
 
 
 def _normalize_device_color(color_id: str) -> str:

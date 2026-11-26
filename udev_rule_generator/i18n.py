@@ -476,6 +476,14 @@ _EN.update(
         "El archivo de dispositivos no es válido.": (
             "The devices file is invalid."
         ),
+        "Ver emoji": "View emoji",
+        "Emojis disponibles": "Available emojis",
+        "Estos son los iconos simbólicos disponibles en Adwaita. "
+        "Decime cuáles querés agregar al selector.": (
+            "These are the symbolic icons available in Adwaita. Tell me "
+            "which ones you want added to the selector."
+        ),
+        "{count} iconos disponibles": "{count} icons available",
         "Elegir icono": "Choose icon",
         "Icono del dispositivo": "Device icon",
         "Mando": "Gamepad",

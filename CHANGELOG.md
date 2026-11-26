@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.9.0 - 2026-11-26
+
+- Uses white as the default device color again.
+- Adds a development-only **View emoji** menu entry when `TEST=1`. It shows
+  the catalog of symbolic icon candidates available for future choices.
+
 ## 1.8.1 - 2026-11-26
 
 - Uses only the light GNOME Terminal palette colors, without duplicate dark
