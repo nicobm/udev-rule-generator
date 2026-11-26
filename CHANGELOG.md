@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.12.3 - 2026-11-26
+
+- Adds `--device=dri` to the Flatpak manifest. GTK can use the GPU inside the
+  sandbox and Mesa no longer falls back to software because `/dev/dri` is
+  missing.
+- Documents the GPU permission and the Mesa/Zink warnings it prevents.
+
 ## 0.12.2 - 2026-11-26
 
 - Handles `Ctrl+C` in the GUI without printing a Python traceback. The app

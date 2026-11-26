@@ -7,6 +7,7 @@
     "finish-args": [
         "--socket=wayland",
         "--device=input",
+        "--device=dri",
         "--talk-name=org.freedesktop.Flatpak",
         "--unshare=network"
     ],
