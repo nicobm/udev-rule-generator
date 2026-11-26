@@ -23,25 +23,104 @@
     <meta property="og:type" content="website" />
     <script>
       (() => {
+        // Preferencia guardada solo para este sitio. La clave anterior
+        // ("theme") era genérica y se compartía con el resto de páginas de
+        // GitHub Pages, así que un valor viejo podía congelar el tema.
+        const STORAGE_KEY = "udev-rule-generator-theme";
         const root = document.documentElement;
-        let saved = null;
-        try {
-          saved = localStorage.getItem("theme");
-        } catch {}
-        if (saved === "light" || saved === "dark") {
-          root.dataset.theme = saved;
-        } else {
-          root.dataset.theme = matchMedia("(prefers-color-scheme: dark)").matches
-            ? "dark"
-            : "light";
+        const darkQuery = window.matchMedia("(prefers-color-scheme: dark)");
+
+        const readChoice = () => {
+          try {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            return saved === "light" || saved === "dark" ? saved : "system";
+          } catch {
+            return "system";
+          }
+        };
+
+        let choice = readChoice();
+
+        const systemTheme = () => (darkQuery.matches ? "dark" : "light");
+
+        const effectiveTheme = () =>
+          choice === "system" ? systemTheme() : choice;
+
+        const apply = () => {
+          const theme = effectiveTheme();
+          // En modo "system" no se fija data-theme: la media query de CSS
+          // decide sola. Así el tema también cambia cuando el navegador no
+          // entrega eventos de prefers-color-scheme (WebKit, pestañas en
+          // segundo plano, etc.).
+          if (choice === "system") {
+            delete root.dataset.theme;
+          } else {
+            root.dataset.theme = choice;
+          }
+          root.dataset.themeSource = choice === "system" ? "system" : "manual";
+
+          const meta = document.querySelector('meta[name="theme-color"]');
+          if (meta) {
+            meta.setAttribute(
+              "content",
+              theme === "dark" ? "#000000" : "#ffffff",
+            );
+          }
+
+          const toggle = document.querySelector(".theme-toggle");
+          if (toggle) {
+            const next = theme === "dark" ? "light" : "dark";
+            const label = `Switch to ${next} theme`;
+            toggle.setAttribute("aria-label", label);
+            toggle.setAttribute("title", label);
+            toggle.setAttribute("aria-pressed", String(theme === "dark"));
+          }
+        };
+
+        const syncWithSystem = () => {
+          if (choice === "system") apply();
+        };
+
+        apply();
+
+        if (typeof darkQuery.addEventListener === "function") {
+          darkQuery.addEventListener("change", syncWithSystem);
+        } else if (typeof darkQuery.addListener === "function") {
+          darkQuery.addListener(syncWithSystem);
         }
-        const meta = document.querySelector('meta[name="theme-color"]');
-        if (meta) {
-          meta.setAttribute(
-            "content",
-            root.dataset.theme === "dark" ? "#000000" : "#ffffff",
-          );
-        }
+        // Algunos navegadores solo refrescan la media query al volver a la
+        // pestaña, así que se reconsulta en esos casos.
+        document.addEventListener("visibilitychange", () => {
+          if (!document.hidden) syncWithSystem();
+        });
+        window.addEventListener("focus", syncWithSystem);
+        window.addEventListener("pageshow", syncWithSystem);
+
+        document.addEventListener("DOMContentLoaded", () => {
+          const toggle = document.querySelector(".theme-toggle");
+          if (toggle) {
+            toggle.addEventListener("click", () => {
+              choice = effectiveTheme() === "dark" ? "light" : "dark";
+              try {
+                localStorage.setItem(STORAGE_KEY, choice);
+              } catch {}
+              apply();
+            });
+          }
+
+          const useSystem = document.querySelector("#use-system-theme");
+          if (useSystem) {
+            useSystem.addEventListener("click", () => {
+              choice = "system";
+              try {
+                localStorage.removeItem(STORAGE_KEY);
+              } catch {}
+              apply();
+            });
+          }
+
+          apply();
+        });
       })();
     </script>
     <style>
@@ -927,56 +1006,5 @@ flatpak run io.github.nicobm.UdevRuleGenerator</code></pre>
       </div>
     </footer>
 
-    <script>
-      const toggle = document.querySelector(".theme-toggle");
-      const colorScheme = matchMedia("(prefers-color-scheme: dark)");
-      let manualTheme = null;
-      try {
-        manualTheme = localStorage.getItem("theme");
-      } catch {}
-
-      function applyTheme(theme) {
-        document.documentElement.dataset.theme = theme;
-        document
-          .querySelector('meta[name="theme-color"]')
-          ?.setAttribute("content", theme === "dark" ? "#000000" : "#ffffff");
-      }
-
-      function onSystemThemeChange(event) {
-        if (manualTheme === "light" || manualTheme === "dark") {
-          return;
-        }
-        applyTheme(event.matches ? "dark" : "light");
-      }
-
-      if (colorScheme.addEventListener) {
-        colorScheme.addEventListener("change", onSystemThemeChange);
-      } else {
-        colorScheme.addListener(onSystemThemeChange);
-      }
-
-      toggle?.addEventListener("click", () => {
-        const root = document.documentElement;
-        const isDark =
-          root.dataset.theme === "dark" ||
-          (!root.dataset.theme && colorScheme.matches);
-        const theme = isDark ? "light" : "dark";
-        manualTheme = theme;
-        applyTheme(theme);
-        try {
-          localStorage.setItem("theme", theme);
-        } catch {}
-      });
-
-      document
-        .querySelector("#use-system-theme")
-        ?.addEventListener("click", () => {
-          manualTheme = null;
-          try {
-            localStorage.removeItem("theme");
-          } catch {}
-          applyTheme(colorScheme.matches ? "dark" : "light");
-        });
-    </script>
   </body>
 </html>
