@@ -841,6 +841,68 @@ class DeviceManager(Gtk.Box):
         handle.append(image)
         handle.set_tooltip_text(tr("Arrastrar para reordenar"))
 
+        drag_state: dict[str, object] = {
+            "drag": None,
+            "timer": 0,
+            "hot_y": 0,
+        }
+
+        def pointer_position() -> tuple[float, float] | None:
+            root = row.get_root()
+            native = row.get_native()
+            if root is None or native is None:
+                return None
+            surface = native.get_surface()
+            display = Gdk.Display.get_default()
+            if surface is None or display is None:
+                return None
+            seat = display.get_default_seat()
+            pointer = seat.get_pointer() if seat is not None else None
+            if pointer is None:
+                return None
+            result = surface.get_device_position(pointer)
+            if not result or not result[0]:
+                return None
+            origin = row.translate_coordinates(root, 0, 0)
+            if not origin or not origin[0]:
+                return None
+            return result[1] - origin[1], result[2] - origin[2]
+
+        def update_hotspot() -> bool:
+            drag = drag_state.get("drag")
+            if drag is None:
+                return False
+            position = pointer_position()
+            if position is not None:
+                pointer_x, _pointer_y = position
+                drag.set_hotspot(
+                    int(pointer_x),
+                    int(drag_state["hot_y"]),
+                )
+            return True
+
+        def on_drag_begin(drag_source, drag) -> None:
+            row.add_css_class("device-dragging")
+            drag_source.set_icon(Gtk.WidgetPaintable.new(row), 0, 0)
+            drag_state["drag"] = drag
+            position = pointer_position()
+            if position is not None:
+                pointer_x, pointer_y = position
+                # Keep the card's left edge fixed to the row, but let its
+                # vertical offset follow the pointer.
+                hot_y = min(20, max(0, int(pointer_y)))
+                drag_state["hot_y"] = hot_y
+                drag.set_hotspot(int(pointer_x), hot_y)
+                drag_state["timer"] = GLib.timeout_add(16, update_hotspot)
+
+        def on_drag_end(*_args) -> None:
+            row.remove_css_class("device-dragging")
+            timer = drag_state.get("timer")
+            if timer:
+                GLib.source_remove(timer)
+                drag_state["timer"] = 0
+            drag_state["drag"] = None
+
         source = Gtk.DragSource()
         source.set_actions(Gdk.DragAction.MOVE)
         source.connect(
@@ -849,14 +911,9 @@ class DeviceManager(Gtk.Box):
                 device_id
             ),
         )
-        source.connect(
-            "drag-begin",
-            lambda drag_source, _drag: drag_source.set_icon(
-                Gtk.WidgetPaintable.new(row),
-                0,
-                0,
-            ),
-        )
+        source.connect("drag-begin", on_drag_begin)
+        source.connect("drag-end", on_drag_end)
+        source.connect("drag-cancel", lambda *_args: on_drag_end())
         handle.add_controller(source)
 
         target = Gtk.DropTarget.new(

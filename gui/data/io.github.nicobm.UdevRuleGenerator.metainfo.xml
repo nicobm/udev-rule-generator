@@ -65,6 +65,14 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="1.11.2" date="2026-11-26">
+      <description>
+        <p>
+          Outlines the held device card and locks the drag preview to the
+          vertical rail.
+        </p>
+      </description>
+    </release>
     <release version="1.11.1" date="2026-11-26">
       <description>
         <p>

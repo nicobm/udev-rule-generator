@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.11.2 - 2026-11-26
+
+- Outlines the held device card during drag and drop.
+- Locks the drag preview to the vertical rail so it only follows the pointer
+  up and down.
+
 ## 1.11.1 - 2026-11-26
 
 - Shows the complete device card as the drag preview instead of a transparent
