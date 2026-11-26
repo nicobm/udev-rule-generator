@@ -362,9 +362,15 @@ class KnownDevices:
             os.chmod(temporary, 0o644)
             os.replace(temporary, self.path)
 
-    def merge_snapshot(self, raw: object) -> tuple[int, int]:
+    def merge_snapshot(
+        self,
+        raw: object,
+        *,
+        active: bool | None = None,
+    ) -> tuple[int, int]:
         """Fusiona un ``devices.json`` importado sin borrar datos locales.
 
+        ``active`` permite forzar el estado de los dispositivos importados.
         Devuelve la cantidad de dispositivos y alias importados.
         """
         if not isinstance(raw, dict):
@@ -385,6 +391,8 @@ class KnownDevices:
                 record = KnownDevice.from_dict(value)
                 if _is_legacy_ignore(record.content):
                     continue
+                if active is not None:
+                    record = replace(record, active=active)
                 identity = record.id or str(key)
                 if not identity:
                     continue

@@ -18,7 +18,6 @@ from udev_rule_generator.backup import (
 from udev_rule_generator.devices import Joystick
 from udev_rule_generator.installed import InstalledRule
 from udev_rule_generator.known import KnownDevices
-from udev_rule_generator.privileged import InstallResult
 from udev_rule_generator.rules import RuleAction, build_rule
 from udev_rule_generator.userconfig import device_identity
 
@@ -88,7 +87,7 @@ class BackupTests(unittest.TestCase):
                 "Backup rojo",
             )
 
-    def test_import_merges_devices_and_installs_only_backed_up_rules(self) -> None:
+    def test_import_restores_data_without_installing_rules(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             source_store = KnownDevices(Path(directory) / "source.json")
             device = _device()
@@ -116,19 +115,9 @@ class BackupTests(unittest.TestCase):
                 data, _info = create_backup(object(), source_store)  # type: ignore[arg-type]
 
             target_store = KnownDevices(Path(directory) / "target.json")
-            install_result = InstallResult(
-                filenames=(spec.filename,),
-                reloaded=True,
-            )
-            with (
-                mock.patch(
-                    "udev_rule_generator.backup.list_installed_rules",
-                    return_value=[generated],
-                ),
-                mock.patch(
-                    "udev_rule_generator.backup.install_rule_files",
-                    return_value=install_result,
-                ) as install,
+            with mock.patch(
+                "udev_rule_generator.backup.list_installed_rules",
+                return_value=[],
             ):
                 result = import_backup(
                     object(),  # type: ignore[arg-type]
@@ -139,18 +128,14 @@ class BackupTests(unittest.TestCase):
             self.assertEqual(result.devices, 1)
             self.assertEqual(result.aliases, 1)
             self.assertEqual(result.rules, 1)
-            self.assertEqual(result.installed, (spec.filename,))
-            self.assertTrue(result.reloaded)
-            install.assert_called_once()
-            installed_files = install.call_args.args[1]
-            self.assertEqual(set(installed_files), {spec.filename})
             self.assertEqual(
                 target_store.alias_for(device_identity(device)),
                 "Backup rojo",
             )
-            self.assertIsNotNone(
-                target_store.get(device_identity(device))
-            )
+            imported = target_store.get(device_identity(device))
+            self.assertIsNotNone(imported)
+            assert imported is not None
+            self.assertFalse(imported.active)
 
     def test_import_rejects_path_traversal(self) -> None:
         buffer = io.BytesIO()

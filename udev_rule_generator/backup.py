@@ -15,7 +15,6 @@ from .host import Host, HostError
 from .i18n import tr
 from .installed import _parse_header, list_installed_rules
 from .known import KnownDevices
-from .privileged import install_rule_files
 from .rules import validate_rule_filename
 
 BACKUP_FORMAT = "udev-rule-generator-backup"
@@ -50,8 +49,6 @@ class ImportResult:
     devices: int
     aliases: int
     rules: int
-    installed: tuple[str, ...]
-    reloaded: bool
 
 
 def _json_bytes(value: object) -> bytes:
@@ -341,26 +338,16 @@ def import_backup(
 ) -> ImportResult:
     """Importa una copia creada por :func:`create_backup`.
 
-    Los dispositivos se fusionan con los existentes y las reglas incluidas se
-    instalan con la misma autenticación de polkit que usa la aplicación.
+    Solo restaura los datos de los dispositivos y sus alias.  Las reglas
+    incluidas no se instalan ni se activan: el usuario puede activarlas
+    después desde la ventana principal.
     """
     _manifest, raw_devices, rules = _read_archive(data)
-    installed: tuple[str, ...] = ()
-    reloaded = False
-    if rules:
-        try:
-            result = install_rule_files(
-                host,
-                rules,
-                trigger="change",
-            )
-        except (HostError, OSError) as exc:
-            raise BackupError(str(exc)) from exc
-        installed = result.filenames
-        reloaded = result.reloaded
-
     try:
-        imported_devices, imported_aliases = store.merge_snapshot(raw_devices)
+        imported_devices, imported_aliases = store.merge_snapshot(
+            raw_devices,
+            active=False,
+        )
     except (OSError, ValueError) as exc:
         raise BackupError(str(exc)) from exc
 
@@ -374,6 +361,4 @@ def import_backup(
         devices=imported_devices,
         aliases=imported_aliases,
         rules=len(rules),
-        installed=installed,
-        reloaded=reloaded,
     )

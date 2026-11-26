@@ -432,6 +432,14 @@ _EN.update(
         "¿Importar dispositivos y reglas generadas desde {filename}?": (
             "Import devices and generated rules from {filename}?"
         ),
+        "¿Importar dispositivos y alias desde {filename}?": (
+            "Import devices and aliases from {filename}?"
+        ),
+        "Datos importados: {devices} dispositivos y {aliases} alias. "
+        "Ninguna regla fue activada.": (
+            "Imported data: {devices} devices and {aliases} aliases. No rules "
+            "were activated."
+        ),
         "Copia de seguridad importada: {devices} dispositivos, "
         "{aliases} alias y {rules} reglas.": (
             "Backup imported: {devices} devices, {aliases} aliases, and "

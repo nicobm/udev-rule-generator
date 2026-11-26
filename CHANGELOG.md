@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.6.0 - 2026-11-26
+
+- Importing a backup now only restores devices, aliases, and their metadata.
+  It does not install or activate rules and no longer asks for administrator
+  authentication. Imported devices start disabled and can be enabled later.
+
 ## 1.5.2 - 2026-11-26
 
 - Pressing Escape while editing a device alias closes the inline field without

@@ -857,8 +857,7 @@ def _cmd_import(
             )
         if not _confirm(
             tr(
-                "¿Importar dispositivos y reglas generadas desde "
-                "{filename}?",
+                "¿Importar dispositivos y alias desde {filename}?",
                 filename=Path(path).name,
             )
         ):
@@ -871,11 +870,10 @@ def _cmd_import(
     print(
         colors.green(
             tr(
-                "Copia de seguridad importada: {devices} dispositivos, "
-                "{aliases} alias y {rules} reglas.",
+                "Datos importados: {devices} dispositivos y {aliases} "
+                "alias. Ninguna regla fue activada.",
                 devices=result.devices,
                 aliases=result.aliases,
-                rules=result.rules,
             )
         )
     )

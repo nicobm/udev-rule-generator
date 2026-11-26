@@ -475,10 +475,10 @@ class MainWindow(Adw.ApplicationWindow):
         GLib.timeout_add(1200, self._refresh_after_change)
         self.add_toast(
             tr(
-                "Copia de seguridad importada: {devices} dispositivos y "
-                "{rules} reglas.",
+                "Datos importados: {devices} dispositivos y {aliases} "
+                "alias. Ninguna regla fue activada.",
                 devices=result.devices,
-                rules=result.rules,
+                aliases=result.aliases,
             )
         )
         return False
