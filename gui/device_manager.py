@@ -567,7 +567,6 @@ class DeviceManager(Gtk.Box):
         js_label = _js_nodes_label(device)
         if js_label:
             details.append(js_label)
-        details.append(tr("Sin regla guardada"))
         row = Adw.ActionRow(
             title=markup_escape(device.display_name),
             subtitle=markup_escape(" · ".join(details)),

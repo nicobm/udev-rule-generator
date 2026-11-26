@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.5.1 - 2026-11-26
+
+- Removes the "No saved rule" text from connected-device subtitles. The
+  subtitle now only shows bus, VID:PID, and active input nodes.
+
 ## 1.5.0 - 2026-11-26
 
 - Adds **Delete all data** to the header menu. It removes saved devices,
