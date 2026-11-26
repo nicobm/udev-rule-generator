@@ -100,11 +100,11 @@ class KnownDevicesTests(unittest.TestCase):
             store = KnownDevices(path)
             key = device_identity(_device())
 
-            store.set_color(key, "bright-cyan")
-            self.assertEqual(store.color_for(key), "bright-cyan")
+            store.set_color(key, "cyan")
+            self.assertEqual(store.color_for(key), "cyan")
             self.assertEqual(
                 KnownDevices(path).color_for(key),
-                "bright-cyan",
+                "cyan",
             )
 
     def test_clear_all_removes_devices_and_aliases(self) -> None:
@@ -119,7 +119,7 @@ class KnownDevicesTests(unittest.TestCase):
             )
             store.set_alias(key, "Temporal")
             store.set_icon(key, "joystick")
-            store.set_color(key, "bright-cyan")
+            store.set_color(key, "cyan")
             store.clear_all()
 
             reloaded = KnownDevices(path)

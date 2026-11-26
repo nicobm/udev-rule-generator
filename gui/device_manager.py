@@ -36,25 +36,35 @@ _DEVICE_ICONS = {
 }
 _DEFAULT_DEVICE_ICON = "gamepad"
 _DEVICE_COLOR_CHOICES = (
-    ("black", "Negro"),
     ("red", "Rojo"),
     ("green", "Verde"),
     ("yellow", "Amarillo"),
     ("blue", "Azul"),
     ("magenta", "Magenta"),
     ("cyan", "Cian"),
+    ("orange", "Naranja"),
+    ("pink", "Rosa"),
+    ("gray", "Gris"),
     ("white", "Blanco"),
-    ("bright-black", "Negro brillante"),
-    ("bright-red", "Rojo brillante"),
-    ("bright-green", "Verde brillante"),
-    ("bright-yellow", "Amarillo brillante"),
-    ("bright-blue", "Azul brillante"),
-    ("bright-magenta", "Magenta brillante"),
-    ("bright-cyan", "Cian brillante"),
-    ("bright-white", "Blanco brillante"),
 )
 _DEVICE_COLOR_IDS = tuple(color_id for color_id, _label in _DEVICE_COLOR_CHOICES)
+_DEVICE_COLOR_ALIASES = {
+    "black": "gray",
+    "bright-black": "gray",
+    "bright-red": "red",
+    "bright-green": "green",
+    "bright-yellow": "yellow",
+    "bright-blue": "blue",
+    "bright-magenta": "magenta",
+    "bright-cyan": "cyan",
+    "bright-white": "white",
+}
 _DEFAULT_DEVICE_COLOR = "blue"
+
+
+def _normalize_device_color(color_id: str) -> str:
+    color_id = _DEVICE_COLOR_ALIASES.get(color_id, color_id)
+    return color_id if color_id in _DEVICE_COLOR_IDS else _DEFAULT_DEVICE_COLOR
 
 
 def _js_nodes_label(device: Joystick | None) -> str:
@@ -360,9 +370,7 @@ class DeviceManager(Gtk.Box):
         icon_id = self.store.icon_for(device_id)
         if icon_id not in _DEVICE_ICONS:
             icon_id = _DEFAULT_DEVICE_ICON
-        color_id = self.store.color_for(device_id)
-        if color_id not in _DEVICE_COLOR_IDS:
-            color_id = _DEFAULT_DEVICE_COLOR
+        color_id = _normalize_device_color(self.store.color_for(device_id))
 
         image = Gtk.Image.new_from_icon_name(_DEVICE_ICONS[icon_id])
         image.set_pixel_size(18)
@@ -441,9 +449,11 @@ class DeviceManager(Gtk.Box):
         content.append(color_heading)
         color_grid = Gtk.FlowBox()
         color_grid.set_selection_mode(Gtk.SelectionMode.NONE)
-        color_grid.set_max_children_per_line(4)
-        color_grid.set_column_spacing(4)
-        color_grid.set_row_spacing(4)
+        color_grid.set_homogeneous(True)
+        color_grid.set_min_children_per_line(5)
+        color_grid.set_max_children_per_line(5)
+        color_grid.set_column_spacing(6)
+        color_grid.set_row_spacing(6)
         color_choices: dict[str, Gtk.Button] = {}
 
         def update_color_selection(selected_id: str) -> None:
@@ -458,6 +468,8 @@ class DeviceManager(Gtk.Box):
             choice.add_css_class("device-color-swatch")
             choice.add_css_class(f"device-color-{choice_id}")
             choice.set_size_request(26, 26)
+            choice.set_halign(Gtk.Align.CENTER)
+            choice.set_valign(Gtk.Align.CENTER)
             choice.set_tooltip_text(tr(label))
             choice.connect(
                 "clicked",
@@ -617,12 +629,29 @@ class DeviceManager(Gtk.Box):
                 entry.set_position(-1)
             return False
 
-        def start_edit() -> None:
-            nonlocal entry, editing
-            if editing:
-                finish_edit(True)
+        def confirm_clear_alias() -> None:
+            alias = self.store.alias_for(device_id)
+            if not alias:
+                update_state()
                 return
-            if self.store.alias_for(device_id):
+            dialog = Adw.AlertDialog(
+                heading=tr("¿Eliminar el alias?"),
+                body=tr(
+                    "Se eliminará el alias «{alias}».",
+                    alias=alias,
+                ),
+            )
+            dialog.add_response("cancel", tr("Cancelar"))
+            dialog.add_response("remove", tr("Eliminar"))
+            dialog.set_response_appearance(
+                "remove", Adw.ResponseAppearance.DESTRUCTIVE
+            )
+            dialog.set_default_response("cancel")
+            dialog.set_close_response("cancel")
+
+            def on_response(_dialog, response: str) -> None:
+                if response != "remove":
+                    return
                 try:
                     self.store.clear_alias(device_id)
                 except OSError as exc:
@@ -632,6 +661,18 @@ class DeviceManager(Gtk.Box):
                     )
                     return
                 update_state()
+
+            dialog.connect("response", on_response)
+            root = self.get_root()
+            dialog.present(root if root is not None else self.parent_window)
+
+        def start_edit() -> None:
+            nonlocal entry, editing
+            if editing:
+                finish_edit(True)
+                return
+            if self.store.alias_for(device_id):
+                confirm_clear_alias()
                 return
             editing = True
             title.set_visible(False)

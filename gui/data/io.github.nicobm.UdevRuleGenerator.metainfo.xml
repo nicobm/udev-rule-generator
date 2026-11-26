@@ -65,6 +65,14 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="1.8.1" date="2026-11-26">
+      <description>
+        <p>
+          Refines the light color palette, fixes swatch sizing, and confirms
+          before removing an alias.
+        </p>
+      </description>
+    </release>
     <release version="1.8.0" date="2026-11-26">
       <description>
         <p>

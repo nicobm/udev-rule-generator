@@ -490,6 +490,13 @@ _EN.update(
         "Magenta": "Magenta",
         "Cian": "Cyan",
         "Blanco": "White",
+        "Naranja": "Orange",
+        "Rosa": "Pink",
+        "Gris": "Gray",
+        "¿Eliminar el alias?": "Remove alias?",
+        "Se eliminará el alias «{alias}».": (
+            "The alias “{alias}” will be removed."
+        ),
         "Negro brillante": "Bright black",
         "Rojo brillante": "Bright red",
         "Verde brillante": "Bright green",

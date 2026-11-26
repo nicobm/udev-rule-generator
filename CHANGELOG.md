@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.8.1 - 2026-11-26
+
+- Uses only the light GNOME Terminal palette colors, without duplicate dark
+  variants, and makes all color swatches the same size.
+- Asks for confirmation before removing a device alias.
+
 ## 1.8.0 - 2026-11-26
 
 - Adds the 16-color GNOME Terminal palette to the device icon selector. The
