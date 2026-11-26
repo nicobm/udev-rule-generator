@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.12.0 - 2026-11-26
+
+- Adds the **Ignorados** section for devices that the kernel exposes with a
+  `js` node but udev does not classify as joysticks.
+- Enabling the switch unbinds the device's HID driver and releases its `js`
+  node; disabling it binds the driver again.
+- Active USB controllers are rebound after an ignore, so their `js` numbers
+  compact to `js0`, `js1`, … without gaps.
+- Persists the ignored state and the HID driver in `devices.json`, and
+  rebinds ignored devices before clearing all data.
+- Ignorable devices no longer send "joystick connected" notifications.
+- After a reboot, udev binds the device again until its switch is enabled;
+  boot-time persistence is not included yet.
+
 ## 1.11.10 - 2026-11-26
 
 - Prevents target rows from showing hover or focus outlines while a device
