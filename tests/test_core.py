@@ -57,6 +57,8 @@ def _device(
     vendor_id: str = "045e",
     product_id: str = "0b12",
     bus: str = "usb",
+    key_codes: tuple[int, ...] = (),
+    abs_codes: tuple[int, ...] = (),
 ) -> Joystick:
     return Joystick(
         key="test-key",
@@ -72,6 +74,8 @@ def _device(
         js_devices=("/dev/input/js0",),
         input_names=(name,),
         properties={},
+        key_codes=frozenset(key_codes),
+        abs_codes=frozenset(abs_codes),
     )
 
 
@@ -96,6 +100,10 @@ class DetectionTests(unittest.TestCase):
         self.assertIn("js0", xbox.handlers)
         self.assertEqual(xbox.vendor_id, "045e")
         self.assertEqual(xbox.product_id, "0b12")
+        self.assertIn(304, xbox.key_codes)
+        self.assertIn(0, xbox.abs_codes)
+        power = next(block for block in blocks if block.name == "Power Button")
+        self.assertIn(116, power.key_codes)
 
     def test_groups_event_and_js_by_physical_device(self) -> None:
         devices = joysticks_from_export_db(self.export_text, FakeHost(self.proc_text))
@@ -109,6 +117,8 @@ class DetectionTests(unittest.TestCase):
         )
         self.assertTrue(xbox.is_usb)
         self.assertEqual(xbox.identifier, "045e:0b12")
+        self.assertIn(304, xbox.key_codes)
+        self.assertIn(0, xbox.abs_codes)
 
     def test_detects_bluetooth(self) -> None:
         devices = joysticks_from_export_db(self.export_text, FakeHost(self.proc_text))
@@ -120,29 +130,65 @@ class DetectionTests(unittest.TestCase):
         devices = joysticks_from_proc(FakeHost(self.proc_text))
         self.assertEqual(len(devices), 2)
         self.assertTrue(all(device.js_devices for device in devices))
+        self.assertTrue(
+            all(device.key_codes and device.abs_codes for device in devices)
+        )
+
+    def test_proc_pipeline_flags_fake_js_node(self) -> None:
+        text = (FIXTURES / "proc-bus-input-devices-fake.txt").read_text(
+            encoding="utf-8"
+        )
+        devices = joysticks_from_proc(FakeHost(text))
+        self.assertEqual(len(devices), 1)
+        device = devices[0]
+        self.assertIn(314, device.key_codes)
+        self.assertIn(0, device.abs_codes)
+        self.assertTrue(is_probable_fake_joystick(device))
 
 
 class FakeJoystickTests(unittest.TestCase):
-    def test_asrock_led_controller_is_probable_fake(self) -> None:
-        device = _device(name="ASRock LED Controller")
-        device = Joystick(
-            key=device.key,
-            name=device.name,
-            vendor="ASRock",
-            model="LED Controller",
-            vendor_id="26ce",
-            product_id="01a2",
-            serial="",
-            bus="usb",
-            devpaths=(),
-            event_devices=(),
-            js_devices=("/dev/input/js0",),
-            input_names=(device.name,),
-            properties={},
+    def test_device_with_axes_but_no_gamepad_buttons_is_probable_fake(self) -> None:
+        # Teclas de teclado y SELECT/START, sin botones frontales ni gatillos.
+        device = _device(
+            key_codes=(103, 105, 106, 108, 116, 314, 315),
+            abs_codes=(0, 1),
+        )
+        self.assertTrue(is_probable_fake_joystick(device))
+
+    def test_mouse_like_js_node_is_probable_fake(self) -> None:
+        device = _device(
+            name="Generic HID",
+            key_codes=(272, 273, 274, 275, 276),
+            abs_codes=(0, 1),
         )
         self.assertTrue(is_probable_fake_joystick(device))
 
     def test_real_gamepad_is_not_probable_fake(self) -> None:
+        device = _device(
+            key_codes=(304, 305, 307, 308, 310, 311, 314, 315, 317, 318),
+            abs_codes=(0, 1, 2, 3, 4, 5, 16, 17),
+        )
+        self.assertFalse(is_probable_fake_joystick(device))
+
+    def test_name_and_ids_do_not_change_detection(self) -> None:
+        fake = _device(
+            name="Xbox Wireless Controller",
+            vendor_id="045e",
+            product_id="0b12",
+            key_codes=(103, 105, 106, 108),
+            abs_codes=(0, 1),
+        )
+        real = _device(
+            name="LED Controller",
+            vendor_id="0000",
+            product_id="0000",
+            key_codes=(304, 305, 307, 308),
+            abs_codes=(0, 1),
+        )
+        self.assertTrue(is_probable_fake_joystick(fake))
+        self.assertFalse(is_probable_fake_joystick(real))
+
+    def test_device_without_capabilities_is_not_flagged(self) -> None:
         self.assertFalse(is_probable_fake_joystick(_device()))
 
 

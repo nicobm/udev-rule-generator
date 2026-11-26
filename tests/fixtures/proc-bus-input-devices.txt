@@ -16,8 +16,8 @@ U: Uniq=303937303630303036303035
 H: Handlers=event30 js0
 B: PROP=0
 B: EV=20000b
-B: KEY=7cdb000000000000 0 0 0 0
-B: ABS=306770000000000
+B: KEY=7fff000000000000 0 0 0 0
+B: ABS=3003f
 
 I: Bus=0005 Vendor=054c Product=0ce6 Version=0100
 N: Name="Sony Interactive Entertainment DualSense Wireless Controller"
@@ -27,5 +27,5 @@ U: Uniq=cc:98:8b:11:22:33
 H: Handlers=event40 js1
 B: PROP=0
 B: EV=20000b
-B: KEY=7cdb000000000000 0 0 0 0
-B: ABS=306770000000000
+B: KEY=7fff000000000000 0 0 0 0
+B: ABS=3003f

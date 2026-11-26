@@ -94,11 +94,12 @@ _EN.update(
         ),
         "Sin regla de ignorar": "No ignore rule",
         "Ignorar dispositivos": "Ignore devices",
-        "Dispositivos detectados como joystick que probablemente no "
-        "lo son, como controladores LED.  El interruptor azul "
+        "Dispositivos que el kernel expone como joystick, pero que no "
+        "declaran los botones típicos de un mando.  El interruptor azul "
         "significa que están ignorados.": (
-            "Devices detected as joysticks that probably are not, such as LED "
-            "controllers.  The blue switch means they are ignored."
+            "Devices the kernel exposes as joysticks but that do not declare "
+            "the buttons typical of a gamepad.  The blue switch means they "
+            "are ignored."
         ),
         "Steam Input y SteamVR.": "Steam Input and SteamVR.",
         "Selección no válida: {selection!r}. Usá steam.": (

@@ -80,8 +80,8 @@ class DeviceManager(Gtk.Box):
         self.ignore_group = Adw.PreferencesGroup(
             title=tr("Ignorar dispositivos"),
             description=tr(
-                "Dispositivos detectados como joystick que probablemente no "
-                "lo son, como controladores LED.  El interruptor azul "
+                "Dispositivos que el kernel expone como joystick, pero que no "
+                "declaran los botones típicos de un mando.  El interruptor azul "
                 "significa que están ignorados."
             ),
         )
@@ -115,11 +115,23 @@ class DeviceManager(Gtk.Box):
 
     def set_connected_devices(self, devices: list[Joystick]) -> None:
         fingerprint = tuple(
-            (device.key, device.display_name, device.identifier)
+            (
+                device.key,
+                device.display_name,
+                device.identifier,
+                device.key_codes,
+                device.abs_codes,
+            )
             for device in devices
         )
         previous = tuple(
-            (device.key, device.display_name, device.identifier)
+            (
+                device.key,
+                device.display_name,
+                device.identifier,
+                device.key_codes,
+                device.abs_codes,
+            )
             for device in self._connected
         )
         self._connected = list(devices)
