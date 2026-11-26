@@ -21,7 +21,7 @@ from .gi_compat import Adw, GLib, Gtk
 
 
 class PresetsDialog(Adw.Dialog):
-    """Selección de reglas de fabricantes y reglas recomendadas."""
+    """Selección de los paquetes completos de presets."""
 
     def __init__(
         self,
@@ -34,10 +34,8 @@ class PresetsDialog(Adw.Dialog):
         self.parent_window = parent
         self.host = host
         self.on_installed = on_installed
-        self._steam_rows: dict[Preset, Adw.SwitchRow] = {}
-        self._upstream_rows: list[tuple[Preset, Adw.SwitchRow]] = []
-        self._all_row: Adw.SwitchRow | None = None
-        self._updating = False
+        self._steam_switch: Adw.SwitchRow | None = None
+        self._fabiscafe_switch: Adw.SwitchRow | None = None
         self._busy = False
 
         self.set_title(tr("Reglas preconfiguradas"))
@@ -53,7 +51,7 @@ class PresetsDialog(Adw.Dialog):
         header.set_title_widget(
             Adw.WindowTitle(
                 title=tr("Reglas preconfiguradas"),
-                subtitle=tr("Steam/SteamVR y fabiscafe"),
+                subtitle=tr("fabiscafe y steam-devices"),
             )
         )
         close_button = Gtk.Button(
@@ -79,46 +77,46 @@ class PresetsDialog(Adw.Dialog):
         page.add(intro)
 
         steam = Adw.PreferencesGroup(
-            title=tr("Steam / SteamVR (Valve)"),
+            title=tr("steam-devices (Valve)"),
             description=tr(
-                "Reglas oficiales de ValveSoftware/steam-devices (MIT).  Son "
-                "opcionales: no se activan por defecto y no forman parte de "
-                "«Todos los fabricantes»."
+                "Reglas oficiales de ValveSoftware/steam-devices (MIT).  "
+                "Steam Input y SteamVR se instalan juntos."
             ),
         )
-        for preset in STEAM:
-            row = self._switch_row(preset)
-            self._steam_rows[preset] = row
-            steam.add(row)
+        self._steam_switch = Adw.SwitchRow(
+            title=tr("Instalar steam-devices"),
+            subtitle=tr(
+                "Instala Steam Input y SteamVR ({count} archivos).",
+                count=len(STEAM),
+            ),
+        )
+        self._steam_switch.set_active(False)
+        self._steam_switch.connect(
+            "notify::active", lambda *_: self._update_summary()
+        )
+        steam.add(self._steam_switch)
         page.add(steam)
 
         upstream = Adw.PreferencesGroup(
-            title=tr("game-devices-udev"),
+            title=tr("game-devices-udev (fabiscafe)"),
             description=tr(
                 "Biblioteca de Fabian Bornschein (fabiscafe), licencia MIT.  "
-                "Cada archivo agrupa los mandos de un fabricante."
+                "Se instala completa o no se instala ninguna regla."
             ),
         )
-        self._all_row = Adw.SwitchRow(
-            title=tr("Todos los fabricantes"),
+        self._fabiscafe_switch = Adw.SwitchRow(
+            title=tr("Instalar todas las reglas de fabiscafe"),
             subtitle=tr(
-                "Instala las {count} reglas de la biblioteca upstream, "
-                "incluida la creación temprana de uinput.",
+                "Instala las {count} reglas de la biblioteca, incluida la "
+                "creación temprana de uinput.",
                 count=len(UPSTREAM),
             ),
         )
-        self._all_row.connect("notify::active", self._on_all_toggled)
-        upstream.add(self._all_row)
-
-        expander = Adw.ExpanderRow(
-            title=tr("Elegir fabricante"),
-            subtitle=tr("Desplegá para instalar solo algunos fabricantes."),
+        self._fabiscafe_switch.set_active(False)
+        self._fabiscafe_switch.connect(
+            "notify::active", lambda *_: self._update_summary()
         )
-        for preset in UPSTREAM:
-            row = self._switch_row(preset)
-            self._upstream_rows.append((preset, row))
-            expander.add_row(row)
-        upstream.add(expander)
+        upstream.add(self._fabiscafe_switch)
         page.add(upstream)
 
         license_group = Adw.PreferencesGroup(title=tr("Licencia y origen"))
@@ -171,45 +169,13 @@ class PresetsDialog(Adw.Dialog):
         toolbar.add_bottom_bar(bottom)
         self.set_child(toolbar)
 
-    def _switch_row(self, preset: Preset) -> Adw.SwitchRow:
-        row = Adw.SwitchRow(
-            title=preset.title,
-            subtitle=preset.description,
-        )
-        row.set_active(False)
-        row.connect("notify::active", lambda *_: self._on_row_toggled())
-        return row
-
     def _selected_presets(self) -> list[Preset]:
-        selected = [
-            preset for preset, row in self._steam_rows.items() if row.get_active()
-        ]
-        selected.extend(
-            preset for preset, row in self._upstream_rows if row.get_active()
-        )
-        unique: list[Preset] = []
-        seen: set[str] = set()
-        for preset in selected:
-            if preset.install_name in seen:
-                continue
-            seen.add(preset.install_name)
-            unique.append(preset)
-        return unique
-
-    def _on_row_toggled(self) -> None:
-        if self._updating:
-            return
-        self._update_summary()
-
-    def _on_all_toggled(self, row: Adw.SwitchRow, _parameter) -> None:
-        if self._updating:
-            return
-        active = row.get_active()
-        self._updating = True
-        for _preset, vendor_row in self._upstream_rows:
-            vendor_row.set_active(active)
-        self._updating = False
-        self._update_summary()
+        selected: list[Preset] = []
+        if self._fabiscafe_switch is not None and self._fabiscafe_switch.get_active():
+            selected.extend(UPSTREAM)
+        if self._steam_switch is not None and self._steam_switch.get_active():
+            selected.extend(STEAM)
+        return selected
 
     def _update_summary(self) -> None:
         selected = self._selected_presets()
@@ -223,13 +189,6 @@ class PresetsDialog(Adw.Dialog):
                 tr("{count} archivos seleccionados", count=count)
             )
         self.install_button.set_sensitive(count > 0 and not self._busy)
-
-        if self._all_row is not None and self._upstream_rows:
-            all_active = all(row.get_active() for _preset, row in self._upstream_rows)
-            if self._all_row.get_active() != all_active:
-                self._updating = True
-                self._all_row.set_active(all_active)
-                self._updating = False
 
     def _install(self) -> None:
         presets = self._selected_presets()

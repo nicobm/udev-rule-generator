@@ -542,18 +542,14 @@ _EN.update(
         "instala /etc/udev/rules.d/{filename} · {license}": (
             "installs /etc/udev/rules.d/{filename} · {license}"
         ),
-        "Elegí una selección: steam, all o el "
-        "id de una regla.": (
-            "Choose a selection: steam, all or a rule id."
+        "Elegí una selección: steam, all o all,steam.": (
+            "Choose a selection: steam, all or all,steam."
         ),
         "  1) Toda la biblioteca game-devices-udev (fabiscafe)": (
             "  1) Full game-devices-udev library (fabiscafe)"
         ),
-        "  2) Steam / SteamVR (Valve)": "  2) Steam / SteamVR (Valve)",
-        "  3) Elegir fabricantes de fabiscafe": (
-            "  3) Choose fabiscafe vendors"
-        ),
-        "  4) Volver": "  4) Back",
+        "  2) steam-devices (Valve)": "  2) steam-devices (Valve)",
+        "  3) Volver": "  3) Back",
         "\nNúmeros separados por coma (por ejemplo 1,3,7): ": (
             "\nComma-separated numbers (for example 1,3,7): "
         ),
@@ -664,10 +660,10 @@ _EN.update(
             "index, VID:PID or part of the joystick name"
         ),
         "acción a aplicar con --device": "action to apply with --device",
-        "instala reglas preconfiguradas: steam, all "
-        "o un id (por ejemplo steam-input).  Sin valor abre el menú": (
-            "install presets: steam, all or an id "
-            "(for example steam-input).  With no value it opens the menu"
+        "instala paquetes completos: steam, all o all,steam.  "
+        "Sin valor abre el menú": (
+            "install complete packages: steam, all or all,steam.  With no "
+            "value it opens the menu"
         ),
         "lista las reglas instaladas por esta aplicación": (
             "list the rules installed by this application"
@@ -706,5 +702,49 @@ _EN.update(
             "Install to /etc/udev/rules.d with administrator permissions?"
         ),
         "# {name}": "# {name}",
+    }
+)
+
+_EN.update(
+    {
+        "fabiscafe y steam-devices": "fabiscafe and steam-devices",
+        "steam-devices (Valve)": "steam-devices (Valve)",
+        "Reglas oficiales de ValveSoftware/steam-devices (MIT).  "
+        "Steam Input y SteamVR se instalan juntos.": (
+            "Official ValveSoftware/steam-devices rules (MIT).  Steam Input "
+            "and SteamVR are installed together."
+        ),
+        "Instalar steam-devices": "Install steam-devices",
+        "Instala Steam Input y SteamVR ({count} archivos).": (
+            "Installs Steam Input and SteamVR ({count} files)."
+        ),
+        "game-devices-udev (fabiscafe)": "game-devices-udev (fabiscafe)",
+        "Biblioteca de Fabian Bornschein (fabiscafe), licencia MIT.  "
+        "Se instala completa o no se instala ninguna regla.": (
+            "Fabian Bornschein's library (fabiscafe), MIT license.  It is "
+            "installed completely or no rules are installed."
+        ),
+        "Instalar todas las reglas de fabiscafe": (
+            "Install all fabiscafe rules"
+        ),
+        "Instala las {count} reglas de la biblioteca, incluida la "
+        "creación temprana de uinput.": (
+            "Installs the {count} library rules, including early uinput "
+            "creation."
+        ),
+        "Selección no válida: {selection!r}. Usá steam, all o all,steam.": (
+            "Invalid selection: {selection!r}.  Use steam, all or all,steam."
+        ),
+    }
+)
+
+_EN.update(
+    {
+        "  · game-devices-udev (fabiscafe): {count} archivos": (
+            "  · game-devices-udev (fabiscafe): {count} files"
+        ),
+        "  · steam-devices (Valve): {count} archivos": (
+            "  · steam-devices (Valve): {count} files"
+        ),
     }
 )

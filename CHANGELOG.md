@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.8.0 - 2026-11-26
+
+- Elimina el selector “Elegir fabricante” de la GUI.
+- `game-devices-udev` se instala completa o no se instala: no hay selección
+  por fabricante.
+- `steam-devices` se instala como un solo paquete con Steam Input y SteamVR
+  juntos; se elimina la separación `steam-input`/`steam-vr` de la interfaz y
+  de `--presets`.
+- La CLI acepta `--presets steam`, `--presets all` o `--presets all,steam`.
+- Actualiza tests, documentación y traducciones.
+
 ## 0.7.0 - 2026-11-26
 
 - Elimina la fila “Detección automática” de la sección Estado de la GUI.

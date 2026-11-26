@@ -176,9 +176,10 @@ _GROUPS: dict[str, tuple[Preset, ...]] = {
 
 
 def select_presets(selection: str) -> list[Preset]:
-    """Resuelve grupos y/o ids separados por coma.
+    """Resuelve paquetes separados por coma.
 
-    Ejemplos: ``steam``, ``all``, ``all,steam``.
+    Ejemplos: ``steam``, ``all``, ``all,steam``.  No se seleccionan
+    fabricantes individuales: fabiscafe se instala completa o no se instala.
     """
     selection = selection.strip()
     result: list[Preset] = []
@@ -187,14 +188,17 @@ def select_presets(selection: str) -> list[Preset]:
         if not item:
             continue
         group = _GROUPS.get(item)
-        if group is not None:
-            for preset in group:
-                if preset not in result:
-                    result.append(preset)
-            continue
-        preset = get_preset(item)
-        if preset not in result:
-            result.append(preset)
+        if group is None:
+            raise ValueError(
+                tr(
+                    "Selección no válida: {selection!r}. Usá steam, all o "
+                    "all,steam.",
+                    selection=item,
+                )
+            )
+        for preset in group:
+            if preset not in result:
+                result.append(preset)
     if not result:
         raise ValueError(
             tr("No se seleccionó ninguna regla preconfigurada.")

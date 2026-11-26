@@ -290,22 +290,6 @@ def _cmd_installed(
     return 0
 
 
-def _print_presets(presets: Iterable[Preset], colors: Colors) -> None:
-    for index, preset in enumerate(presets, start=1):
-        print(f"  {colors.bold(str(index).rjust(2))}) {colors.bold(preset.title)}")
-        print(f"      {preset.description}")
-        print(
-            "      "
-            + colors.dim(
-                tr(
-                    "instala /etc/udev/rules.d/{filename} · {license}",
-                    filename=preset.install_name,
-                    license=preset.license,
-                )
-            )
-        )
-
-
 def _install_presets(
     host: Host,
     presets: Sequence[Preset],
@@ -320,8 +304,28 @@ def _install_presets(
     files = preset_files(presets)
     print()
     print(colors.bold(tr("Se instalarán:")))
-    for preset in presets:
-        print(f"  · {preset.install_name}  ({preset.title})")
+    selected_ids = {preset.id for preset in presets}
+    upstream_ids = {preset.id for preset in UPSTREAM}
+    steam_ids = {preset.id for preset in STEAM}
+    complete_upstream = upstream_ids <= selected_ids
+    complete_steam = steam_ids <= selected_ids
+    if complete_upstream:
+        print(
+            tr(
+                "  · game-devices-udev (fabiscafe): {count} archivos",
+                count=len(UPSTREAM),
+            )
+        )
+    if complete_steam:
+        print(
+            tr(
+                "  · steam-devices (Valve): {count} archivos",
+                count=len(STEAM),
+            )
+        )
+    if not complete_upstream and not complete_steam:
+        for preset in presets:
+            print(f"  · {preset.install_name}  ({preset.title})")
     return _confirm_and_install(
         host,
         files,
@@ -343,41 +347,20 @@ def _cmd_presets(
     if selection in {"menu", "interactive"}:
         if not sys.stdin.isatty():
             raise ValueError(
-                tr(
-                    "Elegí una selección: steam, all o el id de una regla."
-                )
+                tr("Elegí una selección: steam, all o all,steam.")
             )
         print()
         print(colors.bold(tr("Reglas preconfiguradas")))
         print(tr("  1) Toda la biblioteca game-devices-udev (fabiscafe)"))
-        print(tr("  2) Steam / SteamVR (Valve)"))
-        print(tr("  3) Elegir fabricantes de fabiscafe"))
-        print(tr("  4) Volver"))
+        print(tr("  2) steam-devices (Valve)"))
+        print(tr("  3) Volver"))
         choice = _ask(tr("\nSelección: "))
-        if choice in {"4", "q", ""}:
+        if choice in {"3", "q", ""}:
             return 0
         if choice == "1":
             presets = list(ALL_PRESETS)
         elif choice == "2":
             presets = list(STEAM)
-        elif choice == "3":
-            _print_presets(UPSTREAM, colors)
-            raw = _ask(
-                tr("\nNúmeros separados por coma (por ejemplo 1,3,7): ")
-            )
-            try:
-                indexes = {
-                    int(part.strip())
-                    for part in raw.split(",")
-                    if part.strip().isdigit()
-                }
-            except ValueError:
-                indexes = set()
-            presets = [
-                preset
-                for index, preset in enumerate(UPSTREAM, start=1)
-                if index in indexes
-            ]
         else:
             print(colors.red(tr("Selección no válida.")))
             return 1
@@ -389,10 +372,7 @@ def _cmd_presets(
             colors=colors,
         )
 
-    try:
-        presets = select_presets(selection)
-    except KeyError as exc:
-        raise ValueError(str(exc)) from exc
+    presets = select_presets(selection)
     return _install_presets(
         host,
         presets,
@@ -701,8 +681,8 @@ def build_parser() -> argparse.ArgumentParser:
         const="menu",
         metavar=tr("SELECCIÓN"),
         help=tr(
-            "instala reglas preconfiguradas: steam, all "
-            "o un id (por ejemplo steam-input).  Sin valor abre el menú"
+            "instala paquetes completos: steam, all o all,steam.  "
+            "Sin valor abre el menú"
         ),
     )
     parser.add_argument(

@@ -64,6 +64,15 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.8.0" date="2026-11-26">
+      <description>
+        <p>
+          Los presets se eligen por paquete completo: game-devices-udev
+          (fabiscafe) o steam-devices (Valve).  Elimina el selector de
+          fabricantes y la separación entre Steam Input y SteamVR.
+        </p>
+      </description>
+    </release>
     <release version="0.7.0" date="2026-11-26">
       <description>
         <p>

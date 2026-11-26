@@ -242,7 +242,7 @@ Para un mando USB, el archivo se llama por ejemplo
 `10-gamepad-045e-02fd-xbox-wireless-controller.rules` y contiene:
 
 ```udev
-# Generado por udev-rule-generator 0.7.0
+# Generado por udev-rule-generator 0.8.0
 # Generador de reglas udev
 # Dispositivo: Xbox Wireless Controller
 # Bus: USB · ID: 045e:02fd
@@ -302,16 +302,14 @@ app y no se instalan durante la instalación del paquete.
 |---|---|
 | `all` | Las 27 reglas de game-devices-udev (incluye Microsoft) |
 | `steam` | `71-steam-input.rules` y `71-steam-vr.rules` (Valve) |
-| `steam-input` | Solo Steam Input (Valve) |
-| `steam-vr` | Solo SteamVR (Valve) |
 
 Ninguna regla se instala sola: la app no escribe en `/etc/udev/rules.d` hasta
-que elegís una acción y pasás por polkit.  Steam y SteamVR son fuentes
-opcionales: no están en `all`, y en la GUI sus interruptores empiezan
-apagados.
+que elegís una acción y pasás por polkit.  Steam y SteamVR son una fuente
+opcional: no están en `all`, y en la GUI su interruptor empieza apagado.
 
 En la CLI, `--presets` sin valor abre un menú.  En la GUI, el diálogo permite
-elegir Steam/SteamVR, todos los fabricantes de fabiscafe o fabricantes sueltos.
+instalar la biblioteca completa de fabiscafe o el paquete completo de
+steam-devices; no hay selección por fabricante ni separación de SteamVR.
 
 Las reglas de fabricantes son de **game-devices-udev**, MIT, de Fabian
 Bornschein (fabiscafe).  Las de Steam/SteamVR son de **steam-devices**, MIT,
@@ -344,8 +342,7 @@ Todo va a `/etc/udev/rules.d`:
 - `71-microsoft-gdu.rules`
 - `71-<fabricante>-gdu.rules`
 - `71-uinput-dev-early-creation.rules`
-- `71-steam-input.rules` (opcional)
-- `71-steam-vr.rules` (opcional)
+- `71-steam-input.rules` y `71-steam-vr.rules` (paquete steam-devices)
 
 Las reglas generadas llevan una cabecera `# Generado por
 udev-rule-generator`; las preconfiguradas, `# Instalado por

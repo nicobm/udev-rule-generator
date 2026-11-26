@@ -227,13 +227,13 @@ class PresetTests(unittest.TestCase):
             {p.id for p in select_presets("all")},
         )
         self.assertEqual(
-            [p.id for p in select_presets("steam-vr")],
-            ["steam-vr"],
-        )
-        self.assertEqual(
             len(select_presets("all,steam")),
             29,
         )
+        with self.assertRaises(ValueError):
+            select_presets("steam-vr")
+        with self.assertRaises(ValueError):
+            select_presets("8bitdo")
 
 
 if __name__ == "__main__":
