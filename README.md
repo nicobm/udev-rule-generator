@@ -17,6 +17,11 @@ Two optional rule packages are bundled as reviewed snapshots:
 - **[game-devices-udev](https://codeberg.org/fabiscafe/game-devices-udev)**
   from Fabian Bornschein (fabiscafe).
 
+The optional **steam-devices** rules provide Valve's permissions for Steam
+Input and SteamVR, including the `uinput` access that Steam needs to create
+virtual controllers. They are useful when you use Steam's controller features
+or SteamVR.
+
 The optional **game-devices-udev** rules add Fabian Bornschein's community
 rules for controllers that need a vendor-specific udev rule. They are useful
 when the kernel or the generated per-device rule is not enough. Both rule
