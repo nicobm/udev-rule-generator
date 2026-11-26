@@ -67,6 +67,24 @@ class Joystick:
         return self.bus == "bluetooth"
 
     @property
+    def is_ignorable(self) -> bool:
+        """¿El kernel lo expone con ``js`` pero udev no lo ve como joystick?
+
+        Es el caso de dispositivos como el LED Controller de ASRock: joydev
+        les crea un nodo ``js`` por sus ejes, pero ``input_id`` no les pone
+        ``ID_INPUT_JOYSTICK``.  No se comparan modelos ni nombres: el criterio
+        sale de las propiedades udev del propio dispositivo.
+        """
+        if not self.js_devices:
+            return False
+        if not self.properties:
+            # Sin propiedades udev no podemos distinguir un joystick real de
+            # un falso positivo; no lo clasificamos por las dudas.
+            return False
+        value = (self.properties.get("ID_INPUT_JOYSTICK") or "").strip().lower()
+        return value not in {"1", "true", "yes"}
+
+    @property
     def nodes(self) -> tuple[str, ...]:
         return self.js_devices or self.event_devices
 
@@ -586,12 +604,68 @@ def _drop_jsless_duplicates(joysticks: Iterable[Joystick]) -> list[Joystick]:
     ]
 
 
-def detect_joysticks(host: Host | None = None) -> list[Joystick]:
-    """Detecta los joysticks conectados.
+@dataclass(frozen=True)
+class HidDevice:
+    """Un dispositivo del subsistema ``hid`` y su estado de binding.
 
-    Se intenta primero ``udevadm``.  Si no está instalado o no devuelve nada,
-    se usa el fallback de ``/proc``/``/sys``.
+    ``sysname`` es el nombre estable mientras el USB sigue conectado, por
+    ejemplo ``0003:26CE:01A2.0006``.  ``driver`` queda vacío cuando el
+    dispositivo está desvinculado (unbind).
     """
+
+    identifier: str
+    name: str
+    sysname: str
+    driver: str
+
+    @property
+    def bound(self) -> bool:
+        return bool(self.driver)
+
+
+@dataclass(frozen=True)
+class Detection:
+    """Resultado de una pasada de detección."""
+
+    joysticks: list[Joystick]
+    hid_devices: list[HidDevice]
+
+
+def hid_devices_from_export_db(text: str) -> list[HidDevice]:
+    """Extrae los dispositivos HID de ``udevadm info --export-db``."""
+    devices: list[HidDevice] = []
+    seen: set[str] = set()
+    for devpath, properties in parse_export_db(text):
+        if (properties.get("SUBSYSTEM") or "").strip().lower() != "hid":
+            continue
+        hid_id = (properties.get("HID_ID") or "").strip()
+        parts = hid_id.split(":")
+        if len(parts) != 3:
+            continue
+        vendor_id = parts[1].strip().lower()[-4:]
+        product_id = parts[2].strip().lower()[-4:]
+        if not (
+            re.fullmatch(r"[0-9a-f]{4}", vendor_id)
+            and re.fullmatch(r"[0-9a-f]{4}", product_id)
+        ):
+            continue
+        sysname = Path(devpath).name
+        if not sysname or sysname in seen:
+            continue
+        seen.add(sysname)
+        devices.append(
+            HidDevice(
+                identifier=f"{vendor_id}:{product_id}",
+                name=(properties.get("HID_NAME") or "").strip(),
+                sysname=sysname,
+                driver=(properties.get("DRIVER") or "").strip(),
+            )
+        )
+    return devices
+
+
+def detect_state(host: Host | None = None) -> Detection:
+    """Detecta joysticks y dispositivos HID en una sola lectura de udev."""
     host = host or Host()
     try:
         result = host.run(["udevadm", "info", "--export-db"], timeout=40)
@@ -602,18 +676,42 @@ def detect_joysticks(host: Host | None = None) -> list[Joystick]:
 
     if result is not None and result.ok:
         joysticks = joysticks_from_export_db(result.stdout, host)
+        hid_devices = hid_devices_from_export_db(result.stdout)
         if joysticks:
-            return _drop_jsless_duplicates(
-                device
-                for device in joysticks
-                if not is_auxiliary_input(device)
+            return Detection(
+                joysticks=_drop_jsless_duplicates(
+                    device
+                    for device in joysticks
+                    if not is_auxiliary_input(device)
+                ),
+                hid_devices=hid_devices,
             )
+        return Detection(
+            joysticks=_drop_jsless_duplicates(
+                device
+                for device in joysticks_from_proc(host)
+                if not is_auxiliary_input(device)
+            ),
+            hid_devices=hid_devices,
+        )
 
-    return _drop_jsless_duplicates(
-        device
-        for device in joysticks_from_proc(host)
-        if not is_auxiliary_input(device)
+    return Detection(
+        joysticks=_drop_jsless_duplicates(
+            device
+            for device in joysticks_from_proc(host)
+            if not is_auxiliary_input(device)
+        ),
+        hid_devices=[],
     )
+
+
+def detect_joysticks(host: Host | None = None) -> list[Joystick]:
+    """Detecta los joysticks conectados.
+
+    Se intenta primero ``udevadm``.  Si no está instalado o no devuelve nada,
+    se usa el fallback de ``/proc``/``/sys``.
+    """
+    return detect_state(host).joysticks
 
 
 def find_joystick(joysticks: Iterable[Joystick], selector: str) -> Joystick | None:

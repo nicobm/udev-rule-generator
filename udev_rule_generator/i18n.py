@@ -1349,3 +1349,31 @@ _EN.update(
         ),
     }
 )
+
+_EN.update(
+    {
+        # Dispositivos ignorados
+        "Ignorados": "Ignored",
+        "Dispositivos que el kernel expone como joystick pero udev no "
+        "reconoce como tales. Deshabilitalos para liberar su nodo js.": (
+            "Devices the kernel exposes as joysticks but udev does not "
+            "recognize as such. Disable them to release their js node."
+        ),
+        "Deshabilitado": "Disabled",
+        "El driver HID está desvinculado y el nodo js está liberado.": (
+            "The HID driver is unbound and the js node is released."
+        ),
+        "Deshabilitar y liberar el nodo js": (
+            "Disable and release the js node"
+        ),
+        "Volver a habilitar y recuperar el nodo js": (
+            "Re-enable and recover the js node"
+        ),
+        "VID no válido: {value!r}": "Invalid VID: {value!r}",
+        "PID no válido: {value!r}": "Invalid PID: {value!r}",
+        "Driver HID no válido: {value!r}": "Invalid HID driver: {value!r}",
+        "No se pudo cambiar el estado del dispositivo HID: {error}": (
+            "Could not change the HID device state: {error}"
+        ),
+    }
+)

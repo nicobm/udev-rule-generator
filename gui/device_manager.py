@@ -6,7 +6,7 @@ import threading
 from typing import Callable
 
 from udev_rule_generator import GAME_DEVICES_URL, STEAM_DEVICES_URL
-from udev_rule_generator.devices import Joystick
+from udev_rule_generator.devices import HidDevice, Joystick
 from udev_rule_generator.host import Host
 from udev_rule_generator.i18n import tr
 from udev_rule_generator.known import KnownDevice, KnownDevices
@@ -16,7 +16,11 @@ from udev_rule_generator.presets import (
     preset_files,
     presets_trigger,
 )
-from udev_rule_generator.privileged import apply_rule_changes, remove_rule_files
+from udev_rule_generator.privileged import (
+    HidBindingChange,
+    apply_rule_changes,
+    remove_rule_files,
+)
 from udev_rule_generator.rules import (
     RuleAction,
     build_rule,
@@ -103,8 +107,13 @@ class DeviceManager(Gtk.Box):
         self.parent_window = parent
         self.on_changed = on_changed
         self._connected: list[Joystick] = []
+        self._hid_devices: dict[str, HidDevice] = {}
+        self._hid_fingerprint: tuple = ()
         self._pending_known: dict[str, bool] = {}
         self._pending_unknown: dict[str, Joystick] = {}
+        self._pending_ignored: dict[str, bool] = {}
+        self._pending_ignored_joysticks: dict[str, Joystick] = {}
+        self._ignored_actual: dict[str, bool] = {}
         self._pending_steam: bool | None = None
         self._pending_gdu: bool | None = None
         self._steam_installed = False
@@ -143,6 +152,18 @@ class DeviceManager(Gtk.Box):
         self.devices_listbox = self._find_listbox(self.devices_group)
         if self.devices_listbox is not None:
             self.devices_listbox.set_sort_func(self._sort_device_rows)
+
+        self.ignored_group = Adw.PreferencesGroup(
+            title=tr("Ignorados"),
+            description=tr(
+                "Dispositivos que el kernel expone como joystick pero udev no "
+                "reconoce como tales. Deshabilitalos para liberar su nodo js."
+            ),
+        )
+        self.ignored_group.set_separate_rows(True)
+        self.ignored_group.set_hexpand(True)
+        self.ignored_group.set_visible(False)
+        self.append(self.ignored_group)
 
         self.external_group = Adw.PreferencesGroup(
             title=tr("Reglas externas"),
@@ -217,6 +238,22 @@ class DeviceManager(Gtk.Box):
         self._connected = list(devices)
         if fingerprint != previous:
             self.reload()
+
+    def set_hid_devices(self, devices: list[HidDevice]) -> None:
+        """Actualiza el estado de binding de los dispositivos HID."""
+        fingerprint = tuple(
+            sorted((device.identifier, device.sysname, device.driver) for device in devices)
+        )
+        if fingerprint == self._hid_fingerprint:
+            return
+        self._hid_fingerprint = fingerprint
+        by_id: dict[str, HidDevice] = {}
+        for device in devices:
+            existing = by_id.get(device.identifier)
+            if existing is None or (device.bound and not existing.bound):
+                by_id[device.identifier] = device
+        self._hid_devices = by_id
+        self.reload()
 
     def set_uinput_available(self, available: bool) -> None:
         self._uinput_available = available
@@ -349,20 +386,30 @@ class DeviceManager(Gtk.Box):
         for key in list(self._pending_unknown):
             if key in known_ids:
                 self._pending_unknown.pop(key, None)
-        allow_known = [
-            device
-            for device in known
-            if device.action == "allow" and not device.hidden
-        ]
         connected = self._connected
         connected_by_id = {
             device_identity(device): device for device in connected
         }
+        ignorable_ids = {
+            device_identity(device)
+            for device in connected
+            if device.is_ignorable
+        }
+
+        allow_known = [
+            device
+            for device in known
+            if device.action == "allow"
+            and not device.hidden
+            and not device.ignorable
+            and device.id not in ignorable_ids
+        ]
 
         regular_connected = [
             device
             for device in connected
-            if device_identity(device) not in known_ids
+            if not device.is_ignorable
+            and device_identity(device) not in known_ids
         ]
 
         entries: list[tuple[str, str, object]] = [
@@ -408,6 +455,81 @@ class DeviceManager(Gtk.Box):
             )
             row.set_activatable(False)
             self._append(self.devices_group, row)
+
+        ignored_known = [
+            record
+            for record in known
+            if (record.ignorable or record.id in ignorable_ids)
+            and not record.hidden
+        ]
+        ignored_known_ids = {record.id for record in ignored_known}
+        ignored_entries: list[tuple[str, str, object]] = [
+            ("known", record.id, record) for record in ignored_known
+        ]
+        ignored_entries.extend(
+            ("unknown", device_identity(device), device)
+            for device in connected
+            if device.is_ignorable
+            and device_identity(device) not in ignored_known_ids
+            and device_identity(device) not in known_ids
+        )
+
+        def ignored_name(entry: tuple[str, str, object]) -> str:
+            item = entry[2]
+            if isinstance(item, KnownDevice):
+                return item.name
+            return item.display_name  # type: ignore[union-attr]
+
+        ignored_entries.sort(
+            key=lambda item: (
+                ignored_name(item).casefold(),
+                item[1],
+            )
+        )
+
+        self._ignored_actual.clear()
+        for kind, device_id, entry in ignored_entries:
+            if kind == "known":
+                record = entry  # type: ignore[assignment]
+                connected_device = connected_by_id.get(device_id)
+                actual = self._actual_ignored(
+                    record.identifier,
+                    record,
+                    connected_device,
+                )
+                self._ignored_actual[device_id] = actual
+                row = self._ignored_row(
+                    device_id,
+                    record.name,
+                    record.bus_label,
+                    record.identifier,
+                    connected_device,
+                    actual,
+                )
+            else:
+                joystick = entry  # type: ignore[assignment]
+                actual = self._actual_ignored(
+                    joystick.identifier,
+                    None,
+                    joystick,
+                )
+                self._ignored_actual[device_id] = actual
+                row = self._ignored_row(
+                    device_id,
+                    joystick.display_name,
+                    joystick.bus_label,
+                    joystick.identifier,
+                    joystick,
+                    actual,
+                )
+            self._append(self.ignored_group, row)
+        self.ignored_group.set_visible(bool(ignored_entries))
+
+        for key in list(self._pending_ignored):
+            actual = self._ignored_actual.get(key)
+            if actual is not None and actual == self._pending_ignored[key]:
+                self._pending_ignored.pop(key, None)
+                self._pending_ignored_joysticks.pop(key, None)
 
         self._apply_sensitivity()
         self._update_pending_ui()
@@ -1418,6 +1540,98 @@ class DeviceManager(Gtk.Box):
         badge.set_valign(Gtk.Align.CENTER)
         return badge
 
+    def _actual_ignored(
+        self,
+        identifier: str,
+        record: KnownDevice | None,
+        connected: Joystick | None,
+    ) -> bool:
+        """Estado real: ¿el driver HID está desvinculado?"""
+        if connected is not None:
+            # Si udev lo vuelve a detectar como js, el HID está enlazado.
+            return False
+        hid = self._hid_devices.get(identifier)
+        if hid is not None:
+            # El dispositivo HID sigue en el bus pero no expone js: está
+            # desvinculado (o al menos no está entregando su interfaz de
+            # entrada).
+            return True
+        if record is not None:
+            return record.ignored
+        return False
+
+    def _ignored_row(
+        self,
+        device_id: str,
+        name: str,
+        bus: str,
+        identifier: str,
+        connected: Joystick | None,
+        actual_ignored: bool,
+    ) -> Adw.ActionRow:
+        row = Adw.ActionRow(
+            title=markup_escape(name),
+            subtitle=markup_escape(f"{bus} · {identifier}"),
+        )
+        self._row_identities[row] = device_id
+        row.set_activatable(False)
+        self._add_device_icon(row, device_id)
+
+        if actual_ignored:
+            badge = Gtk.Label(label=tr("Deshabilitado"))
+            badge.add_css_class("device-badge")
+            badge.add_css_class("device-badge-disabled")
+            badge.set_valign(Gtk.Align.CENTER)
+            badge.set_tooltip_text(
+                tr(
+                    "El driver HID está desvinculado y el nodo js está "
+                    "liberado."
+                )
+            )
+            row.add_suffix(badge)
+        elif connected is not None:
+            row.add_suffix(self._connected_badge(connected))
+
+        active = self._pending_ignored.get(device_id, actual_ignored)
+        switch = Gtk.Switch(active=active)
+        switch.set_valign(Gtk.Align.CENTER)
+        switch.set_tooltip_text(
+            tr("Volver a habilitar y recuperar el nodo js")
+            if active
+            else tr("Deshabilitar y liberar el nodo js")
+        )
+        switch.connect(
+            "notify::active",
+            lambda selected_switch, _pspec, selected_id=device_id, selected_device=connected: (
+                self._set_ignored_pending(
+                    selected_id,
+                    selected_switch.get_active(),
+                    selected_device,
+                )
+            ),
+        )
+        row.add_suffix(switch)
+        self._controls.append(switch)
+        return row
+
+    def _set_ignored_pending(
+        self,
+        device_id: str,
+        active: bool,
+        device: Joystick | None,
+    ) -> None:
+        if self._updating or self._busy:
+            return
+        actual = self._ignored_actual.get(device_id, False)
+        if active == actual:
+            self._pending_ignored.pop(device_id, None)
+            self._pending_ignored_joysticks.pop(device_id, None)
+        else:
+            self._pending_ignored[device_id] = active
+            if device is not None:
+                self._pending_ignored_joysticks[device_id] = device
+        self._update_pending_ui()
+
     def _set_known_pending(self, device: KnownDevice, active: bool) -> None:
         if self._updating or self._busy:
             return
@@ -1551,12 +1765,15 @@ class DeviceManager(Gtk.Box):
         """Descarta cambios pendientes y recarga tras borrar todos los datos."""
         self._pending_known.clear()
         self._pending_unknown.clear()
+        self._pending_ignored.clear()
+        self._pending_ignored_joysticks.clear()
         self.reload()
 
     def _update_pending_ui(self) -> None:
         pending = bool(
             self._pending_known
             or self._pending_unknown
+            or self._pending_ignored
             or self._pending_steam is not None
             or self._pending_gdu is not None
         )
@@ -1570,6 +1787,7 @@ class DeviceManager(Gtk.Box):
         if self._busy or not (
             self._pending_known
             or self._pending_unknown
+            or self._pending_ignored
             or self._pending_steam is not None
             or self._pending_gdu is not None
         ):
@@ -1633,13 +1851,41 @@ class DeviceManager(Gtk.Box):
                 else:
                     removed.extend(package_files)
 
-            if not install_files and not removed:
+            hid_changes: list[HidBindingChange] = []
+            ignored_updates: list[tuple[str, bool, Joystick, str]] = []
+            for device_id, ignored in self._pending_ignored.items():
+                record = self.store.get(device_id)
+                joystick = self._pending_ignored_joysticks.get(device_id)
+                if joystick is None and record is not None:
+                    joystick = record.to_joystick()
+                if joystick is None:
+                    continue
+                hid = self._hid_devices.get(joystick.identifier)
+                driver = record.hid_driver if record is not None else ""
+                if not driver and hid is not None:
+                    driver = hid.driver
+                if not driver:
+                    driver = "hid-generic"
+                hid_changes.append(
+                    HidBindingChange(
+                        joystick.vendor_id,
+                        joystick.product_id,
+                        bound=not ignored,
+                        driver=driver,
+                    )
+                )
+                ignored_updates.append(
+                    (device_id, ignored, joystick, driver)
+                )
+
+            if not install_files and not removed and not hid_changes:
                 message = tr("No hay cambios para aplicar.")
             else:
                 apply_rule_changes(
                     self.host,
                     install_files,
                     removed,
+                    hid_changes=hid_changes,
                     trigger="add" if trigger_add else "change",
                 )
                 try:
@@ -1647,6 +1893,13 @@ class DeviceManager(Gtk.Box):
                         self.store.update_many(updated)
                     if removed:
                         self.store.mark_inactive_by_filenames(removed)
+                    for device_id, ignored, joystick, driver in ignored_updates:
+                        self.store.set_ignored(
+                            device_id,
+                            ignored,
+                            device=joystick,
+                            driver=driver,
+                        )
                 except OSError as exc:
                     message = tr(
                         "Cambios aplicados, pero no se pudo guardar el "
@@ -1664,6 +1917,8 @@ class DeviceManager(Gtk.Box):
                     self._gdu_installed = desired
             self._pending_known.clear()
             self._pending_unknown.clear()
+            self._pending_ignored.clear()
+            self._pending_ignored_joysticks.clear()
             self._pending_steam = None
             self._pending_gdu = None
         except Exception as exc:  # noqa: BLE001 (se muestra al usuario)
@@ -1699,6 +1954,7 @@ class DeviceManager(Gtk.Box):
             and bool(
                 self._pending_known
                 or self._pending_unknown
+                or self._pending_ignored
                 or self._pending_steam is not None
                 or self._pending_gdu is not None
             )

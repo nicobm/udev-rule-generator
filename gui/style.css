@@ -28,6 +28,11 @@
   color: @success_color;
 }
 
+.device-badge-disabled {
+  background-color: alpha(@warning_color, 0.18);
+  color: @warning_color;
+}
+
 .device-icon-button {
   min-width: 34px;
   min-height: 34px;

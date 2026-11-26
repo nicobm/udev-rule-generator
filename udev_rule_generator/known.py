@@ -82,6 +82,9 @@ class KnownDevice:
     active: bool
     updated_at: str
     hidden: bool = False
+    ignorable: bool = False
+    ignored: bool = False
+    hid_driver: str = ""
 
     @property
     def identifier(self) -> str:
@@ -172,6 +175,9 @@ class KnownDevice:
             "active": self.active,
             "updated_at": self.updated_at,
             "hidden": self.hidden,
+            "ignorable": self.ignorable,
+            "ignored": self.ignored,
+            "hid_driver": self.hid_driver,
         }
 
     @classmethod
@@ -196,6 +202,9 @@ class KnownDevice:
             active=bool(data.get("active", False)),
             updated_at=str(data.get("updated_at", "")),
             hidden=bool(data.get("hidden", False)),
+            ignorable=bool(data.get("ignorable", False)),
+            ignored=bool(data.get("ignored", False)),
+            hid_driver=str(data.get("hid_driver", "")),
         )
 
     @classmethod
@@ -217,6 +226,42 @@ class KnownDevice:
             sha256=_sha256(content),
             active=True,
             updated_at=_now(),
+            ignorable=device.is_ignorable,
+        )
+
+    @classmethod
+    def from_ignored(
+        cls,
+        device: Joystick,
+        *,
+        driver: str = "",
+        ignored: bool = True,
+    ) -> KnownDevice:
+        """Registro para un dispositivo deshabilitado por unbind del HID.
+
+        No tiene regla udev: el estado se representa desvinculando el driver
+        HID del dispositivo.  ``hid_driver`` guarda el driver que hay que
+        volver a enlazar cuando se reactive.
+        """
+        return cls(
+            id=device_identity(device),
+            name=device.display_name,
+            vendor=device.vendor,
+            model=device.model,
+            vendor_id=device.vendor_id,
+            product_id=device.product_id,
+            bus=device.bus,
+            serial=device.serial,
+            input_names=device.input_names,
+            action="allow",
+            filename="",
+            content="",
+            sha256="",
+            active=False,
+            updated_at=_now(),
+            ignorable=True,
+            ignored=ignored,
+            hid_driver=driver,
         )
 
     @classmethod
@@ -575,6 +620,36 @@ class KnownDevices:
             if record.hidden == hidden:
                 return record
             updated = replace(record, hidden=hidden, updated_at=_now())
+            self._devices[device_id] = updated
+            self.save()
+            return updated
+
+    def set_ignored(
+        self,
+        device_id: str,
+        ignored: bool,
+        *,
+        device: Joystick | None = None,
+        driver: str = "",
+    ) -> KnownDevice | None:
+        """Marca o desmarca un dispositivo como ignorado (HID desvinculado)."""
+        with self._lock:
+            record = self._devices.get(device_id)
+            if record is None:
+                if device is None:
+                    return None
+                record = KnownDevice.from_ignored(
+                    device,
+                    driver=driver,
+                    ignored=ignored,
+                )
+            updated = replace(
+                record,
+                ignored=ignored,
+                ignorable=True,
+                hid_driver=driver or record.hid_driver,
+                updated_at=_now(),
+            )
             self._devices[device_id] = updated
             self.save()
             return updated

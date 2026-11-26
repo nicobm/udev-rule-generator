@@ -13,13 +13,16 @@ from udev_rule_generator.backup import (
     create_backup,
 )
 from udev_rule_generator.backup import import_backup as restore_backup
-from udev_rule_generator.devices import Joystick, detect_joysticks
+from udev_rule_generator.devices import Detection, Joystick, detect_state
 from udev_rule_generator.host import Host
 from udev_rule_generator.i18n import tr
 from udev_rule_generator.installed import list_installed_rules
 from udev_rule_generator.known import KnownDevices
 from udev_rule_generator.monitor import UdevMonitor
-from udev_rule_generator.privileged import remove_rule_files
+from udev_rule_generator.privileged import (
+    HidBindingChange,
+    apply_rule_changes,
+)
 from udev_rule_generator.uinput import uinput_available
 
 from .device_manager import DeviceManager
@@ -135,14 +138,14 @@ class MainWindow(Adw.ApplicationWindow):
 
         def worker() -> None:
             error: Exception | None = None
-            devices: list[Joystick] = []
+            detection = Detection(joysticks=[], hid_devices=[])
             try:
-                devices = detect_joysticks(self.host)
+                detection = detect_state(self.host)
             except Exception as exc:  # noqa: BLE001 (se muestra al usuario)
                 error = exc
             GLib.idle_add(
                 self._apply_detection,
-                devices,
+                detection,
                 error,
                 generation,
                 silent,
@@ -157,7 +160,7 @@ class MainWindow(Adw.ApplicationWindow):
 
     def _apply_detection(
         self,
-        devices: list[Joystick],
+        detection: Detection,
         error: Exception | None,
         generation: int,
         silent: bool,
@@ -178,14 +181,18 @@ class MainWindow(Adw.ApplicationWindow):
                 )
             return False
 
+        devices = detection.joysticks
         previous_keys = {device.key for device in self._devices}
         added = [device for device in devices if device.key not in previous_keys]
 
         self._devices = devices
         self.manager.set_connected_devices(devices)
+        self.manager.set_hid_devices(detection.hid_devices)
 
         if notify and not self._first_detection:
             for device in added:
+                if device.is_ignorable:
+                    continue
                 self._notify_device(device)
         self._first_detection = False
         return False
@@ -558,8 +565,25 @@ class MainWindow(Adw.ApplicationWindow):
                     if rule.kind == "generated"
                 }
             )
-            if filenames:
-                remove_rule_files(self.host, filenames)
+            hid_changes = [
+                HidBindingChange(
+                    record.vendor_id,
+                    record.product_id,
+                    bound=True,
+                    driver=record.hid_driver or "hid-generic",
+                )
+                for record in self.known_store.devices()
+                if record.ignored
+                and record.vendor_id
+                and record.product_id
+            ]
+            if filenames or hid_changes:
+                apply_rule_changes(
+                    self.host,
+                    {},
+                    filenames,
+                    hid_changes=hid_changes,
+                )
             self.known_store.clear_all()
         except Exception as exc:  # noqa: BLE001 (se muestra al usuario)
             GLib.idle_add(self._clear_failed, str(exc))

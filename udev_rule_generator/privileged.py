@@ -8,9 +8,11 @@ sistema).  Si ya se es root, se escribe directamente y no se muestra diálogo.
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import subprocess
 from dataclasses import dataclass
+from typing import Sequence
 
 from . import RULES_DIR
 from .host import Host, HostError
@@ -20,6 +22,76 @@ from .rules import validate_rule_filename
 _POLKIT_CANCELLED = 126
 _POLKIT_NOT_AUTHORIZED = 127
 _POLKIT_ERROR = 125
+_HEX4 = re.compile(r"^[0-9a-f]{4}$")
+_DRIVER_NAME = re.compile(r"^[A-Za-z0-9_-]+$")
+
+
+@dataclass(frozen=True)
+class HidBindingChange:
+    """Unbind/bind de un dispositivo HID para la sección Ignorados."""
+
+    vendor_id: str
+    product_id: str
+    bound: bool
+    driver: str = ""
+
+    def validate(self) -> None:
+        if not _HEX4.fullmatch(self.vendor_id):
+            raise ValueError(
+                tr("VID no válido: {value!r}", value=self.vendor_id)
+            )
+        if not _HEX4.fullmatch(self.product_id):
+            raise ValueError(
+                tr("PID no válido: {value!r}", value=self.product_id)
+            )
+        if self.driver and not _DRIVER_NAME.fullmatch(self.driver):
+            raise ValueError(
+                tr("Driver HID no válido: {value!r}", value=self.driver)
+            )
+
+
+def _hid_binding_script(changes: Sequence[HidBindingChange]) -> list[str]:
+    """Líneas POSIX sh para desvincular/revincular drivers HID."""
+    lines: list[str] = []
+    for change in changes:
+        change.validate()
+        vendor = change.vendor_id.upper()
+        product = change.product_id.upper()
+        if change.bound:
+            driver = change.driver or "hid-generic"
+            if not _DRIVER_NAME.fullmatch(driver):
+                raise ValueError(
+                    tr("Driver HID no válido: {value!r}", value=driver)
+                )
+            lines.extend(
+                [
+                    f'for dev in /sys/bus/hid/devices/*{vendor}:{product}*; do',
+                    '  [ -e "$dev" ] || continue',
+                    "  if [ ! -e \"$dev/driver\" ] && "
+                    f'[ -d "/sys/bus/hid/drivers/{driver}" ]; then',
+                    '    name=$(basename "$dev")',
+                    f'    echo "$name" > "/sys/bus/hid/drivers/{driver}/bind"'
+                    " || true",
+                    "  fi",
+                    "done",
+                ]
+            )
+        else:
+            lines.extend(
+                [
+                    f'for dev in /sys/bus/hid/devices/*{vendor}:{product}*; do',
+                    '  [ -e "$dev" ] || continue',
+                    '  [ -e "$dev/driver" ] || continue',
+                    '  name=$(basename "$dev")',
+                    '  driver=$(basename "$(readlink -f "$dev/driver")")',
+                    '  [ -n "$driver" ] || continue',
+                    '  echo "$name" > "/sys/bus/hid/drivers/$driver/unbind"'
+                    " || true",
+                    "done",
+                ]
+            )
+    return lines
+
 
 
 @dataclass(frozen=True)
@@ -251,6 +323,7 @@ def install_rule_files(
 def _apply_as_root(
     install_files: dict[str, str],
     remove_filenames: list[str],
+    hid_changes: Sequence[HidBindingChange],
     trigger: str,
 ) -> InstallResult:
     installed: list[str] = []
@@ -290,6 +363,23 @@ def _apply_as_root(
             )
         except (OSError, subprocess.TimeoutExpired):
             pass
+    hid_lines = _hid_binding_script(hid_changes)
+    if hid_lines:
+        try:
+            subprocess.run(
+                ["sh", "-c", "\n".join(hid_lines)],
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=60,
+            )
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            raise HostError(
+                tr(
+                    "No se pudo cambiar el estado del dispositivo HID: {error}",
+                    error=exc,
+                )
+            ) from exc
     reloaded = _run_udevadm_local(trigger)
     return InstallResult(
         filenames=tuple(installed),
@@ -306,6 +396,7 @@ def _apply_with_pkexec(
     host: Host,
     install_files: dict[str, str],
     remove_filenames: list[str],
+    hid_changes: Sequence[HidBindingChange],
     trigger: str,
 ) -> InstallResult:
     pkexec = host.which("pkexec")
@@ -339,6 +430,7 @@ def _apply_with_pkexec(
             [
                 "if command -v restorecon >/dev/null 2>&1; then "
                 "restorecon -F /etc/udev/rules.d/ >/dev/null 2>&1 || true; fi",
+                *_hid_binding_script(hid_changes),
                 *_udev_reload_script(trigger),
             ]
         )
@@ -403,10 +495,11 @@ def apply_rule_changes(
     install_files: dict[str, str],
     remove_filenames: list[str],
     *,
+    hid_changes: Sequence[HidBindingChange] = (),
     trigger: str = "change",
 ) -> InstallResult:
-    """Aplica instalaciones y eliminaciones en una sola autenticación."""
-    if not install_files and not remove_filenames:
+    """Aplica reglas y cambios de binding HID en una sola autenticación."""
+    if not install_files and not remove_filenames and not hid_changes:
         raise ValueError(tr("No hay cambios para aplicar."))
     if trigger not in {"change", "add"}:
         raise ValueError(
@@ -416,11 +509,22 @@ def apply_rule_changes(
         validate_rule_filename(filename)
     for filename in remove_filenames:
         validate_rule_filename(filename)
+    for change in hid_changes:
+        change.validate()
 
     if os.geteuid() == 0 and not host.in_flatpak:
-        return _apply_as_root(install_files, remove_filenames, trigger)
+        return _apply_as_root(
+            install_files,
+            remove_filenames,
+            hid_changes,
+            trigger,
+        )
     return _apply_with_pkexec(
-        host, install_files, remove_filenames, trigger
+        host,
+        install_files,
+        remove_filenames,
+        hid_changes,
+        trigger,
     )
 
 
