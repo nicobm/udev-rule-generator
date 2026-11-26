@@ -8,7 +8,7 @@ import unicodedata
 from dataclasses import dataclass
 from enum import Enum
 
-from . import APP_NAME, PROJECT_URL, __version__
+from . import PROJECT_URL, __version__
 from .devices import Joystick
 from .i18n import tr
 
@@ -149,7 +149,6 @@ def _require_ids(device: Joystick) -> None:
 def _header(device: Joystick, action: RuleAction) -> list[str]:
     lines = [
         tr("# Generado por udev-rule-generator {version}", version=__version__),
-        tr("# {name}", name=tr(APP_NAME)),
         tr("# Dispositivo: {name}", name=_comment_value(device.display_name)),
         tr(
             "# Bus: {bus} · ID: {identifier}",

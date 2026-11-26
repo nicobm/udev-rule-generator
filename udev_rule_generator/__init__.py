@@ -1,4 +1,4 @@
-"""Generador de reglas udev para joysticks y gamepads.
+"""udev-rule-generator: reglas udev para joysticks y gamepads.
 
 El paquete no depende de bibliotecas externas: toda la detección se hace con
 ``udevadm`` y los archivos de ``/proc``/``/sys``, y la instalación usa
@@ -7,10 +7,10 @@ El paquete no depende de bibliotecas externas: toda la detección se hace con
 
 from __future__ import annotations
 
-__version__ = "0.8.0"
+__version__ = "0.9.0"
 
 APP_ID = "io.github.nicobm.UdevRuleGenerator"
-APP_NAME = "Generador de reglas udev"
+APP_NAME = "udev-rule-generator"
 APP_SUMMARY = "Crea reglas udev para permitir o ignorar joysticks y gamepads"
 PROJECT_URL = "https://github.com/nicobm/udev-rule-generator"
 ISSUE_URL = f"{PROJECT_URL}/issues"

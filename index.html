@@ -1,0 +1,928 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#ffffff" />
+    <title>udev-rule-generator</title>
+    <meta
+      name="description"
+      content="A small Linux utility that detects joysticks and gamepads and creates udev rules to allow or ignore them."
+    />
+    <link
+      rel="icon"
+      href="gui/data/icons/hicolor/scalable/apps/io.github.nicobm.UdevRuleGenerator.svg"
+      type="image/svg+xml"
+    />
+    <meta property="og:title" content="udev-rule-generator" />
+    <meta
+      property="og:description"
+      content="Detect joysticks and gamepads, then create clean udev rules to allow or ignore them."
+    />
+    <meta property="og:type" content="website" />
+    <script>
+      try {
+        const theme = localStorage.getItem("theme");
+        if (theme === "light" || theme === "dark") {
+          document.documentElement.dataset.theme = theme;
+        }
+      } catch {}
+    </script>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #ffffff;
+        --bg-subtle: #f6f6f8;
+        --bg-card: #ffffff;
+        --border: #dcdce2;
+        --border-light: #ebebef;
+        --text: #0a0a0a;
+        --text-secondary: #2e2e33;
+        --muted: #5a5a63;
+        --accent: #6a39db;
+        --accent-hover: #3c28a1;
+        --accent-soft: rgba(106, 57, 219, 0.1);
+        --on-accent: #ffffff;
+        --shadow: 0 18px 60px rgba(23, 16, 48, 0.1);
+        --header-bg: rgba(255, 255, 255, 0.86);
+        --max: 760px;
+        --wide: 980px;
+        --gutter: 24px;
+        --radius: 12px;
+        --font:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+          Arial, sans-serif;
+        --mono:
+          ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          color-scheme: dark;
+          --bg: #000000;
+          --bg-subtle: #121214;
+          --bg-card: #0c0c0e;
+          --border: #2c2c30;
+          --border-light: #1e1e22;
+          --text: #f4f4f5;
+          --text-secondary: #d4d4d8;
+          --muted: #a1a1aa;
+          --accent: #b496ff;
+          --accent-hover: #cab5ff;
+          --accent-soft: rgba(180, 150, 255, 0.12);
+          --on-accent: #000000;
+          --shadow: 0 18px 60px rgba(0, 0, 0, 0.5);
+          --header-bg: rgba(0, 0, 0, 0.86);
+        }
+      }
+
+      :root[data-theme="light"] {
+        color-scheme: light;
+        --bg: #ffffff;
+        --bg-subtle: #f6f6f8;
+        --bg-card: #ffffff;
+        --border: #dcdce2;
+        --border-light: #ebebef;
+        --text: #0a0a0a;
+        --text-secondary: #2e2e33;
+        --muted: #5a5a63;
+        --accent: #6a39db;
+        --accent-hover: #3c28a1;
+        --accent-soft: rgba(106, 57, 219, 0.1);
+        --on-accent: #ffffff;
+        --shadow: 0 18px 60px rgba(23, 16, 48, 0.1);
+        --header-bg: rgba(255, 255, 255, 0.86);
+      }
+
+      :root[data-theme="dark"] {
+        color-scheme: dark;
+        --bg: #000000;
+        --bg-subtle: #121214;
+        --bg-card: #0c0c0e;
+        --border: #2c2c30;
+        --border-light: #1e1e22;
+        --text: #f4f4f5;
+        --text-secondary: #d4d4d8;
+        --muted: #a1a1aa;
+        --accent: #b496ff;
+        --accent-hover: #cab5ff;
+        --accent-soft: rgba(180, 150, 255, 0.12);
+        --on-accent: #000000;
+        --shadow: 0 18px 60px rgba(0, 0, 0, 0.5);
+        --header-bg: rgba(0, 0, 0, 0.86);
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      html {
+        scroll-behavior: smooth;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      body {
+        font-family: var(--font);
+        font-size: 19px;
+        line-height: 1.65;
+        color: var(--text-secondary);
+        background: var(--bg);
+      }
+
+      ::selection {
+        color: var(--bg);
+        background: var(--accent);
+      }
+
+      a {
+        color: var(--accent);
+        text-decoration-color: var(--accent-soft);
+        text-underline-offset: 3px;
+      }
+
+      a:hover {
+        color: var(--accent-hover);
+        text-decoration-color: currentColor;
+      }
+
+      img {
+        display: block;
+        max-width: 100%;
+        height: auto;
+      }
+
+      strong {
+        color: var(--text);
+        font-weight: 600;
+      }
+
+      .container {
+        width: 100%;
+        max-width: var(--max);
+        margin: 0 auto;
+        padding: 0 var(--gutter);
+      }
+
+      .wide {
+        max-width: var(--wide);
+      }
+
+      header {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        border-bottom: 1px solid var(--border);
+        background: var(--header-bg);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+      }
+
+      .nav {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        min-height: 64px;
+      }
+
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
+        margin-right: auto;
+        color: var(--text);
+        font-size: 0.92rem;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+        text-decoration: none;
+        white-space: nowrap;
+      }
+
+      .brand img {
+        width: 26px;
+        height: 26px;
+        border-radius: 7px;
+      }
+
+      nav {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        font-size: 0.88rem;
+      }
+
+      nav a {
+        color: var(--muted);
+        text-decoration: none;
+        white-space: nowrap;
+      }
+
+      nav a:hover {
+        color: var(--text);
+      }
+
+      .theme-toggle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 34px;
+        height: 34px;
+        border: 1px solid var(--border);
+        border-radius: 50%;
+        color: var(--muted);
+        background: transparent;
+        cursor: pointer;
+      }
+
+      .theme-toggle:hover {
+        color: var(--text);
+        border-color: var(--muted);
+      }
+
+      .hero {
+        position: relative;
+        overflow: hidden;
+        padding: 84px 0 42px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .hero::before {
+        content: "";
+        position: absolute;
+        top: -360px;
+        right: -10%;
+        width: min(900px, 90%);
+        aspect-ratio: 1;
+        background: radial-gradient(closest-side, var(--accent-soft), transparent);
+        pointer-events: none;
+      }
+
+      .hero .container {
+        position: relative;
+      }
+
+      .eyebrow {
+        margin-bottom: 18px;
+        color: var(--muted);
+        font-size: 0.72rem;
+        font-weight: 600;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      h1,
+      h2,
+      h3 {
+        color: var(--text);
+        line-height: 1.12;
+        letter-spacing: -0.03em;
+      }
+
+      h1 {
+        max-width: 880px;
+        font-size: clamp(2.8rem, 7vw, 5rem);
+        font-weight: 300;
+        line-height: 1.02;
+        margin-bottom: 24px;
+      }
+
+      h2 {
+        font-size: clamp(1.8rem, 4vw, 2.6rem);
+        font-weight: 300;
+        margin-bottom: 14px;
+      }
+
+      h3 {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 6px;
+      }
+
+      .hero-copy {
+        max-width: 650px;
+        color: var(--text-secondary);
+        font-size: 1.2rem;
+      }
+
+      .hero-note {
+        margin-top: 18px;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 30px;
+      }
+
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 44px;
+        padding: 0 20px;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        color: var(--text);
+        background: var(--bg-card);
+        font-size: 0.92rem;
+        font-weight: 600;
+        text-decoration: none;
+      }
+
+      .button:hover {
+        color: var(--text);
+        border-color: var(--muted);
+        text-decoration: none;
+      }
+
+      .button.primary {
+        color: var(--on-accent);
+        border-color: var(--accent);
+        background: var(--accent);
+      }
+
+      .button.primary:hover {
+        color: var(--on-accent);
+        border-color: var(--accent-hover);
+        background: var(--accent-hover);
+      }
+
+      section {
+        padding: 58px 0;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .section-intro {
+        max-width: 650px;
+        margin-bottom: 30px;
+        color: var(--text-secondary);
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .card {
+        padding: 20px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--bg-card);
+      }
+
+      .card p {
+        color: var(--muted);
+        font-size: 0.94rem;
+      }
+
+      .card a {
+        font-size: 0.9rem;
+      }
+
+      .window {
+        overflow: hidden;
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        background: var(--bg-subtle);
+        box-shadow: var(--shadow);
+      }
+
+      .window-bar {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        height: 42px;
+        padding: 0 14px;
+        border-bottom: 1px solid var(--border);
+        background: var(--bg-card);
+      }
+
+      .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--border);
+      }
+
+      .window-title {
+        margin-left: 8px;
+        color: var(--muted);
+        font-size: 0.76rem;
+        font-weight: 600;
+      }
+
+      .window-body {
+        padding: 26px;
+      }
+
+      .window h3 {
+        margin-bottom: 4px;
+      }
+
+      .window-subtitle {
+        margin-bottom: 18px;
+        color: var(--muted);
+        font-size: 0.86rem;
+      }
+
+      .device-card,
+      .status-card {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 14px;
+        border: 1px solid var(--border);
+        background: var(--bg-card);
+      }
+
+      .device-card {
+        margin-bottom: 16px;
+        border-radius: 12px;
+      }
+
+      .status-card {
+        border-radius: 12px;
+      }
+
+      .status-card + .status-card {
+        border-top: 0;
+        border-radius: 0 0 12px 12px;
+      }
+
+      .device-avatar {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 44px;
+        height: 44px;
+        flex: 0 0 44px;
+        border-radius: 12px;
+        background: var(--accent-soft);
+      }
+
+      .device-avatar img {
+        width: 24px;
+        height: 24px;
+      }
+
+      .device-name {
+        color: var(--text);
+        font-size: 0.92rem;
+        font-weight: 600;
+      }
+
+      .device-meta,
+      .status-meta {
+        color: var(--muted);
+        font-size: 0.78rem;
+      }
+
+      .spacer {
+        flex: 1;
+      }
+
+      .tag {
+        padding: 2px 9px;
+        border-radius: 999px;
+        color: var(--text-secondary);
+        background: var(--bg-subtle);
+        font-size: 0.72rem;
+        white-space: nowrap;
+      }
+
+      .status-icon {
+        display: inline-flex;
+        width: 20px;
+        justify-content: center;
+        color: var(--accent);
+      }
+
+      .status-title {
+        color: var(--text);
+        font-size: 0.9rem;
+        font-weight: 500;
+      }
+
+      .checks {
+        display: grid;
+        gap: 12px;
+        padding: 0;
+        list-style: none;
+      }
+
+      .checks li {
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+        color: var(--text-secondary);
+      }
+
+      .checks li::before {
+        content: "✓";
+        flex: 0 0 auto;
+        margin-top: 1px;
+        color: var(--accent);
+        font-weight: 700;
+      }
+
+      pre {
+        overflow-x: auto;
+        margin: 12px 0 0;
+        padding: 14px 16px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: var(--bg-subtle);
+        color: var(--text-secondary);
+        font-family: var(--mono);
+        font-size: 0.8rem;
+        line-height: 1.55;
+      }
+
+      code {
+        font-family: var(--mono);
+        font-size: 0.9em;
+      }
+
+      .muted {
+        color: var(--muted);
+      }
+
+      footer {
+        padding: 42px 0 54px;
+        color: var(--muted);
+        font-size: 0.82rem;
+      }
+
+      footer .links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 18px;
+        margin-top: 12px;
+      }
+
+      footer a {
+        color: var(--muted);
+      }
+
+      footer a:hover {
+        color: var(--text);
+      }
+
+      @media (max-width: 700px) {
+        body {
+          font-size: 17px;
+        }
+
+        .nav {
+          flex-wrap: wrap;
+          gap: 10px;
+          padding: 10px 0;
+        }
+
+        nav {
+          order: 3;
+          width: 100%;
+          gap: 14px;
+          padding-top: 2px;
+          overflow-x: auto;
+        }
+
+        .hero {
+          padding: 58px 0 34px;
+        }
+
+        .hero-copy {
+          font-size: 1.05rem;
+        }
+
+        section {
+          padding: 42px 0;
+        }
+
+        .grid {
+          grid-template-columns: 1fr;
+        }
+
+        .window-body {
+          padding: 18px;
+        }
+
+        .device-card,
+        .status-card {
+          flex-wrap: wrap;
+        }
+      }
+
+      @media (max-width: 420px) {
+        .brand span {
+          max-width: 170px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .button {
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="container nav">
+        <a class="brand" href="./" aria-label="udev-rule-generator home">
+          <img
+            src="gui/data/icons/hicolor/scalable/apps/io.github.nicobm.UdevRuleGenerator.svg"
+            alt=""
+          />
+          <span>udev-rule-generator</span>
+        </a>
+        <nav aria-label="Main navigation">
+          <a href="#features">Features</a>
+          <a href="#install">Install</a>
+          <a href="#presets">Presets</a>
+          <a href="https://github.com/nicobm/udev-rule-generator">GitHub</a>
+        </nav>
+        <button
+          class="theme-toggle"
+          type="button"
+          aria-label="Toggle light and dark theme"
+        >
+          <svg
+            width="17"
+            height="17"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            aria-hidden="true"
+          >
+            <circle cx="12" cy="12" r="9"></circle>
+            <path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor" stroke="none"></path>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="container">
+          <p class="eyebrow">Linux · GTK4 · Flatpak</p>
+          <h1>udev rules for your controllers.</h1>
+          <p class="hero-copy">
+            A small Linux utility that detects joysticks and gamepads, then
+            writes clean udev rules to let them work—or to ignore false
+            positives.
+          </p>
+          <p class="hero-note">
+            Free and open source. MIT licensed. No rules are installed
+            automatically.
+          </p>
+          <div class="actions">
+            <a
+              class="button primary"
+              href="https://github.com/nicobm/udev-rule-generator"
+              >View on GitHub</a
+            >
+            <a class="button" href="#install">How to install</a>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <div class="container wide">
+          <div class="window" aria-label="Preview of the graphical interface">
+            <div class="window-bar">
+              <span class="dot"></span>
+              <span class="dot"></span>
+              <span class="dot"></span>
+              <span class="window-title">udev-rule-generator</span>
+            </div>
+            <div class="window-body">
+              <h3>Connected joysticks</h3>
+              <p class="window-subtitle">
+                The list updates automatically when a controller is connected or
+                disconnected.
+              </p>
+              <div class="device-card">
+                <span class="device-avatar">
+                  <img
+                    src="gui/data/icons/hicolor/scalable/apps/io.github.nicobm.UdevRuleGenerator.svg"
+                    alt=""
+                  />
+                </span>
+                <span>
+                  <span class="device-name">Xbox Wireless Controller</span>
+                  <span class="device-meta">USB · 045e:02fd</span>
+                </span>
+                <span class="spacer"></span>
+                <span class="tag">USB</span>
+                <span class="tag">js0</span>
+              </div>
+              <div class="status-card">
+                <span class="status-icon">✓</span>
+                <span>
+                  <span class="status-title">Presets</span>
+                  <span class="status-meta">fabiscafe and steam-devices, optional</span>
+                </span>
+              </div>
+              <div class="status-card">
+                <span class="status-icon">▤</span>
+                <span>
+                  <span class="status-title">Installed rules</span>
+                  <span class="status-meta">View or remove managed rules</span>
+                </span>
+                <span class="spacer"></span>
+                <span class="tag">14</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="features">
+        <div class="container">
+          <p class="eyebrow">Features</p>
+          <h2>Small tool, focused job.</h2>
+          <p class="section-intro">
+            No background daemon and no automatic writes. You stay in control of
+            every rule.
+          </p>
+          <div class="grid">
+            <div class="card">
+              <h3>Detect</h3>
+              <p>
+                Finds USB and Bluetooth controllers through
+                <code>udevadm</code>, with their name, VID:PID, serial, and
+                input nodes.
+              </p>
+            </div>
+            <div class="card">
+              <h3>Allow</h3>
+              <p>
+                Creates <code>10-</code> rules with <code>MODE="0660"</code> and
+                <code>TAG+="uaccess"</code> for input, USB, and hidraw access.
+              </p>
+            </div>
+            <div class="card">
+              <h3>Ignore</h3>
+              <p>
+                Creates <code>99-</code> rules that deauthorize USB devices or
+                deny access to input nodes, so false positives stay out of your
+                way.
+              </p>
+            </div>
+            <div class="card">
+              <h3>Inspect</h3>
+              <p>
+                Preview the exact rule before installing it, use
+                <code>--dry-run</code>, and view or remove managed rules later.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <div class="container">
+          <p class="eyebrow">GNOME</p>
+          <h2>Built to feel at home.</h2>
+          <p class="section-intro">
+            The GUI uses GTK4 and libadwaita, with a clean card layout in the
+            spirit of GNOME apps.
+          </p>
+          <ul class="checks">
+            <li>
+              Detects controllers automatically with
+              <code>udevadm monitor</code> and a periodic fallback.
+            </li>
+            <li>Sends a GNOME notification when a controller connects.</li>
+            <li>
+              Lets you hide devices and restore them later without deleting
+              rules.
+            </li>
+            <li>
+              Speaks English for <code>en_US</code>/<code>en_GB</code> and
+              Spanish for every <code>es_*</code> locale.
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section id="install">
+        <div class="container">
+          <p class="eyebrow">Install</p>
+          <h2>Two ways to run it.</h2>
+          <p class="section-intro">
+            Use your distribution packages for a native install, or build the
+            Flatpak with the included script.
+          </p>
+          <div class="grid">
+            <div class="card">
+              <h3>Fedora / native</h3>
+              <p>
+                Requires Python, PyGObject, GTK4, libadwaita, and polkit.
+              </p>
+              <pre><code>sudo dnf install python3-gobject gtk4 libadwaita polkit
+bash install-native.sh
+udev-rule-generator --gui</code></pre>
+            </div>
+            <div class="card">
+              <h3>Flatpak</h3>
+              <p>
+                Uses the GNOME 51 runtime and the included build script.
+              </p>
+              <pre><code>bash build-flatpak.sh
+flatpak run io.github.nicobm.UdevRuleGenerator</code></pre>
+            </div>
+          </div>
+          <p class="muted" style="margin-top: 16px; font-size: 0.82rem">
+            See the
+            <a href="https://github.com/nicobm/udev-rule-generator#readme"
+              >README</a
+            >
+            for requirements, CLI usage, and troubleshooting.
+          </p>
+        </div>
+      </section>
+
+      <section id="presets">
+        <div class="container">
+          <p class="eyebrow">Optional presets</p>
+          <h2>Two sources. Both off by default.</h2>
+          <p class="section-intro">
+            Presets are copied only when you select them. They are never
+            installed during package installation.
+          </p>
+          <div class="grid">
+            <div class="card">
+              <h3>game-devices-udev</h3>
+              <p>
+                27 vendor rules from Fabian Bornschein (fabiscafe). MIT
+                licensed. Installed as a complete package or not at all.
+              </p>
+              <a href="https://codeberg.org/fabiscafe/game-devices-udev"
+                >View on Codeberg</a
+              >
+            </div>
+            <div class="card">
+              <h3>steam-devices</h3>
+              <p>
+                Valve's Steam Input and SteamVR rules. MIT licensed. Installed
+                together as one package.
+              </p>
+              <a href="https://github.com/ValveSoftware/steam-devices"
+                >View on GitHub</a
+              >
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="container">
+        <p>
+          udev-rule-generator is free software released under the MIT license.
+          Built with Python, GTK4, and libadwaita.
+        </p>
+        <div class="links">
+          <a href="https://github.com/nicobm/udev-rule-generator">GitHub</a>
+          <a href="https://github.com/nicobm/udev-rule-generator/issues"
+            >Issues</a
+          >
+          <a href="https://github.com/nicobm/udev-rule-generator#readme"
+            >Documentation</a
+          >
+          <a
+            href="https://github.com/nicobm/udev-rule-generator/blob/main/THIRD_PARTY_NOTICES.md"
+            >Third-party notices</a
+          >
+        </div>
+      </div>
+    </footer>
+
+    <script>
+      const toggle = document.querySelector(".theme-toggle");
+      toggle?.addEventListener("click", () => {
+        const root = document.documentElement;
+        const isDark =
+          root.dataset.theme === "dark" ||
+          (!root.dataset.theme &&
+            matchMedia("(prefers-color-scheme: dark)").matches);
+        const theme = isDark ? "light" : "dark";
+        root.dataset.theme = theme;
+        try {
+          localStorage.setItem("theme", theme);
+        } catch {}
+      });
+    </script>
+  </body>
+</html>

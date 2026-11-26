@@ -1,127 +1,126 @@
-# Generador de reglas udev
+# udev-rule-generator
 
-Herramienta en Python para Linux que detecta joysticks y gamepads, permite
-elegir uno y crea una regla udev para **permitirlo/detectarlo** o para
-**ignorarlo**.  Incluye una interfaz de terminal y una aplicación GTK4 +
-libadwaita integrada con GNOME.
+A Linux tool written in Python that detects joysticks and gamepads and creates
+udev rules to **allow** or **ignore** them. It includes a terminal interface
+and a GTK4/libadwaita desktop application for GNOME.
 
-La app **no instala ninguna regla automáticamente**.  Solo escribe en
-`/etc/udev/rules.d` cuando elegís una regla para un dispositivo y pasás por el
-diálogo de autenticación de polkit/GNOME.  No se guarda ninguna contraseña.
+The app **never installs rules automatically**. It only writes to
+`/etc/udev/rules.d` after you choose a rule and authenticate through the GNOME
+polkit dialog. No password is stored.
 
-Los presets de terceros son opcionales y están desactivados por defecto; se
-explican más abajo, en “Presets opcionales”.  No forman parte del flujo normal
-de generación de reglas.
+Optional third-party presets come from **game-devices-udev** (fabiscafe) and
+**steam-devices** (Valve). They are disabled by default and are never installed
+as part of the application installation.
 
-## Características
+## Features
 
-- Detección de mandos por USB y Bluetooth con `udevadm`.
-- Lista con nombre, bus, VID:PID, serial y nodos `/dev/input/*`.
-- Regla de permiso con `MODE="0660"` y `TAG+="uaccess"`.
-- Regla de ignorar: desautoriza el USB (`ATTR{authorized}="0"`) y, además,
-  deniega el acceso a los nodos de entrada.
-- Nombres de archivo con prioridad `10-` para permitir y `99-` para ignorar.
-- Vista previa antes de instalar y modo `--dry-run`.
-- Presets de terceros opcionales, con licencia y procedencia, que solo se
-  instalan si los elegís explícitamente.
-- Listado y eliminación de las reglas que administra la aplicación.
-- Ocultar dispositivos de la lista y recuperarlos desde “Dispositivos
-  ocultos”, sin borrar sus reglas.
-- GUI GTK4/libadwaita con detección automática al conectar un mando,
-  notificaciones de GNOME y tarjetas centradas al estilo de Pika Backup.
-- Sin dependencias Python externas para el núcleo.
-- Flatpak con `org.gnome.Platform//51` y wrapper `build-flatpak.sh` para
-  toolbox/flatpak-builder.
+- USB and Bluetooth controller detection with `udevadm`.
+- Device list with name, bus, VID:PID, serial, and `/dev/input/*` nodes.
+- Permission rules with `MODE="0660"` and `TAG+="uaccess"`.
+- Ignore rules that deauthorize USB devices and deny access to input nodes.
+- Generated rule filenames use `10-` for allow and `99-` for ignore.
+- Rule preview and `--dry-run`.
+- Optional presets with license and source information.
+- List and remove rules managed by the application.
+- Hide devices from the main list and restore them from the menu.
+- GTK4/libadwaita GUI with automatic connection detection, GNOME
+  notifications, and centered Pika Backup-style cards.
+- Automatic language detection for English (US/UK) and Spanish.
+- Flatpak manifest for GNOME 51 and a `build-flatpak.sh` toolbox wrapper.
+- No external Python dependencies for the core.
 
-## Requisitos
+## Requirements
 
-### Nativos (Fedora)
+### Native Fedora
 
 ```bash
 sudo dnf install python3-gobject gtk4 libadwaita polkit
 ```
 
-`udevadm` viene con systemd, que ya está en cualquier Fedora.  Para la CLI no
-hacen falta GTK ni libadwaita: el núcleo usa solo la biblioteca estándar.
+`udevadm` comes with systemd, which is already present on Fedora. The CLI does
+not need GTK or libadwaita; the core uses only the Python standard library.
 
-En Debian/Ubuntu los paquetes equivalentes son `python3-gi`,
-`gir1.2-gtk-4.0`, `gir1.2-adw-1` y `polkitd`/`pkexec`.  En Arch:
-`python-gobject`, `gtk4`, `libadwaita` y `polkit`.
+Debian/Ubuntu equivalents are `python3-gi`, `gir1.2-gtk-4.0`,
+`gir1.2-adw-1`, and `polkitd`/`pkexec`. On Arch, install `python-gobject`,
+`gtk4`, `libadwaita`, and `polkit`.
 
-Instalación nativa opcional:
+### Native install
 
 ```bash
-# Instala el paquete con pip --user, el .desktop y el icono.
-# El .desktop es lo que permite que GNOME muestre nombre e icono en las
-# notificaciones.
+# Installs the Python package with pip --user, plus the .desktop file and icon.
 bash install-native.sh
 
 udev-rule-generator --list
-udev-rule-generator-gui
+udev-rule-generator --gui
 ```
 
-También podés ejecutar la GUI directamente desde el repo con
-`./udev-rule-generator-gui`; en ese caso las notificaciones pueden salir sin
-nombre/icono de aplicación hasta que instales el `.desktop`.
+You can also run the GUI directly from the repository:
 
-### Flatpak
+```bash
+./udev-rule-generator-gui
+```
+
+If you run from the repository without installing the `.desktop` file, GNOME
+notifications may appear without the application name or icon.
+
+### Flatpak build requirements
 
 - `flatpak`
 - `flatpak-builder`
-- Runtime y SDK `org.gnome.Platform//51` y `org.gnome.Sdk//51`
-- En Fedora Atomic, Toolbx (el script lo maneja).
+- `org.gnome.Platform//51` and `org.gnome.Sdk//51`
+- Toolbx on Fedora Atomic (the build script handles it)
 
-## Uso rápido por terminal
+## Quick start (CLI)
 
-Desde el repositorio:
+From the repository:
 
 ```bash
 ./udev-rule-generator
 ```
 
-o, sin el lanzador:
+Or, without the launcher:
 
 ```bash
 python3 -m udev_rule_generator
 ```
 
-El menú principal permite listar mandos, instalar reglas preconfiguradas y
-ver/eliminar las reglas instaladas.
+The main menu lets you list controllers, install preset packages, and
+view/remove installed rules.
 
-### Comandos no interactivos
+### Non-interactive commands
 
 ```bash
-# Lista los mandos detectados
+# List detected controllers
 ./udev-rule-generator --list
 
-# Genera y muestra la regla sin instalar nada
+# Show the generated rule without installing it
 ./udev-rule-generator --device 1 --action allow --dry-run
 
-# Instala la regla para el mando 045e:02fd (Xbox One)
+# Install an allow rule for 045e:02fd (Xbox One)
 ./udev-rule-generator --device 045e:02fd --action allow --yes
 
-# Ignora un dispositivo concreto
+# Ignore a device by list index
 ./udev-rule-generator --device 1 --action ignore --yes
 
-# Opcional: reglas de Steam Input y SteamVR de Valve
-./udev-rule-generator --presets steam
-
-# Toda la biblioteca game-devices-udev (sin Steam)
+# Install the full fabiscafe library
 ./udev-rule-generator --presets all
 
-# Combinar fabiscafe + Steam
+# Install the full steam-devices package
+./udev-rule-generator --presets steam
+
+# Install both complete packages
 ./udev-rule-generator --presets all,steam
 
-# Reglas instaladas por esta aplicación
+# Show rules installed by this application
 ./udev-rule-generator --installed
 
-# Eliminar una regla administrada
+# Remove a managed rule
 ./udev-rule-generator --remove 10-gamepad-045e-02fd-xbox-wireless-controller.rules
 ```
 
-`--device` acepta el número de la lista, `VID:PID` o parte del nombre.
-`--dry-run` nunca escribe.  `--yes` evita la confirmación de la terminal; el
-diálogo de polkit se sigue mostrando igual.
+`--device` accepts a 1-based list index, a `VID:PID` pair, or part of the
+device name. `--dry-run` never writes anything. `--yes` skips the terminal
+confirmation; the polkit authentication dialog is still shown.
 
 ## GUI
 
@@ -129,77 +128,84 @@ diálogo de polkit se sigue mostrando igual.
 ./udev-rule-generator --gui
 ```
 
-o:
+Or:
 
 ```bash
 ./udev-rule-generator-gui
 python3 -m gui
 ```
 
-La ventana principal lista los mandos en tarjetas centradas, con el icono del
-dispositivo, nombre, VID:PID y pills de bus/nodo.  Al elegir uno se abre un
-diálogo con:
+The main window lists connected controllers as centered cards with the device
+icon, name, VID:PID, and bus/node tags. Selecting a device opens a dialog with:
 
-- Datos del dispositivo.
-- Acción **Permitir / detectar** o **Ignorar**.
-- **Ocultar este dispositivo**: se mueve a “Dispositivos ocultos” sin borrar
-  ninguna regla.
-- Vista previa de la regla.
-- Botón para copiar la regla y botón para instalarla.
+- Device information.
+- **Allow / detect** or **Ignore**.
+- **Hide this device**, which moves it to Hidden devices without deleting any
+  rule.
+- Rule preview.
+- Copy and install buttons.
 
-La GUI monitorea `udevadm monitor` mientras está abierta, además de un sondeo
-de respaldo cada 5 segundos.  Al conectar un mando, la lista se actualiza sola
-y se envía una **notificación de GNOME**; al hacer clic en ella se abre la
-ventana.  El menú de la cabecera permite abrir las reglas preconfiguradas, las
-reglas instaladas, **Dispositivos ocultos** y “Acerca de”.  En “Dispositivos
-ocultos” cada fila tiene un botón **Desocultar**; la preferencia se guarda en
-`$XDG_CONFIG_HOME/udev-rule-generator/hidden.json`.
+The GUI monitors `udevadm monitor` while open and also polls every 5 seconds as
+a fallback. When a controller connects, the list updates automatically and a
+**GNOME notification** is shown. Clicking the notification opens the window.
+The header menu contains Presets, Installed rules, Hidden devices, and About.
 
-La GUI usa `Adw.HeaderBar`, `Adw.Clamp`, `Adw.PreferencesGroup`,
-`Adw.SwitchRow`, `Adw.Banner`, `Adw.AlertDialog` y `Adw.ToastOverlay`, por lo
-que sigue el tema claro/oscuro y el estilo de GNOME 51 sin CSS propio más allá
-de los avatares, las pills y la fuente monoespaciada de la vista previa.
-Las notificaciones usan `Gio.Notification`; en Flatpak GNOME las muestra a
-través del portal sin permisos extra.
+The **Installed rules** row shows the number of managed rules as a tag on the
+right side, in the same style as the bus and node tags.
 
-### Idioma
+Hidden devices are stored in:
 
-La app detecta el locale al arrancar:
+```text
+$XDG_CONFIG_HOME/udev-rule-generator/hidden.json
+```
 
-- `en_US` o `en_GB` → inglés.
-- Cualquier variante de español (`es_ES`, `es_AR`, `es_MX`, etc.) → español.
-- Otros idiomas → español como respaldo.
+Inside Flatpak this lives under
+`~/.var/app/io.github.nicobm.UdevRuleGenerator/config/`.
 
-La detección se aplica a la GUI, la CLI, los diálogos, las notificaciones y las
-cabeceras de las reglas generadas.
+### Language
+
+The application detects the locale at startup:
+
+- `en_US` or `en_GB` → English.
+- Any Spanish variant (`es_ES`, `es_AR`, `es_MX`, etc.) → Spanish.
+- Other locales → Spanish as the fallback.
+
+The detection applies to the GUI, CLI, dialogs, notifications, error messages,
+and generated rule headers. Restart the app after changing the locale.
+
+`LC_ALL` takes precedence over `LC_MESSAGES`, `LANG`, and `LANGUAGE`. To force a
+language for a single run:
+
+```bash
+LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8 ./udev-rule-generator --list
+LC_ALL=es_ES.UTF-8 LANG=es_ES.UTF-8 ./udev-rule-generator --list
+```
 
 ## Flatpak
 
-El manifiesto está en la raíz:
+The manifest is at the repository root:
 
 ```text
 io.github.nicobm.UdevRuleGenerator.json
 ```
 
-Compilar e instalar:
+Build and install:
 
 ```bash
 bash build-flatpak.sh
 ```
 
-El script:
+The script:
 
-1. Si está en Fedora Atomic y falta `flatpak-builder`, crea/entra al toolbox
-   `udev-rule-generator`.
-2. Instala `flatpak` y `flatpak-builder` dentro del toolbox si hace falta.
-3. Instala `org.gnome.Platform//51` y `org.gnome.Sdk//51` desde Flathub o los
-   remotos de Fedora.
-4. Compila con `flatpak-builder` y exporta a `repo/`.
-5. Instala desde el remoto local `udev-rule-generator-local`, que queda
-   deshabilitado para que `flatpak update` no intente actualizar una app
-   local.
+1. On Fedora Atomic, creates/enters the `udev-rule-generator` toolbox if
+   `flatpak-builder` is missing.
+2. Installs `flatpak` and `flatpak-builder` inside the toolbox when needed.
+3. Installs `org.gnome.Platform//51` and `org.gnome.Sdk//51`.
+4. Builds with `flatpak-builder` and exports to `repo/`.
+5. Installs from the local `udev-rule-generator-local` remote and leaves that
+   remote disabled.
 
-Ejecutar:
+Run:
 
 ```bash
 flatpak run io.github.nicobm.UdevRuleGenerator
@@ -207,7 +213,7 @@ flatpak run --command=udev-rule-generator io.github.nicobm.UdevRuleGenerator
 flatpak run --command=udev-rule-generator io.github.nicobm.UdevRuleGenerator --list
 ```
 
-El manifiesto es deliberadamente mínimo:
+The manifest is intentionally minimal:
 
 ```json
 "finish-args": [
@@ -218,211 +224,225 @@ El manifiesto es deliberadamente mínimo:
 ]
 ```
 
-- Solo **Wayland**: no hay `fallback-x11`.
-- Solo **input**: no hay `--device=dri`, sonido ni otros dispositivos.
-- **Sin red**: `--unshare=network`.
-- No monta `/etc`, el home ni el host.
+- Wayland only; there is no X11 fallback.
+- Input access only; no GPU device, sound, or extra devices.
+- No network access.
+- No `/etc`, home, or host filesystem mounts.
+- `org.freedesktop.Flatpak` is required to run `udevadm` and `pkexec` on the
+  host through `flatpak-spawn --host`. Without it, the UI could open but the app
+  could not detect devices or install rules. It is a broad host-integration
+  permission, as with any utility of this kind.
 
-Para leer udev y ejecutar `pkexec` en el host usa `flatpak-spawn --host`,
-habilitado por `org.freedesktop.Flatpak`.  Ese permiso no es red, display ni
-sonido: es lo que permite ejecutar en el host los comandos concretos que la
-app necesita (`udevadm` y `pkexec`).  Sin él, el Flatpak podría mostrar la
-interfaz pero no detectar dispositivos ni instalar reglas.  Sigue siendo un
-permiso amplio, como en cualquier app que necesite integración con el sistema.
+If your system does not have the GNOME 51 runtime yet, change
+`runtime-version` in the manifest and `RUNTIME_VERSION` in `build-flatpak.sh`
+to the GNOME version you have installed.
 
-Si tu sistema todavía no tiene el runtime 51, cambiá `runtime-version` en el
-manifiesto y en `build-flatpak.sh` por la versión de GNOME que tengas
-instalada.
+## Generated rules
 
-## Qué reglas genera
+### Allow / detect
 
-### Permitir / detectar
-
-Para un mando USB, el archivo se llama por ejemplo
-`10-gamepad-045e-02fd-xbox-wireless-controller.rules` y contiene:
+For a USB controller, the file is named for example
+`10-gamepad-045e-02fd-xbox-wireless-controller.rules` and contains:
 
 ```udev
-# Generado por udev-rule-generator 0.8.0
-# Generador de reglas udev
-# Dispositivo: Xbox Wireless Controller
+# Generated by udev-rule-generator 0.9.0
+# Device: Xbox Wireless Controller
 # Bus: USB · ID: 045e:02fd
-# Acción: permitir / detectar
+# Action: allow / detect
+# Project: https://github.com/nicobm/udev-rule-generator
 
+# USB device permissions
 ACTION!="remove", SUBSYSTEM=="usb", ATTRS{idVendor}=="045e", ATTRS{idProduct}=="02fd", MODE="0660", TAG+="uaccess"
+# Input node permissions and detection
 ACTION!="remove", SUBSYSTEMS=="input", ATTRS{name}=="Xbox Wireless Controller", ENV{ID_INPUT_JOYSTICK}="1", MODE="0660", TAG+="uaccess"
+# hidraw permissions (Steam, SDL and HID tools)
 ACTION!="remove", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="045e", ATTRS{idProduct}=="02fd", MODE="0660", TAG+="uaccess"
 ```
 
-El `TAG+="uaccess"` hace que systemd-logind dé acceso al usuario de la sesión
-activa (lo que usan SDL, Steam, etc.).  `ID_INPUT_JOYSTICK=1` ayuda a que udev
-marque el dispositivo como joystick.
+`TAG+="uaccess"` lets systemd-logind grant access to the active session user,
+which is what SDL, Steam, and similar tools use. `ID_INPUT_JOYSTICK=1` helps
+udev mark the device as a joystick.
 
-### Ignorar
+### Ignore
 
-Para USB se desautoriza el dispositivo antes de que se enumere:
+For USB devices, the device is deauthorized before it is used:
 
 ```udev
-ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="26ce", ATTR{idProduct}=="01a2", ATTR{authorized}="0"
+ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="045e", ATTR{idProduct}=="02fd", ATTR{authorized}="0"
 ```
 
-Además se añaden reglas de refuerzo con `MODE="0000"` y `TAG-="uaccess"` para
-los nodos de entrada e hidraw.  Así el dispositivo desaparece de
-`/dev/input/js*` y tampoco se puede abrir como usuario normal.
+Additional `MODE="0000"` and `TAG-="uaccess"` rules deny access to input and
+hidraw nodes. The device disappears from `/dev/input/js*` and cannot be opened
+by a normal user.
 
-En **Bluetooth** no existe el atributo `authorized` de USB.  La regla de
-ignorar es “best effort”: deniega el acceso a los nodos de entrada y quita
-`uaccess`, pero el dispositivo puede seguir existiendo para root.  La GUI y
-la CLI avisan de esta limitación.
+For **Bluetooth**, USB deauthorization is not possible. The ignore rule is
+best effort: it denies access to the input nodes and removes `uaccess`, but the
+device may still exist for root. The GUI and CLI warn about this limitation.
 
-Las reglas de **permitir** usan el prefijo `10-`, como pediste.  Las de
-**ignorar** usan `99-` a propósito: udev procesa los archivos en orden
-lexicográfico, y una regla que quite `uaccess` o ponga `MODE="0000"` tiene que
-ejecutarse después de `70-uaccess.rules` y de las reglas de fabricante
-instaladas como `71-`.  Con `10-` una regla posterior podría volver a dar
-permisos.  Para USB la desautorización de todos modos es contundente, pero
-usamos `99-` para que el comportamiento sea consistente en Bluetooth.
+Allow rules use the `10-` prefix. Ignore rules use `99-` on purpose: udev
+processes files in lexicographic order, and a rule that removes `uaccess` or
+sets `MODE="0000"` must run after `70-uaccess.rules` and after the `71-`
+vendor rules. With `10-`, a later rule could grant permissions again.
 
-Las reglas preconfiguradas de fabricantes se instalan con `71-` (el valor que
-usa game-devices-udev).
+> **Watch out for unprefixed files:** udev sorts names lexicographically, and
+> digits sort before letters. A file such as `microsoft-gdu.rules` (without a
+> number) is processed *after* `99-...`. If you have old rules like that,
+> rename them to `71-microsoft-gdu.rules` or remove them so the ignore rule is
+> not overridden.
 
-> **Ojo con los archivos sin prefijo:** udev ordena los nombres
-> lexicográficamente y los dígitos van antes que las letras.  Un archivo como
-> `microsoft-gdu.rules` (sin número) se procesa *después* de `99-...`.  Si
-> tenés reglas viejas así, renombrarlas a `71-microsoft-gdu.rules` o
-> eliminarlas para que la regla de ignorar no sea sobrescrita.
+## Optional presets
 
-## Presets opcionales
+These presets are third-party files that the app copies **only if you select
+them**. The only bundled sources are **game-devices-udev (fabiscafe)** and
+**steam-devices (Valve)**. They are not active rules, are not loaded when the
+app starts, and are not installed during package installation.
 
-Estos presets son archivos de terceros que la app puede copiar **solo si los
-elegís**.  Las únicas fuentes incluidas son **game-devices-udev (fabiscafe)**
-y **steam-devices (Valve)**.  No son reglas activas, no se cargan al abrir la
-app y no se instalan durante la instalación del paquete.
-
-| Selección | Archivos |
+| Selection | Files |
 |---|---|
-| `all` | Las 27 reglas de game-devices-udev (incluye Microsoft) |
-| `steam` | `71-steam-input.rules` y `71-steam-vr.rules` (Valve) |
+| `all` | All 27 game-devices-udev rules (includes Microsoft) |
+| `steam` | `71-steam-input.rules` and `71-steam-vr.rules` (Valve) |
 
-Ninguna regla se instala sola: la app no escribe en `/etc/udev/rules.d` hasta
-que elegís una acción y pasás por polkit.  Steam y SteamVR son una fuente
-opcional: no están en `all`, y en la GUI su interruptor empieza apagado.
+Presets are selected as complete packages:
 
-En la CLI, `--presets` sin valor abre un menú.  En la GUI, el diálogo permite
-instalar la biblioteca completa de fabiscafe o el paquete completo de
-steam-devices; no hay selección por fabricante ni separación de SteamVR.
+- **game-devices-udev** installs all 27 rules or none.
+- **steam-devices** installs Steam Input and SteamVR together.
 
-Las reglas de fabricantes son de **game-devices-udev**, MIT, de Fabian
-Bornschein (fabiscafe).  Las de Steam/SteamVR son de **steam-devices**, MIT,
-de Valve Software.  El detalle y las licencias completas están en
+There is no per-vendor selection and no separate Steam/SteamVR selection.
+
+Nothing is installed automatically: the app does not write to
+`/etc/udev/rules.d` until you choose an action and pass polkit. The Steam
+package is optional and is not part of `all`; in the GUI its switch starts off.
+
+In the CLI, `--presets` with no value opens a menu. In the GUI, the dialog lets
+you install the complete fabiscafe library and/or the complete steam-devices
+package.
+
+The vendor rules are from **game-devices-udev**, MIT, by Fabian Bornschein
+(fabiscafe). The Steam/SteamVR rules are from **steam-devices**, MIT, by Valve
+Software. Full license texts are in
 [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
 
-## Cómo funciona la autenticación
+## Authentication
 
-La app nunca pide la contraseña directamente.  Cuando hay que escribir en
-`/etc/udev/rules.d`, ejecuta:
+The app never asks for a password directly. When it needs to write to
+`/etc/udev/rules.d`, it runs:
 
 ```bash
 pkexec sh -c 'install -m 0644 ... /etc/udev/rules.d/ && udevadm control --reload-rules && udevadm trigger ...'
 ```
 
-`pkexec` consulta a polkit y GNOME muestra su diálogo de administrador.  Si
-cancelás, no se escribe nada.  Después de instalar, udev recarga las reglas y
-se hace un `trigger`: `change` para permisos y `add` para desautorizar USB.
+`pkexec` asks polkit, and GNOME shows its administrator authentication dialog.
+If you cancel, nothing is written. After installation, udev reloads the rules
+and the app triggers `change` for permissions or `add` for USB
+deauthorization.
 
-Dentro del Flatpak, el comando se ejecuta en el host con
-`flatpak-spawn --host pkexec ...`, por lo que el diálogo sigue siendo el de
-GNOME del sistema.
+Inside Flatpak, the command runs on the host through
+`flatpak-spawn --host pkexec ...`, so the dialog is still the host GNOME
+dialog.
 
-## Archivos que crea
+## Files created
 
-Todo va a `/etc/udev/rules.d`:
+Everything goes to `/etc/udev/rules.d`:
 
-- `10-gamepad-<vid>-<pid>-<nombre>.rules`
-- `99-ignore-<vid>-<pid>-<nombre>.rules`
+- `10-gamepad-<vid>-<pid>-<name>.rules`
+- `99-ignore-<vid>-<pid>-<name>.rules`
 - `71-microsoft-gdu.rules`
-- `71-<fabricante>-gdu.rules`
+- `71-<vendor>-gdu.rules`
 - `71-uinput-dev-early-creation.rules`
-- `71-steam-input.rules` y `71-steam-vr.rules` (paquete steam-devices)
+- `71-steam-input.rules` and `71-steam-vr.rules` (steam-devices package)
 
-Las reglas generadas llevan una cabecera `# Generado por
-udev-rule-generator`; las preconfiguradas, `# Instalado por
-udev-rule-generator`.  La app usa esa marca para listarlas y permitir
-eliminarlas sin tocar reglas ajenas.
+Generated rules have a `# Generated by udev-rule-generator` header; presets
+have `# Installed by udev-rule-generator`. The app uses that marker to list and
+remove its own rules without touching unrelated ones.
 
-## Solución de problemas
+## Troubleshooting
 
-### No aparece ningún joystick
+### No joystick appears
 
 ```bash
 udevadm info --export-db | grep -i -B5 -A20 joystick
 ls -l /dev/input/js* /dev/input/event*
 ```
 
-Si el mando está conectado pero no aparece, probá desconectarlo y volver a
-conectarlo.  En Flatpak, comprobá que la app tenga el permiso
-`org.freedesktop.Flatpak` (lo pone el manifiesto).
+If the controller is connected but not listed, disconnect and reconnect it. In
+Flatpak, make sure the app has the `org.freedesktop.Flatpak` permission from
+the manifest.
 
-### No aparece el diálogo de contraseña
+### The password dialog does not appear
 
-Comprobá que el agente de polkit de GNOME esté funcionando:
+Check that the GNOME polkit agent is running:
 
 ```bash
 pkexec true
 ```
 
-Si `pkexec` no existe, instalá polkit.  Si la app corre en Flatpak, el
-diálogo se abre en el host; no lo busques dentro del sandbox.
+If `pkexec` is missing, install polkit. In Flatpak, the dialog opens on the
+host, not inside the sandbox.
 
-### La regla no se aplica
+### The rule does not apply
 
 ```bash
 sudo udevadm control --reload-rules
 sudo udevadm trigger
 ```
 
-Luego desconectá y volvé a conectar el mando.  Para ver qué está pasando:
+Then disconnect and reconnect the controller. To inspect what udev is doing:
 
 ```bash
 udevadm test /sys/class/input/js0
 ```
 
-### Quiero deshacer una regla
+### Undo a rule
 
-Desde la app:
+From the app:
 
 ```bash
 ./udev-rule-generator --installed
-./udev-rule-generator --remove NOMBRE.rules
+./udev-rule-generator --remove RULE_NAME.rules
 ```
 
-O a mano:
+Or manually:
 
 ```bash
-sudo rm /etc/udev/rules.d/NOMBRE.rules
+sudo rm /etc/udev/rules.d/RULE_NAME.rules
 sudo udevadm control --reload-rules
 sudo udevadm trigger
 ```
 
-## Desarrollo
+## Website (GitHub Pages)
+
+The repository root includes a static `index.html` landing page. To publish it
+with GitHub Pages:
+
+1. Open the repository on GitHub and go to **Settings → Pages**.
+2. Under **Build and deployment**, choose **Deploy from a branch**.
+3. Select the `main` branch and the `/ (root)` folder.
+4. Save. GitHub will serve `index.html` at the Pages URL.
+
+The page is plain HTML/CSS/JavaScript and does not need a build step. It uses
+the application icon from `gui/data/icons/`.
+
+## Development
 
 ```bash
 python3 -m unittest discover -s tests -v
 python3 -m compileall -q udev_rule_generator gui
 ```
 
-La estructura es:
+Project layout:
 
 ```text
 udev_rule_generator/
-  cli.py          # menú de terminal y argumentos
-  devices.py      # detección y agrupación con udevadm/procfs
-  rules.py        # generación y validación de reglas
-  presets.py      # reglas preconfiguradas
-  privileged.py   # pkexec, instalación y recarga de udev
-  installed.py    # lectura de reglas administradas
-  hidden.py       # dispositivos ocultos persistidos en la configuración
-  host.py         # comandos nativos o flatpak-spawn --host
-  monitor.py      # udevadm monitor para la detección automática de la GUI
+  cli.py          # terminal UI and arguments
+  devices.py      # detection and grouping via udevadm/procfs
+  rules.py        # rule generation and validation
+  presets.py      # optional third-party preset packages
+  privileged.py   # pkexec, installation, and udev reload
+  installed.py    # reading managed rules
+  hidden.py       # hidden devices persisted in user config
+  host.py         # native commands or flatpak-spawn --host
+  monitor.py      # udevadm monitor for GUI auto-detection
+  i18n.py         # Spanish/English detection and translations
 gui/
   application.py
   window.py
@@ -430,15 +450,15 @@ gui/
   presets_dialog.py
   installed_dialog.py
   hidden_dialog.py
-  data/           # .desktop, metainfo e icono
+  data/           # .desktop, metainfo, and icon
 tests/
 ```
 
-Las pruebas del núcleo usan fixtures de `udevadm` y `/proc` y no necesitan
-hardware ni permisos de root.
+The core tests use `udevadm` and `/proc` fixtures and do not require hardware
+or root permissions.
 
-## Licencia
+## License
 
-El código de este proyecto es MIT.  Las reglas de game-devices-udev son MIT de
-Fabian Bornschein y las de steam-devices son MIT de Valve Software; ver
+The project code is MIT. The game-devices-udev rules are MIT by Fabian
+Bornschein, and the steam-devices rules are MIT by Valve Software. See
 [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Compila e instala el Flatpak de Generador de reglas udev.
+# Compila e instala el Flatpak de udev-rule-generator.
 #
 # Uso:
 #   bash build-flatpak.sh

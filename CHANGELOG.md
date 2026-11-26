@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.9.0 - 2026-11-26
+
+- El nombre visible de la aplicación pasa a ser **udev-rule-generator** en
+  español, inglés, GNOME, notificaciones y `.desktop`/metainfo.
+- Muestra el número de reglas administradas como tag a la derecha de
+  “Reglas instaladas”.
+- README reescrito en inglés estadounidense.
+
 ## 0.8.0 - 2026-11-26
 
 - Elimina el selector “Elegir fabricante” de la GUI.

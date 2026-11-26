@@ -66,7 +66,6 @@ def is_english() -> bool:
 _EN.update(
     {
         # Aplicación / ventana principal
-        "Generador de reglas udev": "udev rule generator",
         "Crea reglas udev para permitir o ignorar joysticks y gamepads": (
             "Create udev rules to allow or ignore joysticks and gamepads"
         ),
@@ -701,7 +700,6 @@ _EN.update(
         "¿Instalar en /etc/udev/rules.d con permisos de administrador?": (
             "Install to /etc/udev/rules.d with administrator permissions?"
         ),
-        "# {name}": "# {name}",
     }
 )
 
@@ -746,5 +744,12 @@ _EN.update(
         "  · steam-devices (Valve): {count} archivos": (
             "  · steam-devices (Valve): {count} files"
         ),
+    }
+)
+
+_EN.update(
+    {
+        "{count} regla instalada": "{count} installed rule",
+        "{count} reglas instaladas": "{count} installed rules",
     }
 )

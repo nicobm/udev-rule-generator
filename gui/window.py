@@ -9,6 +9,7 @@ from udev_rule_generator.devices import Joystick, detect_joysticks
 from udev_rule_generator.hidden import HiddenDevices
 from udev_rule_generator.host import Host
 from udev_rule_generator.i18n import tr
+from udev_rule_generator.installed import list_installed_rules
 from udev_rule_generator.monitor import UdevMonitor
 
 from .gi_compat import Adw, Gio, GLib, Gtk
@@ -48,6 +49,7 @@ class MainWindow(Adw.ApplicationWindow):
         # Respaldo por si udevadm monitor no está disponible en el host.
         self._poll_source = GLib.timeout_add_seconds(5, self._poll_devices)
         self.refresh()
+        self._refresh_rule_count()
 
     def _build_ui(self) -> None:
         toolbar = Adw.ToolbarView()
@@ -169,12 +171,18 @@ class MainWindow(Adw.ApplicationWindow):
                 icon_name="application-x-addon-symbolic",
             )
         )
+        self.rules_count_label = Gtk.Label(label="…")
+        self.rules_count_label.add_css_class("device-badge")
+        self.rules_count_label.set_valign(Gtk.Align.CENTER)
+        self.rules_count_label.set_width_chars(2)
+        self.rules_count_label.set_xalign(0.5)
         status_group.add(
             self._action_row(
                 tr("Reglas instaladas"),
                 tr("Ver o eliminar las reglas creadas por esta aplicación."),
                 "app.installed",
                 icon_name="document-open-symbolic",
+                badge=self.rules_count_label,
             )
         )
         content.append(status_group)
@@ -191,6 +199,7 @@ class MainWindow(Adw.ApplicationWindow):
         action: str,
         *,
         icon_name: str | None = None,
+        badge: Gtk.Widget | None = None,
     ) -> Adw.ActionRow:
         row = Adw.ActionRow(title=title, subtitle=subtitle)
         row.set_activatable(True)
@@ -200,6 +209,8 @@ class MainWindow(Adw.ApplicationWindow):
             prefix.add_css_class("dim-label")
             prefix.set_valign(Gtk.Align.CENTER)
             row.add_prefix(prefix)
+        if badge is not None:
+            row.add_suffix(badge)
         arrow = Gtk.Image(icon_name="go-next-symbolic")
         arrow.add_css_class("dim-label")
         row.add_suffix(arrow)
@@ -438,6 +449,7 @@ class MainWindow(Adw.ApplicationWindow):
     def show_installed(self) -> None:
         from .installed_dialog import InstalledDialog
 
+        self._refresh_rule_count()
         dialog = InstalledDialog(
             host=self.host,
             parent=self,
@@ -463,8 +475,33 @@ class MainWindow(Adw.ApplicationWindow):
         self.toast_overlay.add_toast(Adw.Toast(title=message, timeout=5))
         self.refresh(silent=True, notify=False)
 
+    def _refresh_rule_count(self) -> None:
+        if self._closed:
+            return
+        future = self._executor.submit(list_installed_rules, self.host)
+        future.add_done_callback(
+            lambda completed: GLib.idle_add(self._apply_rule_count, completed)
+        )
+
+    def _apply_rule_count(self, future: Future) -> bool:
+        if self._closed:
+            return False
+        try:
+            rules = future.result()
+        except Exception:  # noqa: BLE001 (contador no crítico)
+            return False
+        count = len(rules)
+        self.rules_count_label.set_text(str(count))
+        if count == 1:
+            tooltip = tr("{count} regla instalada", count=count)
+        else:
+            tooltip = tr("{count} reglas instaladas", count=count)
+        self.rules_count_label.set_tooltip_text(tooltip)
+        return False
+
     def _on_rule_installed(self, message: str) -> None:
         self.toast_overlay.add_toast(Adw.Toast(title=message, timeout=5))
+        self._refresh_rule_count()
         # Si se ignoró un dispositivo, udev puede tardar un instante en
         # retirarlo; refrescar un poco después da una lista más realista.
         GLib.timeout_add(1200, self._refresh_after_change)

@@ -3,14 +3,14 @@
   <id>io.github.nicobm.UdevRuleGenerator</id>
   <metadata_license>MIT</metadata_license>
   <project_license>MIT</project_license>
-  <name>Generador de reglas udev</name>
-  <name xml:lang="en">udev rule generator</name>
+  <name>udev-rule-generator</name>
+  <name xml:lang="en">udev-rule-generator</name>
   <summary>Permitir o ignorar joysticks y gamepads con reglas udev</summary>
   <summary xml:lang="en">Allow or ignore joysticks and gamepads with udev rules</summary>
 
   <description>
     <p>
-      Generador de reglas udev es una herramienta para Linux que detecta los
+      udev-rule-generator es una herramienta para Linux que detecta los
       joysticks y gamepads conectados y crea reglas en /etc/udev/rules.d para
       permitir su uso o para ignorarlos.
     </p>
@@ -32,7 +32,7 @@
 
   <description xml:lang="en">
     <p>
-      udev rule generator is a Linux tool that detects connected joysticks and
+      udev-rule-generator is a Linux tool that detects connected joysticks and
       gamepads and creates rules in /etc/udev/rules.d to allow their use or to
       ignore them.
     </p>
@@ -64,6 +64,14 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.9.0" date="2026-11-26">
+      <description>
+        <p>
+          Usa udev-rule-generator como nombre visible en todos lados y muestra
+          el número de reglas administradas como un tag en Reglas instaladas.
+        </p>
+      </description>
+    </release>
     <release version="0.8.0" date="2026-11-26">
       <description>
         <p>
