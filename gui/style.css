@@ -66,11 +66,14 @@
 }
 
 /* Las tarjetas son clickeables, pero no cambian al pasar el puntero. */
-.device-card:hover,
-.device-card:active {
-  background-color: @card_bg_color;
+list.boxed-list-separate > row.device-card:not(.expander):not(:selected).activatable:hover,
+list.boxed-list-separate > row.device-card:not(.expander):not(:selected).activatable:active,
+list.boxed-list-separate > row.device-card:not(.expander):not(:selected).activatable.has-open-popup,
+list.boxed-list > row.device-card:not(:selected).activatable:hover,
+list.boxed-list > row.device-card:not(:selected).activatable:active,
+list.boxed-list > row.device-card:not(:selected).activatable.has-open-popup {
+  background-color: var(--card-bg-color);
   background-image: none;
-  box-shadow: none;
 }
 
 .device-icon-color {

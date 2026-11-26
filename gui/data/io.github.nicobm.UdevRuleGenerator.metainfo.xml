@@ -65,6 +65,14 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="1.13.3" date="2026-11-26">
+      <description>
+        <p>
+          Keeps the card border on hover, suppresses the hover background, and
+          removes the click tooltips from device cards.
+        </p>
+      </description>
+    </release>
     <release version="1.13.2" date="2026-11-26">
       <description>
         <p>

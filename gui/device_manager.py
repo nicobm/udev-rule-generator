@@ -1447,7 +1447,6 @@ class DeviceManager(Gtk.Box):
         self._row_identities[row] = device.id
         row.set_activatable(True)
         row.add_css_class("device-card")
-        row.set_tooltip_text(tr("Hacé clic para activar o desactivar"))
         self._add_device_icon(row, device.id)
         self._add_drag_handle(row, device.id)
         alias_active = self._add_alias_control(
@@ -1478,7 +1477,6 @@ class DeviceManager(Gtk.Box):
             active=self._pending_known.get(device.id, device.active)
         )
         switch.set_valign(Gtk.Align.CENTER)
-        switch.set_tooltip_text(tr("Activar o desactivar la regla"))
         switch.connect(
             "notify::active",
             lambda selected_switch, _pspec, selected=device: self._set_known_pending(
@@ -1506,7 +1504,6 @@ class DeviceManager(Gtk.Box):
         self._row_identities[row] = key
         row.set_activatable(True)
         row.add_css_class("device-card")
-        row.set_tooltip_text(tr("Hacé clic para activar o desactivar"))
         self._add_device_icon(row, key)
         self._add_drag_handle(row, key)
         alias_active = self._add_alias_control(
@@ -1518,7 +1515,6 @@ class DeviceManager(Gtk.Box):
 
         switch = Gtk.Switch(active=key in self._pending_unknown)
         switch.set_valign(Gtk.Align.CENTER)
-        switch.set_tooltip_text(tr("Crear la regla de permisos"))
         switch.connect(
             "notify::active",
             lambda selected_switch, _pspec, selected=device: self._set_unknown_pending(
@@ -1583,9 +1579,6 @@ class DeviceManager(Gtk.Box):
         self._row_identities[row] = device_id
         row.set_activatable(True)
         row.add_css_class("device-card")
-        row.set_tooltip_text(
-            tr("Hacé clic para deshabilitar o habilitar el dispositivo")
-        )
         self._add_device_icon(row, device_id)
 
         if actual_ignored:

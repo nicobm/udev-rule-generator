@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.13.3 - 2026-11-26
+
+- Fixes the card hover override: it no longer removes the card border, and the
+  hover background is now suppressed with a selector specific enough to win
+  over libadwaita.
+- Removes the "click to enable or disable" tooltips from device cards and the
+  new switch tooltips.
+
 ## 1.13.2 - 2026-11-26
 
 - Removes the hover highlight from device, external-rule, and hidden-device
