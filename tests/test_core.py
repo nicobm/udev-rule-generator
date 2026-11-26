@@ -16,7 +16,6 @@ from udev_rule_generator.host import HostError
 from udev_rule_generator.installed import _parse_header
 from udev_rule_generator.presets import (
     ALL_PRESETS,
-    OPTIONAL,
     PRESETS,
     RECOMMENDED,
     STEAM,
@@ -186,72 +185,55 @@ class RuleTests(unittest.TestCase):
 class PresetTests(unittest.TestCase):
     def test_presets_are_packaged(self) -> None:
         self.assertEqual(len(UPSTREAM), 27)
-        self.assertEqual(len(PRESETS), 30)
+        self.assertEqual(len(PRESETS), 29)
         self.assertEqual(len(RECOMMENDED), 1)
-        self.assertEqual(len(OPTIONAL), 1)
         self.assertEqual(len(STEAM), 2)
-        self.assertNotIn("asrock-led-disable", {p.id for p in RECOMMENDED})
         self.assertEqual(RECOMMENDED[0].id, "microsoft-xbox")
-        self.assertEqual(OPTIONAL[0].id, "asrock-led-disable")
         self.assertEqual({p.id for p in STEAM}, {"steam-input", "steam-vr"})
         self.assertEqual(len(ALL_PRESETS), 27)
-        self.assertNotIn("asrock-led-disable", {p.id for p in ALL_PRESETS})
         self.assertNotIn("steam-input", {p.id for p in ALL_PRESETS})
         self.assertNotIn("steam-vr", {p.id for p in ALL_PRESETS})
         ids = {preset.id for preset in PRESETS}
-        self.assertIn("asrock-led-disable", ids)
+        self.assertNotIn("asrock-led-disable", ids)
         self.assertIn("microsoft-xbox", ids)
         self.assertIn("steam-input", ids)
         self.assertIn("steam-vr", ids)
 
-    def test_microsoft_preset_includes_series_x(self) -> None:
-        microsoft = next(preset for preset in RECOMMENDED if preset.id == "microsoft-xbox")
+    def test_microsoft_preset_has_no_local_series_x_additions(self) -> None:
+        microsoft = next(
+            preset for preset in RECOMMENDED if preset.id == "microsoft-xbox"
+        )
         content = build_preset_content(microsoft)
-        self.assertIn("0b12", content)
-        self.assertIn("Microsoft Xbox Series S|X Controller", content)
+        self.assertNotIn("0b12", content)
+        self.assertNotIn("0b13", content)
+        self.assertNotIn("Velocity Green", content)
 
     def test_preset_files_are_deduplicated(self) -> None:
         files = preset_files(PRESETS)
         self.assertIn("71-microsoft-gdu.rules", files)
-        self.assertIn("10-asrock-led-disable.rules", files)
         self.assertIn("71-steam-input.rules", files)
         self.assertIn("71-steam-vr.rules", files)
+        self.assertNotIn("10-asrock-led-disable.rules", files)
         self.assertEqual(len(files), len(PRESETS))
 
-    def test_trigger_depends_on_hardware_specific_presets(self) -> None:
+    def test_presets_use_change_trigger(self) -> None:
         self.assertEqual(presets_trigger(RECOMMENDED), "change")
-        self.assertEqual(presets_trigger(OPTIONAL), "add")
         self.assertEqual(presets_trigger(STEAM), "change")
         self.assertEqual(presets_trigger(ALL_PRESETS), "change")
-        self.assertEqual(
-            presets_trigger([*RECOMMENDED, *OPTIONAL]),
-            "add",
-        )
+        self.assertEqual(presets_trigger(PRESETS), "change")
 
-    def test_select_presets_excludes_optional_from_all(self) -> None:
+    def test_select_presets_groups(self) -> None:
         self.assertEqual(
             [p.id for p in select_presets("recommended")],
             ["microsoft-xbox"],
-        )
-        self.assertEqual(
-            [p.id for p in select_presets("optional")],
-            ["asrock-led-disable"],
         )
         self.assertEqual(
             {p.id for p in select_presets("steam")},
             {"steam-input", "steam-vr"},
         )
         self.assertNotIn(
-            "asrock-led-disable",
-            {p.id for p in select_presets("all")},
-        )
-        self.assertNotIn(
             "steam-input",
             {p.id for p in select_presets("all")},
-        )
-        self.assertEqual(
-            [p.id for p in select_presets("asrock-led-disable")],
-            ["asrock-led-disable"],
         )
         self.assertEqual(
             [p.id for p in select_presets("steam-vr")],

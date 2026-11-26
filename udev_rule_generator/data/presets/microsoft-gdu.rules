@@ -17,12 +17,3 @@ ACTION!="remove", SUBSYSTEMS=="input", ATTRS{name}=="Xbox Wireless Controller", 
 
 # Microsoft Xbox One Elite 2 Controller; Bluetooth
 ACTION!="remove", KERNEL=="hidraw*", SUBSYSTEM=="hidraw", KERNELS=="*045E:0B22*", MODE="0660", TAG+="uaccess"
-
-# Microsoft Xbox Series S|X Controller (Velocity Green); USB; Bluetooth
-# Añadido localmente por udev-rule-generator: el upstream actual de
-# game-devices-udev no incluye este modelo y el usuario lo necesita.
-ACTION!="remove", SUBSYSTEM=="usb", ATTRS{idVendor}=="045e", ATTRS{idProduct}=="0b12", MODE="0660", TAG+="uaccess"
-ACTION!="remove", SUBSYSTEMS=="input", ATTRS{name}=="Microsoft Xbox Series S|X Controller", MODE="0660", TAG+="uaccess"
-ACTION!="remove", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="045e", ATTRS{idProduct}=="0b12", MODE="0660", TAG+="uaccess"
-ACTION!="remove", KERNEL=="hidraw*", KERNELS=="*045E:0B12*", MODE="0660", TAG+="uaccess"
-ACTION!="remove", KERNEL=="hidraw*", KERNELS=="*045E:0B13*", MODE="0660", TAG+="uaccess"

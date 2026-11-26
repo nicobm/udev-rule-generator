@@ -97,17 +97,14 @@ ver/eliminar las reglas instaladas.
 # Genera y muestra la regla sin instalar nada
 ./udev-rule-generator --device 1 --action allow --dry-run
 
-# Instala la regla para el mando 045e:0b12 (Xbox Series S|X)
-./udev-rule-generator --device 045e:0b12 --action allow --yes
+# Instala la regla para el mando 045e:02fd (Xbox One)
+./udev-rule-generator --device 045e:02fd --action allow --yes
 
 # Ignora un dispositivo concreto
-./udev-rule-generator --device 26ce:01a2 --action ignore --yes
+./udev-rule-generator --device 1 --action ignore --yes
 
-# Regla recomendada: Microsoft Xbox
+# Regla recomendada de fabiscafe: Microsoft Xbox
 ./udev-rule-generator --presets recommended
-
-# Opcional: solo si tenés el controlador de LEDs ASRock 26ce:01a2
-./udev-rule-generator --presets asrock-led-disable
 
 # Opcional: reglas de Steam Input y SteamVR de Valve
 ./udev-rule-generator --presets steam
@@ -115,14 +112,14 @@ ver/eliminar las reglas instaladas.
 # Combinar Microsoft + Steam
 ./udev-rule-generator --presets recommended,steam
 
-# Toda la biblioteca game-devices-udev (sin ASRock ni Steam)
+# Toda la biblioteca game-devices-udev (sin Steam)
 ./udev-rule-generator --presets all
 
 # Reglas instaladas por esta aplicación
 ./udev-rule-generator --installed
 
 # Eliminar una regla administrada
-./udev-rule-generator --remove 10-gamepad-045e-0b12-microsoft-xbox-series-s-x-controller.rules
+./udev-rule-generator --remove 10-gamepad-045e-02fd-xbox-wireless-controller.rules
 ```
 
 `--device` acepta el número de la lista, `VID:PID` o parte del nombre.
@@ -245,18 +242,18 @@ instalada.
 ### Permitir / detectar
 
 Para un mando USB, el archivo se llama por ejemplo
-`10-gamepad-045e-0b12-microsoft-xbox-series-s-x-controller.rules` y contiene:
+`10-gamepad-045e-02fd-xbox-wireless-controller.rules` y contiene:
 
 ```udev
-# Generado por udev-rule-generator 0.5.0
+# Generado por udev-rule-generator 0.6.0
 # Generador de reglas udev
-# Dispositivo: Microsoft Xbox Series S|X Controller
-# Bus: USB · ID: 045e:0b12
+# Dispositivo: Xbox Wireless Controller
+# Bus: USB · ID: 045e:02fd
 # Acción: permitir / detectar
 
-ACTION!="remove", SUBSYSTEM=="usb", ATTRS{idVendor}=="045e", ATTRS{idProduct}=="0b12", MODE="0660", TAG+="uaccess"
-ACTION!="remove", SUBSYSTEMS=="input", ATTRS{name}=="Microsoft Xbox Series S|X Controller", ENV{ID_INPUT_JOYSTICK}="1", MODE="0660", TAG+="uaccess"
-ACTION!="remove", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="045e", ATTRS{idProduct}=="0b12", MODE="0660", TAG+="uaccess"
+ACTION!="remove", SUBSYSTEM=="usb", ATTRS{idVendor}=="045e", ATTRS{idProduct}=="02fd", MODE="0660", TAG+="uaccess"
+ACTION!="remove", SUBSYSTEMS=="input", ATTRS{name}=="Xbox Wireless Controller", ENV{ID_INPUT_JOYSTICK}="1", MODE="0660", TAG+="uaccess"
+ACTION!="remove", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="045e", ATTRS{idProduct}=="02fd", MODE="0660", TAG+="uaccess"
 ```
 
 El `TAG+="uaccess"` hace que systemd-logind dé acceso al usuario de la sesión
@@ -289,9 +286,7 @@ permisos.  Para USB la desautorización de todos modos es contundente, pero
 usamos `99-` para que el comportamiento sea consistente en Bluetooth.
 
 Las reglas preconfiguradas de fabricantes se instalan con `71-` (el valor que
-usa game-devices-udev).  El archivo de ASRock conserva
-`10-asrock-led-disable.rules` porque desautoriza USB, que no se puede
-sobrescribir con permisos.
+usa game-devices-udev).
 
 > **Ojo con los archivos sin prefijo:** udev ordena los nombres
 > lexicográficamente y los dígitos van antes que las letras.  Un archivo como
@@ -302,27 +297,27 @@ sobrescribir con permisos.
 ## Presets opcionales
 
 Estos presets son archivos de terceros que la app puede copiar **solo si los
-elegís**.  No son reglas activas, no se cargan al abrir la app y no se
-instalan durante la instalación del paquete.
+elegís**.  Las únicas fuentes incluidas son **game-devices-udev (fabiscafe)**
+y **steam-devices (Valve)**.  No son reglas activas, no se cargan al abrir la
+app y no se instalan durante la instalación del paquete.
 
 | Selección | Archivos |
 |---|---|
 | `recommended` | `71-microsoft-gdu.rules` |
 | `all` | Las 27 reglas de game-devices-udev (incluye Microsoft) |
 | `microsoft-xbox` | Solo Microsoft Xbox |
-| `asrock-led-disable` | Solo el controlador de LEDs ASRock (opcional) |
 | `steam` | `71-steam-input.rules` y `71-steam-vr.rules` (Valve) |
 | `steam-input` | Solo Steam Input (Valve) |
 | `steam-vr` | Solo SteamVR (Valve) |
 
 Ninguna regla se instala sola: la app no escribe en `/etc/udev/rules.d` hasta
-que elegís una acción y pasás por polkit.  ASRock, Steam y SteamVR son
-fuentes opcionales: no están en `recommended` ni en `all`, y en la GUI sus
+que elegís una acción y pasás por polkit.  Steam y SteamVR son fuentes
+opcionales: no están en `recommended` ni en `all`, y en la GUI sus
 interruptores empiezan apagados.
 
 En la CLI, `--presets` sin valor abre un menú.  En la GUI, el diálogo permite
-elegir la regla recomendada, la opcional de ASRock, Steam/SteamVR, todos los
-fabricantes de fabiscafe o fabricantes sueltos.
+elegir la regla recomendada, Steam/SteamVR, todos los fabricantes de fabiscafe
+o fabricantes sueltos.
 
 Las reglas de fabricantes son de **game-devices-udev**, MIT, de Fabian
 Bornschein (fabiscafe).  Las de Steam/SteamVR son de **steam-devices**, MIT,
@@ -350,7 +345,6 @@ GNOME del sistema.
 
 Todo va a `/etc/udev/rules.d`:
 
-- `10-asrock-led-disable.rules`
 - `10-gamepad-<vid>-<pid>-<nombre>.rules`
 - `99-ignore-<vid>-<pid>-<nombre>.rules`
 - `71-microsoft-gdu.rules`
@@ -400,17 +394,6 @@ Luego desconectá y volvé a conectar el mando.  Para ver qué está pasando:
 ```bash
 udevadm test /sys/class/input/js0
 ```
-
-### El ID del ASRock es distinto
-
-La regla usa `26ce:01a2`.  Comprobá el tuyo con:
-
-```bash
-lsusb
-```
-
-Si es otro, editá `udev_rule_generator/data/presets/10-asrock-led-disable.rules`
-o generá una regla de ignorar desde la app.
 
 ### Quiero deshacer una regla
 

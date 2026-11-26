@@ -172,7 +172,7 @@ class MainWindow(Adw.ApplicationWindow):
         status_group.add(
             self._action_row(
                 tr("Reglas preconfiguradas"),
-                tr("Microsoft Xbox, fabiscafe, Steam/SteamVR y ASRock opcional."),
+                tr("Microsoft Xbox, fabiscafe y Steam/SteamVR opcional."),
                 "app.presets",
                 icon_name="application-x-addon-symbolic",
             )

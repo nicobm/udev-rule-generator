@@ -2,11 +2,9 @@
 
 Las reglas de fabricantes vienen de ``game-devices-udev`` de Fabian
 Bornschein (fabiscafe), publicado bajo licencia MIT.  Las reglas de Steam y
-SteamVR vienen de ``steam-devices`` de Valve, también MIT.  La regla de ASRock
-es una regla local opcional para el controlador de LEDs que algunas placas
-exponen como si fuera un joystick.  Ninguna de estas fuentes se instala por
-defecto: ASRock, Steam y SteamVR solo se instalan si el usuario las elige, y
-``all`` se refiere únicamente a la biblioteca de fabiscafe.
+SteamVR vienen de ``steam-devices`` de Valve, también MIT.  Ninguna de estas
+fuentes se instala por defecto: Steam y SteamVR solo se instalan si el usuario
+las elige, y ``all`` se refiere únicamente a la biblioteca de fabiscafe.
 """
 
 from __future__ import annotations
@@ -82,29 +80,11 @@ class Preset:
         return self.category == "recommended"
 
     @property
-    def is_optional(self) -> bool:
-        return self.category == "optional"
-
-    @property
     def is_steam(self) -> bool:
         return self.category == "steam"
 
 
 _PRESETS: list[Preset] = [
-    Preset(
-        id="asrock-led-disable",
-        title=tr("ASRock LED Controller (ignorar)"),
-        description=tr(
-            "Desautoriza el controlador de LEDs de algunas placas ASRock "
-            "(26ce:01a2) que el kernel detecta erróneamente como joystick."
-        ),
-        source="10-asrock-led-disable.rules",
-        install_name="10-asrock-led-disable.rules",
-        category="optional",
-        trigger="add",
-        license="MIT",
-        upstream=tr("Regla local de udev-rule-generator"),
-    ),
     Preset(
         id="microsoft-xbox",
         title="Microsoft Xbox",
@@ -161,15 +141,12 @@ for _source in _UPSTREAM_ORDER:
         )
     )
 
-# Recomendadas primero, luego las opcionales de hardware específico, Steam y
-# por último la biblioteca de fabiscafe.  Se deduplica por el nombre con el
-# que se instala: Microsoft aparece como recomendada y también dentro del
-# archivo upstream, pero solo debe instalarse una vez.
+# Recomendadas primero, luego Steam y por último la biblioteca de fabiscafe.
+# Se deduplica por el nombre con el que se instala: Microsoft aparece como
+# recomendada y también dentro del archivo upstream, pero solo debe instalarse
+# una vez.
 RECOMMENDED: tuple[Preset, ...] = tuple(
     preset for preset in _PRESETS if preset.is_recommended
-)
-OPTIONAL: tuple[Preset, ...] = tuple(
-    preset for preset in _PRESETS if preset.is_optional
 )
 STEAM: tuple[Preset, ...] = tuple(
     preset for preset in _PRESETS if preset.is_steam
@@ -180,7 +157,7 @@ UPSTREAM: tuple[Preset, ...] = tuple(
 
 _ordered: list[Preset] = []
 _seen_install_names: set[str] = set()
-for _preset in [*RECOMMENDED, *OPTIONAL, *STEAM, *UPSTREAM]:
+for _preset in [*RECOMMENDED, *STEAM, *UPSTREAM]:
     if _preset.install_name in _seen_install_names:
         continue
     _seen_install_names.add(_preset.install_name)
@@ -188,10 +165,10 @@ for _preset in [*RECOMMENDED, *OPTIONAL, *STEAM, *UPSTREAM]:
 PRESETS: tuple[Preset, ...] = tuple(_ordered)
 
 # "all" significa toda la biblioteca de fabricantes de fabiscafe (incluido
-# Microsoft).  No incluye la regla opcional de ASRock ni las de Steam/SteamVR:
-# esas son fuentes separadas y solo se instalan si el usuario las elige.
+# Microsoft).  No incluye las reglas de Steam/SteamVR: esa es una fuente
+# separada y solo se instala si el usuario la elige.
 ALL_PRESETS: tuple[Preset, ...] = tuple(
-    preset for preset in PRESETS if not preset.is_optional and not preset.is_steam
+    preset for preset in PRESETS if not preset.is_steam
 )
 
 
@@ -209,9 +186,6 @@ _GROUPS: dict[str, tuple[Preset, ...]] = {
     "recommended": RECOMMENDED,
     "recomendadas": RECOMMENDED,
     "recomendado": RECOMMENDED,
-    "optional": OPTIONAL,
-    "opcionales": OPTIONAL,
-    "opcional": OPTIONAL,
     "steam": STEAM,
     "valve": STEAM,
     "steam-devices": STEAM,

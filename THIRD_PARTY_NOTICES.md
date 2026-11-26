@@ -10,14 +10,7 @@ Las reglas de **game-devices-udev** que están en
 - GitHub (espejo): https://github.com/fabiscafe/game-devices-udev
 - Licencia: MIT
 
-Se incluyen sin cambios, salvo:
-
-- `microsoft-gdu.rules`: se añadieron al final las reglas del mando
-  **Microsoft Xbox Series S|X Controller (Velocity Green)** (`045e:0b12` y
-  `045e:0b13`), que no estaban en el archivo upstream usado al crear este
-  proyecto.
-- `10-asrock-led-disable.rules`: regla local para el controlador de LEDs
-  ASRock (`26ce:01a2`) que algunas placas exponen como joystick.
+Se incluyen sin cambios.
 
 Texto completo de la licencia MIT de game-devices-udev:
 

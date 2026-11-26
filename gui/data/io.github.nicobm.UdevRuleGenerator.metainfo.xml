@@ -15,11 +15,9 @@
       permitir su uso o para ignorarlos.
     </p>
     <p>
-      Permite generar una regla para un mando concreto, instalar reglas
-      preconfiguradas de Microsoft Xbox y añadir, de forma opcional, la
-      biblioteca game-devices-udev de fabiscafe, las reglas de Steam/SteamVR
-      de Valve o la desautorización del controlador de LEDs ASRock.  Ninguna
-      de esas fuentes se instala por defecto.
+      Permite generar una regla para un mando concreto y añadir, de forma
+      opcional, la biblioteca game-devices-udev de fabiscafe o las reglas de
+      Steam/SteamVR de Valve.  Ninguna de esas fuentes se instala por defecto.
     </p>
     <ul>
       <li>Detección de mandos USB y Bluetooth con udevadm.</li>
@@ -40,9 +38,8 @@
     </p>
     <p>
       It can generate a rule for a specific controller and optionally install
-      presets from Microsoft Xbox, the game-devices-udev library by fabiscafe,
-      Valve's Steam/SteamVR rules, or the ASRock LED controller
-      deauthorization.  None of those sources are installed by default.
+      presets from the game-devices-udev library by fabiscafe or Valve's
+      Steam/SteamVR rules.  Neither source is installed by default.
     </p>
     <ul>
       <li>USB and Bluetooth controller detection with udevadm.</li>
@@ -67,6 +64,15 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.6.0" date="2026-11-26">
+      <description>
+        <p>
+          Deja los presets únicamente con game-devices-udev (fabiscafe) y
+          steam-devices (Valve).  Elimina el preset local de hardware
+          específico y las líneas locales de un modelo Xbox.
+        </p>
+      </description>
+    </release>
     <release version="0.5.0" date="2026-11-26">
       <description>
         <p>
@@ -105,8 +111,8 @@
       <description>
         <p>
           Añade las reglas opcionales de steam-devices (Steam Input y
-          SteamVR), separa ASRock de las reglas recomendadas y deja todas las
-          fuentes opcionales desactivadas por defecto.
+          SteamVR), separa los presets opcionales de las reglas recomendadas
+          y deja todas las fuentes opcionales desactivadas por defecto.
         </p>
       </description>
     </release>

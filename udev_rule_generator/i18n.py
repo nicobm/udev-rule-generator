@@ -102,8 +102,8 @@ _EN.update(
         "Los mandos aparecen solos y se avisa con una notificación.": (
             "Controllers appear automatically and a notification is shown."
         ),
-        "Microsoft Xbox, fabiscafe, Steam/SteamVR y ASRock opcional.": (
-            "Microsoft Xbox, fabiscafe, Steam/SteamVR and optional ASRock."
+        "Microsoft Xbox, fabiscafe y Steam/SteamVR opcional.": (
+            "Microsoft Xbox, fabiscafe and optional Steam/SteamVR."
         ),
         "Ver o eliminar las reglas creadas por esta aplicación.": (
             "View or remove rules created by this application."
@@ -212,8 +212,8 @@ _EN.update(
         "Regla eliminada: {filename}": "Rule removed: {filename}",
         # Diálogo de presets
         "Reglas preconfiguradas": "Presets",
-        "Microsoft, ASRock/Steam opcionales y fabiscafe": (
-            "Microsoft, optional ASRock/Steam and fabiscafe"
+        "Microsoft, Steam/SteamVR y fabiscafe": (
+            "Microsoft, Steam/SteamVR and fabiscafe"
         ),
         "¿Qué se instala?": "What will be installed?",
         "Las reglas se copian a /etc/udev/rules.d con permisos de "
@@ -228,14 +228,6 @@ _EN.update(
         "como recomendada; no se instala nada hasta que la actives.": (
             "Permissions for Xbox controllers.  This is the only recommended "
             "rule; nothing is installed until you enable it."
-        ),
-        "Opcionales / hardware específico": "Optional / specific hardware",
-        "Solo para quien tiene ese hardware.  La regla de ASRock "
-        "desautoriza el controlador de LEDs 26ce:01a2; no la actives "
-        "si no tenés una placa ASRock con ese dispositivo.": (
-            "Only for users who have that hardware.  The ASRock rule "
-            "deauthorizes the 26ce:01a2 LED controller; do not enable it if "
-            "you do not have an ASRock board with that device."
         ),
         "Steam / SteamVR (Valve)": "Steam / SteamVR (Valve)",
         "Reglas oficiales de ValveSoftware/steam-devices (MIT).  Son "
@@ -396,15 +388,6 @@ _EN.update(
             "Prevents the device from being used as a joystick.  For USB the "
             "device is deauthorized; for Bluetooth access to the input nodes "
             "is denied."
-        ),
-        "ASRock LED Controller (ignorar)": "ASRock LED Controller (ignore)",
-        "Desautoriza el controlador de LEDs de algunas placas ASRock "
-        "(26ce:01a2) que el kernel detecta erróneamente como joystick.": (
-            "Deauthorizes the LED controller found on some ASRock boards "
-            "(26ce:01a2), which the kernel incorrectly detects as a joystick."
-        ),
-        "Regla local de udev-rule-generator": (
-            "Local rule from udev-rule-generator"
         ),
         "Permisos para mandos Xbox 360, Xbox One, Xbox Series S|X y "
         "receptores inalámbricos, por USB y Bluetooth.": (
@@ -571,22 +554,19 @@ _EN.update(
         "instala /etc/udev/rules.d/{filename} · {license}": (
             "installs /etc/udev/rules.d/{filename} · {license}"
         ),
-        "Elegí una selección: recommended, optional, steam, all o el "
+        "Elegí una selección: recommended, steam, all o el "
         "id de una regla.": (
-            "Choose a selection: recommended, optional, steam, all or a rule id."
+            "Choose a selection: recommended, steam, all or a rule id."
         ),
-        "  1) Microsoft Xbox (recomendada)": "  1) Microsoft Xbox (recommended)",
-        "  2) ASRock LED (opcional; solo si tenés ese hardware)": (
-            "  2) ASRock LED (optional; only if you have that hardware)"
+        "  1) Microsoft Xbox (fabiscafe)": "  1) Microsoft Xbox (fabiscafe)",
+        "  2) Toda la biblioteca game-devices-udev (fabiscafe)": (
+            "  2) Full game-devices-udev library (fabiscafe)"
         ),
-        "  3) Toda la biblioteca game-devices-udev (fabiscafe)": (
-            "  3) Full game-devices-udev library (fabiscafe)"
+        "  3) Steam / SteamVR (Valve)": "  3) Steam / SteamVR (Valve)",
+        "  4) Elegir fabricantes de fabiscafe": (
+            "  4) Choose fabiscafe vendors"
         ),
-        "  4) Steam / SteamVR (Valve)": "  4) Steam / SteamVR (Valve)",
-        "  5) Elegir fabricantes de fabiscafe": (
-            "  5) Choose fabiscafe vendors"
-        ),
-        "  6) Volver": "  6) Back",
+        "  5) Volver": "  5) Back",
         "\nNúmeros separados por coma (por ejemplo 1,3,7): ": (
             "\nComma-separated numbers (for example 1,3,7): "
         ),
@@ -665,11 +645,10 @@ _EN.update(
         "  udev-rule-generator --gui\n"
         "  udev-rule-generator --list\n"
         "  udev-rule-generator --device 1 --action allow\n"
-        "  udev-rule-generator --device 045e:0b12 --action ignore --dry-run\n"
+        "  udev-rule-generator --device 045e:02fd --action ignore --dry-run\n"
         "  udev-rule-generator --presets recommended\n"
         "  udev-rule-generator --presets steam\n"
         "  udev-rule-generator --presets recommended,steam\n"
-        "  udev-rule-generator --presets asrock-led-disable\n"
         "  udev-rule-generator --presets all --yes\n"
         "  udev-rule-generator --installed\n\n"
         "Proyecto: {project}\n"
@@ -678,11 +657,10 @@ _EN.update(
             "  udev-rule-generator --gui\n"
             "  udev-rule-generator --list\n"
             "  udev-rule-generator --device 1 --action allow\n"
-            "  udev-rule-generator --device 045e:0b12 --action ignore --dry-run\n"
+            "  udev-rule-generator --device 045e:02fd --action ignore --dry-run\n"
             "  udev-rule-generator --presets recommended\n"
             "  udev-rule-generator --presets steam\n"
             "  udev-rule-generator --presets recommended,steam\n"
-            "  udev-rule-generator --presets asrock-led-disable\n"
             "  udev-rule-generator --presets all --yes\n"
             "  udev-rule-generator --installed\n\n"
             "Project: {project}\n"
@@ -701,9 +679,9 @@ _EN.update(
             "index, VID:PID or part of the joystick name"
         ),
         "acción a aplicar con --device": "action to apply with --device",
-        "instala reglas preconfiguradas: recommended, optional, steam, all "
+        "instala reglas preconfiguradas: recommended, steam, all "
         "o un id (por ejemplo steam-input).  Sin valor abre el menú": (
-            "install presets: recommended, optional, steam, all or an id "
+            "install presets: recommended, steam, all or an id "
             "(for example steam-input).  With no value it opens the menu"
         ),
         "lista las reglas instaladas por esta aplicación": (

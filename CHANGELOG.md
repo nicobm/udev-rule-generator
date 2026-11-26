@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.6.0 - 2026-11-26
+
+- Los presets quedan limitados a **game-devices-udev (fabiscafe)** y
+  **steam-devices (Valve)**.
+- Elimina el preset local de ASRock.
+- Restaura `microsoft-gdu.rules` al contenido original de fabiscafe, sin las
+  líneas locales de Xbox Velocity Green (`045e:0b12`/`0b13`).
+- Actualiza la GUI, la CLI, los tests y la documentación para reflejar que ya
+  no existe el preset de ASRock.
+
 ## 0.5.0 - 2026-11-26
 
 - Autodetección de idioma: `en_US`/`en_GB` → inglés; cualquier español →
