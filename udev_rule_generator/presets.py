@@ -76,26 +76,11 @@ class Preset:
         return self.category == "upstream"
 
     @property
-    def is_recommended(self) -> bool:
-        return self.category == "recommended"
-
-    @property
     def is_steam(self) -> bool:
         return self.category == "steam"
 
 
 _PRESETS: list[Preset] = [
-    Preset(
-        id="microsoft-xbox",
-        title="Microsoft Xbox",
-        description=tr(
-            "Permisos para mandos Xbox 360, Xbox One, Xbox Series S|X y "
-            "receptores inalámbricos, por USB y Bluetooth."
-        ),
-        source="microsoft-gdu.rules",
-        install_name="71-microsoft-gdu.rules",
-        category="recommended",
-    ),
     Preset(
         id="steam-input",
         title="Steam Input (Valve)",
@@ -141,13 +126,8 @@ for _source in _UPSTREAM_ORDER:
         )
     )
 
-# Recomendadas primero, luego Steam y por último la biblioteca de fabiscafe.
-# Se deduplica por el nombre con el que se instala: Microsoft aparece como
-# recomendada y también dentro del archivo upstream, pero solo debe instalarse
-# una vez.
-RECOMMENDED: tuple[Preset, ...] = tuple(
-    preset for preset in _PRESETS if preset.is_recommended
-)
+# Steam primero y por último la biblioteca de fabiscafe.  Se deduplica por el
+# nombre con el que se instala.
 STEAM: tuple[Preset, ...] = tuple(
     preset for preset in _PRESETS if preset.is_steam
 )
@@ -157,7 +137,7 @@ UPSTREAM: tuple[Preset, ...] = tuple(
 
 _ordered: list[Preset] = []
 _seen_install_names: set[str] = set()
-for _preset in [*RECOMMENDED, *STEAM, *UPSTREAM]:
+for _preset in [*STEAM, *UPSTREAM]:
     if _preset.install_name in _seen_install_names:
         continue
     _seen_install_names.add(_preset.install_name)
@@ -183,9 +163,6 @@ def get_preset(preset_id: str) -> Preset:
 
 
 _GROUPS: dict[str, tuple[Preset, ...]] = {
-    "recommended": RECOMMENDED,
-    "recomendadas": RECOMMENDED,
-    "recomendado": RECOMMENDED,
     "steam": STEAM,
     "valve": STEAM,
     "steam-devices": STEAM,
@@ -201,7 +178,7 @@ _GROUPS: dict[str, tuple[Preset, ...]] = {
 def select_presets(selection: str) -> list[Preset]:
     """Resuelve grupos y/o ids separados por coma.
 
-    Ejemplos: ``recommended``, ``steam``, ``all``, ``recommended,steam``.
+    Ejemplos: ``steam``, ``all``, ``all,steam``.
     """
     selection = selection.strip()
     result: list[Preset] = []

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.0 - 2026-11-26
+
+- Elimina la fila “Detección automática” de la sección Estado de la GUI.
+- Elimina el preset especial “Microsoft Xbox” de Recomendadas.
+- Los presets quedan únicamente con la biblioteca de fabiscafe y
+  steam-devices; Microsoft sigue dentro de la biblioteca de fabiscafe.
+- Actualiza menús, traducciones, documentación y tests.
+
 ## 0.6.0 - 2026-11-26
 
 - Los presets quedan limitados a **game-devices-udev (fabiscafe)** y

@@ -98,12 +98,8 @@ _EN.update(
             "disconnected.  Choose one to create its udev rule."
         ),
         "Estado": "Status",
-        "Detección automática": "Automatic detection",
-        "Los mandos aparecen solos y se avisa con una notificación.": (
-            "Controllers appear automatically and a notification is shown."
-        ),
-        "Microsoft Xbox, fabiscafe y Steam/SteamVR opcional.": (
-            "Microsoft Xbox, fabiscafe and optional Steam/SteamVR."
+        "fabiscafe y Steam/SteamVR opcionales.": (
+            "fabiscafe and optional Steam/SteamVR."
         ),
         "Ver o eliminar las reglas creadas por esta aplicación.": (
             "View or remove rules created by this application."
@@ -212,9 +208,7 @@ _EN.update(
         "Regla eliminada: {filename}": "Rule removed: {filename}",
         # Diálogo de presets
         "Reglas preconfiguradas": "Presets",
-        "Microsoft, Steam/SteamVR y fabiscafe": (
-            "Microsoft, Steam/SteamVR and fabiscafe"
-        ),
+        "Steam/SteamVR y fabiscafe": "Steam/SteamVR and fabiscafe",
         "¿Qué se instala?": "What will be installed?",
         "Las reglas se copian a /etc/udev/rules.d con permisos de "
         "administrador.  Se pedirá la contraseña con el diálogo de polkit de "
@@ -222,12 +216,6 @@ _EN.update(
             "Rules are copied to /etc/udev/rules.d with administrator "
             "permissions.  You will be asked for your password with the GNOME "
             "polkit dialog."
-        ),
-        "Recomendadas": "Recommended",
-        "Permisos para mandos Xbox.  Es la única regla que se ofrece "
-        "como recomendada; no se instala nada hasta que la actives.": (
-            "Permissions for Xbox controllers.  This is the only recommended "
-            "rule; nothing is installed until you enable it."
         ),
         "Steam / SteamVR (Valve)": "Steam / SteamVR (Valve)",
         "Reglas oficiales de ValveSoftware/steam-devices (MIT).  Son "
@@ -554,19 +542,18 @@ _EN.update(
         "instala /etc/udev/rules.d/{filename} · {license}": (
             "installs /etc/udev/rules.d/{filename} · {license}"
         ),
-        "Elegí una selección: recommended, steam, all o el "
+        "Elegí una selección: steam, all o el "
         "id de una regla.": (
-            "Choose a selection: recommended, steam, all or a rule id."
+            "Choose a selection: steam, all or a rule id."
         ),
-        "  1) Microsoft Xbox (fabiscafe)": "  1) Microsoft Xbox (fabiscafe)",
-        "  2) Toda la biblioteca game-devices-udev (fabiscafe)": (
-            "  2) Full game-devices-udev library (fabiscafe)"
+        "  1) Toda la biblioteca game-devices-udev (fabiscafe)": (
+            "  1) Full game-devices-udev library (fabiscafe)"
         ),
-        "  3) Steam / SteamVR (Valve)": "  3) Steam / SteamVR (Valve)",
-        "  4) Elegir fabricantes de fabiscafe": (
-            "  4) Choose fabiscafe vendors"
+        "  2) Steam / SteamVR (Valve)": "  2) Steam / SteamVR (Valve)",
+        "  3) Elegir fabricantes de fabiscafe": (
+            "  3) Choose fabiscafe vendors"
         ),
-        "  5) Volver": "  5) Back",
+        "  4) Volver": "  4) Back",
         "\nNúmeros separados por coma (por ejemplo 1,3,7): ": (
             "\nComma-separated numbers (for example 1,3,7): "
         ),
@@ -646,10 +633,9 @@ _EN.update(
         "  udev-rule-generator --list\n"
         "  udev-rule-generator --device 1 --action allow\n"
         "  udev-rule-generator --device 045e:02fd --action ignore --dry-run\n"
-        "  udev-rule-generator --presets recommended\n"
         "  udev-rule-generator --presets steam\n"
-        "  udev-rule-generator --presets recommended,steam\n"
-        "  udev-rule-generator --presets all --yes\n"
+        "  udev-rule-generator --presets all\n"
+        "  udev-rule-generator --presets all,steam --yes\n"
         "  udev-rule-generator --installed\n\n"
         "Proyecto: {project}\n"
         "Problemas: {issues}": (
@@ -658,10 +644,9 @@ _EN.update(
             "  udev-rule-generator --list\n"
             "  udev-rule-generator --device 1 --action allow\n"
             "  udev-rule-generator --device 045e:02fd --action ignore --dry-run\n"
-            "  udev-rule-generator --presets recommended\n"
             "  udev-rule-generator --presets steam\n"
-            "  udev-rule-generator --presets recommended,steam\n"
-            "  udev-rule-generator --presets all --yes\n"
+            "  udev-rule-generator --presets all\n"
+            "  udev-rule-generator --presets all,steam --yes\n"
             "  udev-rule-generator --installed\n\n"
             "Project: {project}\n"
             "Issues: {issues}"
@@ -679,9 +664,9 @@ _EN.update(
             "index, VID:PID or part of the joystick name"
         ),
         "acción a aplicar con --device": "action to apply with --device",
-        "instala reglas preconfiguradas: recommended, steam, all "
+        "instala reglas preconfiguradas: steam, all "
         "o un id (por ejemplo steam-input).  Sin valor abre el menú": (
-            "install presets: recommended, steam, all or an id "
+            "install presets: steam, all or an id "
             "(for example steam-input).  With no value it opens the menu"
         ),
         "lista las reglas instaladas por esta aplicación": (

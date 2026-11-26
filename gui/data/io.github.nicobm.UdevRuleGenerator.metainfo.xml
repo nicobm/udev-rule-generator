@@ -64,6 +64,15 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.7.0" date="2026-11-26">
+      <description>
+        <p>
+          Elimina la fila de estado “Detección automática” y el preset especial
+          de Microsoft Xbox.  Los presets quedan limitados a la biblioteca de
+          fabiscafe y a steam-devices.
+        </p>
+      </description>
+    </release>
     <release version="0.6.0" date="2026-11-26">
       <description>
         <p>

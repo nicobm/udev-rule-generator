@@ -9,7 +9,6 @@ from udev_rule_generator import PRESETS_URL, STEAM_DEVICES_URL
 from udev_rule_generator.host import Host
 from udev_rule_generator.i18n import tr
 from udev_rule_generator.presets import (
-    RECOMMENDED,
     STEAM,
     UPSTREAM,
     Preset,
@@ -35,7 +34,6 @@ class PresetsDialog(Adw.Dialog):
         self.parent_window = parent
         self.host = host
         self.on_installed = on_installed
-        self._recommended_rows: dict[Preset, Adw.SwitchRow] = {}
         self._steam_rows: dict[Preset, Adw.SwitchRow] = {}
         self._upstream_rows: list[tuple[Preset, Adw.SwitchRow]] = []
         self._all_row: Adw.SwitchRow | None = None
@@ -55,7 +53,7 @@ class PresetsDialog(Adw.Dialog):
         header.set_title_widget(
             Adw.WindowTitle(
                 title=tr("Reglas preconfiguradas"),
-                subtitle=tr("Microsoft, Steam/SteamVR y fabiscafe"),
+                subtitle=tr("Steam/SteamVR y fabiscafe"),
             )
         )
         close_button = Gtk.Button(
@@ -79,19 +77,6 @@ class PresetsDialog(Adw.Dialog):
             ),
         )
         page.add(intro)
-
-        recommended = Adw.PreferencesGroup(
-            title=tr("Recomendadas"),
-            description=tr(
-                "Permisos para mandos Xbox.  Es la única regla que se ofrece "
-                "como recomendada; no se instala nada hasta que la actives."
-            ),
-        )
-        for preset in RECOMMENDED:
-            row = self._switch_row(preset)
-            self._recommended_rows[preset] = row
-            recommended.add(row)
-        page.add(recommended)
 
         steam = Adw.PreferencesGroup(
             title=tr("Steam / SteamVR (Valve)"),
@@ -197,13 +182,8 @@ class PresetsDialog(Adw.Dialog):
 
     def _selected_presets(self) -> list[Preset]:
         selected = [
-            preset
-            for preset, row in self._recommended_rows.items()
-            if row.get_active()
-        ]
-        selected.extend(
             preset for preset, row in self._steam_rows.items() if row.get_active()
-        )
+        ]
         selected.extend(
             preset for preset, row in self._upstream_rows if row.get_active()
         )

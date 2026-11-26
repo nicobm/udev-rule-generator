@@ -103,17 +103,14 @@ ver/eliminar las reglas instaladas.
 # Ignora un dispositivo concreto
 ./udev-rule-generator --device 1 --action ignore --yes
 
-# Regla recomendada de fabiscafe: Microsoft Xbox
-./udev-rule-generator --presets recommended
-
 # Opcional: reglas de Steam Input y SteamVR de Valve
 ./udev-rule-generator --presets steam
 
-# Combinar Microsoft + Steam
-./udev-rule-generator --presets recommended,steam
-
 # Toda la biblioteca game-devices-udev (sin Steam)
 ./udev-rule-generator --presets all
+
+# Combinar fabiscafe + Steam
+./udev-rule-generator --presets all,steam
 
 # Reglas instaladas por esta aplicación
 ./udev-rule-generator --installed
@@ -245,7 +242,7 @@ Para un mando USB, el archivo se llama por ejemplo
 `10-gamepad-045e-02fd-xbox-wireless-controller.rules` y contiene:
 
 ```udev
-# Generado por udev-rule-generator 0.6.0
+# Generado por udev-rule-generator 0.7.0
 # Generador de reglas udev
 # Dispositivo: Xbox Wireless Controller
 # Bus: USB · ID: 045e:02fd
@@ -303,21 +300,18 @@ app y no se instalan durante la instalación del paquete.
 
 | Selección | Archivos |
 |---|---|
-| `recommended` | `71-microsoft-gdu.rules` |
 | `all` | Las 27 reglas de game-devices-udev (incluye Microsoft) |
-| `microsoft-xbox` | Solo Microsoft Xbox |
 | `steam` | `71-steam-input.rules` y `71-steam-vr.rules` (Valve) |
 | `steam-input` | Solo Steam Input (Valve) |
 | `steam-vr` | Solo SteamVR (Valve) |
 
 Ninguna regla se instala sola: la app no escribe en `/etc/udev/rules.d` hasta
 que elegís una acción y pasás por polkit.  Steam y SteamVR son fuentes
-opcionales: no están en `recommended` ni en `all`, y en la GUI sus
-interruptores empiezan apagados.
+opcionales: no están en `all`, y en la GUI sus interruptores empiezan
+apagados.
 
 En la CLI, `--presets` sin valor abre un menú.  En la GUI, el diálogo permite
-elegir la regla recomendada, Steam/SteamVR, todos los fabricantes de fabiscafe
-o fabricantes sueltos.
+elegir Steam/SteamVR, todos los fabricantes de fabiscafe o fabricantes sueltos.
 
 Las reglas de fabricantes son de **game-devices-udev**, MIT, de Fabian
 Bornschein (fabiscafe).  Las de Steam/SteamVR son de **steam-devices**, MIT,

@@ -162,17 +162,9 @@ class MainWindow(Adw.ApplicationWindow):
         status_group = Adw.PreferencesGroup(title=tr("Estado"))
         status_group.set_hexpand(True)
         status_group.add(
-            self._status_row(
-                tr("Detección automática"),
-                tr("Los mandos aparecen solos y se avisa con una notificación."),
-                "object-select-symbolic",
-                success=True,
-            )
-        )
-        status_group.add(
             self._action_row(
                 tr("Reglas preconfiguradas"),
-                tr("Microsoft Xbox, fabiscafe y Steam/SteamVR opcional."),
+                tr("fabiscafe y Steam/SteamVR opcionales."),
                 "app.presets",
                 icon_name="application-x-addon-symbolic",
             )
@@ -191,22 +183,6 @@ class MainWindow(Adw.ApplicationWindow):
         scroller.set_child(clamp)
         box.append(scroller)
         self.stack.add_named(box, "list")
-
-    @staticmethod
-    def _status_row(
-        title: str,
-        subtitle: str,
-        icon_name: str,
-        *,
-        success: bool = False,
-    ) -> Adw.ActionRow:
-        row = Adw.ActionRow(title=title, subtitle=subtitle)
-        row.set_activatable(False)
-        icon = Gtk.Image(icon_name=icon_name)
-        icon.add_css_class("success" if success else "dim-label")
-        icon.set_valign(Gtk.Align.CENTER)
-        row.add_prefix(icon)
-        return row
 
     @staticmethod
     def _action_row(
