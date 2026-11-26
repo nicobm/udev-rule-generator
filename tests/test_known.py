@@ -84,24 +84,34 @@ class KnownDevicesTests(unittest.TestCase):
             store.clear_alias(key)
             self.assertEqual(KnownDevices(path).alias_for(key), "")
 
+    def test_icon_persists_without_a_saved_rule(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "devices.json"
+            store = KnownDevices(path)
+            key = device_identity(_device())
+
+            store.set_icon(key, "joystick")
+            self.assertEqual(store.icon_for(key), "joystick")
+            self.assertEqual(KnownDevices(path).icon_for(key), "joystick")
+
     def test_clear_all_removes_devices_and_aliases(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "devices.json"
             store = KnownDevices(path)
             device = _device()
+            key = device_identity(device)
             store.record_rule(
                 device,
                 build_rule(device, RuleAction.ALLOW),
             )
-            store.set_alias(device_identity(device), "Temporal")
+            store.set_alias(key, "Temporal")
+            store.set_icon(key, "joystick")
             store.clear_all()
 
             reloaded = KnownDevices(path)
             self.assertEqual(reloaded.devices(), [])
-            self.assertEqual(
-                reloaded.alias_for(device_identity(device)),
-                "",
-            )
+            self.assertEqual(reloaded.alias_for(key), "")
+            self.assertEqual(reloaded.icon_for(key), "")
 
     def test_hidden_state_persists(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

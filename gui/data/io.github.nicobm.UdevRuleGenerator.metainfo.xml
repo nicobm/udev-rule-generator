@@ -65,6 +65,13 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="1.7.0" date="2026-11-26">
+      <description>
+        <p>
+          Adds per-device gamepad and joystick symbolic icons.
+        </p>
+      </description>
+    </release>
     <release version="1.6.0" date="2026-11-26">
       <description>
         <p>

@@ -26,6 +26,16 @@ from udev_rule_generator.userconfig import device_identity
 
 from .gi_compat import Adw, Gdk, GLib, Gtk, markup_escape
 
+_DEVICE_ICON_CHOICES = (
+    ("gamepad", "input-gaming-symbolic", "Mando"),
+    ("joystick", "applications-games-symbolic", "Joystick"),
+)
+_DEVICE_ICONS = {
+    icon_id: icon_name
+    for icon_id, icon_name, _label in _DEVICE_ICON_CHOICES
+}
+_DEFAULT_DEVICE_ICON = "gamepad"
+
 
 def _js_nodes_label(device: Joystick | None) -> str:
     """Devuelve los nombres cortos de los nodos js, por ejemplo ``js0``."""
@@ -321,6 +331,99 @@ class DeviceManager(Gtk.Box):
 
         return walk(row)
 
+    def _add_device_icon(
+        self,
+        row: Adw.ActionRow,
+        device_id: str,
+    ) -> None:
+        """Añade el selector de icono simbólico a la izquierda de la fila."""
+        icon_id = self.store.icon_for(device_id)
+        if icon_id not in _DEVICE_ICONS:
+            icon_id = _DEFAULT_DEVICE_ICON
+
+        image = Gtk.Image.new_from_icon_name(_DEVICE_ICONS[icon_id])
+        image.set_pixel_size(18)
+        menu_button = Gtk.MenuButton()
+        menu_button.add_css_class("flat")
+        menu_button.add_css_class("device-icon-button")
+        menu_button.set_has_frame(False)
+        menu_button.set_always_show_arrow(False)
+        menu_button.set_valign(Gtk.Align.CENTER)
+        menu_button.set_child(image)
+        menu_button.set_tooltip_text(tr("Elegir icono"))
+
+        popover = Gtk.Popover()
+        content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        content.set_margin_top(10)
+        content.set_margin_bottom(10)
+        content.set_margin_start(10)
+        content.set_margin_end(10)
+        heading = Gtk.Label(label=tr("Icono del dispositivo"), xalign=0)
+        heading.add_css_class("caption")
+        content.append(heading)
+
+        grid = Gtk.FlowBox()
+        grid.set_selection_mode(Gtk.SelectionMode.NONE)
+        grid.set_max_children_per_line(4)
+        grid.set_column_spacing(4)
+        grid.set_row_spacing(4)
+        choices: dict[str, Gtk.Button] = {}
+
+        def update_selection(selected_id: str) -> None:
+            for choice_id, choice in choices.items():
+                choice.remove_css_class("device-icon-selected")
+                if choice_id == selected_id:
+                    choice.add_css_class("device-icon-selected")
+
+        for choice_id, choice_icon, label in _DEVICE_ICON_CHOICES:
+            choice = Gtk.Button()
+            choice.add_css_class("flat")
+            choice.set_size_request(36, 36)
+            choice_image = Gtk.Image.new_from_icon_name(choice_icon)
+            choice_image.set_pixel_size(20)
+            choice.set_child(choice_image)
+            choice.set_tooltip_text(tr(label))
+            choice.connect(
+                "clicked",
+                lambda _button, selected_id=choice_id: (
+                    self._select_device_icon(
+                        device_id,
+                        selected_id,
+                        image,
+                        popover,
+                        update_selection,
+                    )
+                ),
+            )
+            choices[choice_id] = choice
+            grid.append(choice)
+
+        update_selection(icon_id)
+        content.append(grid)
+        popover.set_child(content)
+        menu_button.set_popover(popover)
+        row.add_prefix(menu_button)
+
+    def _select_device_icon(
+        self,
+        device_id: str,
+        icon_id: str,
+        image: Gtk.Image,
+        popover: Gtk.Popover,
+        update_selection,
+    ) -> None:
+        try:
+            self.store.set_icon(device_id, icon_id)
+        except OSError as exc:
+            self._show_error(
+                tr("No se pudo guardar el icono"),
+                str(exc),
+            )
+            return
+        image.set_from_icon_name(_DEVICE_ICONS[icon_id])
+        update_selection(icon_id)
+        popover.popdown()
+
     def _add_alias_control(
         self,
         row: Adw.ActionRow,
@@ -541,6 +644,7 @@ class DeviceManager(Gtk.Box):
             "activated",
             lambda _row, selected=device: self._open_known_rule(selected),
         )
+        self._add_device_icon(row, device.id)
         self._add_alias_control(row, device.id, device.name)
 
         if removable:
@@ -587,6 +691,7 @@ class DeviceManager(Gtk.Box):
             subtitle=markup_escape(" · ".join(details)),
         )
         row.set_activatable(False)
+        self._add_device_icon(row, key)
         self._add_alias_control(row, key, device.display_name)
         row.add_suffix(self._connected_badge())
 

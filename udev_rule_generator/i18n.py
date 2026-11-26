@@ -476,6 +476,11 @@ _EN.update(
         "El archivo de dispositivos no es válido.": (
             "The devices file is invalid."
         ),
+        "Elegir icono": "Choose icon",
+        "Icono del dispositivo": "Device icon",
+        "Mando": "Gamepad",
+        "Joystick": "Joystick",
+        "No se pudo guardar el icono": "Could not save the icon",
         "Agregar alias": "Add alias",
         "Guardar alias": "Save alias",
         "Eliminar alias": "Remove alias",

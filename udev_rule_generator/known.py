@@ -300,6 +300,7 @@ class KnownDevices:
         self.path = path or default_path()
         self._devices: dict[str, KnownDevice] = {}
         self._aliases: dict[str, str] = {}
+        self._icons: dict[str, str] = {}
         self._lock = threading.RLock()
         self.load()
 
@@ -310,11 +311,13 @@ class KnownDevices:
             except (OSError, ValueError):
                 self._devices = {}
                 self._aliases = {}
+                self._icons = {}
                 return
             devices = raw.get("devices", {}) if isinstance(raw, dict) else {}
             if not isinstance(devices, dict):
                 self._devices = {}
                 self._aliases = {}
+                self._icons = {}
                 return
             raw_aliases = raw.get("aliases", {}) if isinstance(raw, dict) else {}
             self._aliases = (
@@ -324,6 +327,16 @@ class KnownDevices:
                     if isinstance(value, str) and value.strip()
                 }
                 if isinstance(raw_aliases, dict)
+                else {}
+            )
+            raw_icons = raw.get("icons", {}) if isinstance(raw, dict) else {}
+            self._icons = (
+                {
+                    str(key): value.strip()
+                    for key, value in raw_icons.items()
+                    if isinstance(value, str) and value.strip()
+                }
+                if isinstance(raw_icons, dict)
                 else {}
             )
             loaded: dict[str, KnownDevice] = {}
@@ -348,6 +361,7 @@ class KnownDevices:
                     for key, device in self._devices.items()
                 },
                 "aliases": dict(self._aliases),
+                "icons": dict(self._icons),
             }
 
     def save(self) -> None:
@@ -377,7 +391,12 @@ class KnownDevices:
             raise ValueError(tr("El archivo de dispositivos no es válido."))
         devices = raw.get("devices", {})
         aliases = raw.get("aliases", {})
-        if not isinstance(devices, dict) or not isinstance(aliases, dict):
+        icons = raw.get("icons", {})
+        if (
+            not isinstance(devices, dict)
+            or not isinstance(aliases, dict)
+            or not isinstance(icons, dict)
+        ):
             raise ValueError(tr("El archivo de dispositivos no es válido."))
 
         imported_devices = 0
@@ -403,7 +422,10 @@ class KnownDevices:
                     continue
                 self._aliases[str(key)] = value.strip()
                 imported_aliases += 1
-            if imported_devices or imported_aliases:
+            for key, value in icons.items():
+                if isinstance(value, str) and value.strip():
+                    self._icons[str(key)] = value.strip()
+            if imported_devices or imported_aliases or icons:
                 self.save()
         return imported_devices, imported_aliases
 
@@ -439,11 +461,25 @@ class KnownDevices:
             if self._aliases.pop(device_id, None) is not None:
                 self.save()
 
+    def icon_for(self, device_id: str) -> str:
+        with self._lock:
+            return self._icons.get(device_id, "")
+
+    def set_icon(self, device_id: str, icon: str) -> None:
+        icon = icon.strip()
+        with self._lock:
+            if icon:
+                self._icons[device_id] = icon
+            else:
+                self._icons.pop(device_id, None)
+            self.save()
+
     def clear_all(self) -> None:
-        """Elimina todos los dispositivos, alias y estados guardados."""
+        """Elimina todos los dispositivos, alias, iconos y estados guardados."""
         with self._lock:
             self._devices.clear()
             self._aliases.clear()
+            self._icons.clear()
             self.save()
 
     def set_hidden(self, device_id: str, hidden: bool) -> KnownDevice | None:

@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.7.0 - 2026-11-26
+
+- Adds a square icon selector to every device row. It offers monochrome
+  symbolic gamepad and joystick icons and stores the choice per device.
+- Includes device icons in `devices.json` and in `.tar.gz` backups.
+
 ## 1.6.0 - 2026-11-26
 
 - Importing a backup now only restores devices, aliases, and their metadata.
