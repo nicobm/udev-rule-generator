@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.12.2 - 2026-11-26
+
+- Handles `Ctrl+C` in the GUI without printing a Python traceback. The app
+  stops the udev monitor, timers, and worker executor before exiting with
+  status 130.
+- Calls the same cleanup when quitting from the application menu.
+
 ## 0.12.1 - 2026-11-26
 
 - Fixes the empty space between the connected-controller list and the Status /

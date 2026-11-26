@@ -66,6 +66,14 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.12.2" date="2026-11-26">
+      <description>
+        <p>
+          Handles Ctrl+C gracefully: stops the udev monitor, timers, and worker
+          executor, then exits without a Python traceback.
+        </p>
+      </description>
+    </release>
     <release version="0.12.1" date="2026-11-26">
       <description>
         <p>

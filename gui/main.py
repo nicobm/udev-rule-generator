@@ -46,7 +46,11 @@ def main(argv=None) -> int:
     from gui.application import Application
 
     application = Application()
-    return application.run(arguments)
+    try:
+        return application.run(arguments)
+    except KeyboardInterrupt:
+        application.shutdown()
+        return 130
 
 
 if __name__ == "__main__":

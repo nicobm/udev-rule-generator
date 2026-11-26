@@ -122,5 +122,16 @@ class Application(Adw.Application):
         )
         dialog.present(self.window)
 
-    def _on_quit(self, _action, _parameter) -> None:
+    def shutdown(self) -> None:
+        """Cierra la ventana y limpia los hilos antes de salir."""
+        if self.window is not None:
+            self.window.shutdown()
         self.quit()
+
+    def do_shutdown(self) -> None:  # noqa: N802 (API de GObject)
+        if self.window is not None:
+            self.window.shutdown()
+        Adw.Application.do_shutdown(self)
+
+    def _on_quit(self, _action, _parameter) -> None:
+        self.shutdown()

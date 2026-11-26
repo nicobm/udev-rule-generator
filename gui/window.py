@@ -568,7 +568,10 @@ class MainWindow(Adw.ApplicationWindow):
         dialog.add_response("close", tr("Cerrar"))
         dialog.present(self)
 
-    def _on_close(self, _window) -> bool:
+    def shutdown(self) -> None:
+        """Detiene el monitor, los timers y el executor una sola vez."""
+        if self._closed:
+            return
         self._closed = True
         if self._monitor is not None:
             self._monitor.stop()
@@ -579,4 +582,7 @@ class MainWindow(Adw.ApplicationWindow):
             GLib.source_remove(self._auto_refresh_source)
             self._auto_refresh_source = 0
         self._executor.shutdown(wait=False, cancel_futures=True)
+
+    def _on_close(self, _window) -> bool:
+        self.shutdown()
         return False
