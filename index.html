@@ -8,7 +8,7 @@
     <title>udev-rule-generator</title>
     <meta
       name="description"
-      content="A small Linux utility that detects joysticks and gamepads and creates udev rules to allow or ignore them."
+      content="A small Linux utility that detects joysticks and gamepads and creates udev rules to enable them."
     />
     <link
       rel="icon"
@@ -18,7 +18,7 @@
     <meta property="og:title" content="udev-rule-generator" />
     <meta
       property="og:description"
-      content="Detect joysticks and gamepads, then create clean udev rules to allow or ignore them."
+      content="Detect joysticks and gamepads, then create clean udev rules to enable them."
     />
     <meta property="og:type" content="website" />
     <script>
@@ -701,8 +701,7 @@
           <h1>udev rules for your controllers.</h1>
           <p class="hero-copy">
             A small Linux utility that detects joysticks and gamepads, then
-            writes clean udev rules to let them work—or to ignore false
-            positives.
+            writes clean udev rules to let them work.
           </p>
           <p class="hero-note">
             Free and open source. MIT licensed. No rules are installed
@@ -778,14 +777,6 @@
               <p>
                 Creates <code>10-</code> rules with <code>MODE="0660"</code> and
                 <code>TAG+="uaccess"</code> for input, USB, and hidraw access.
-              </p>
-            </div>
-            <div class="card">
-              <h3>Ignore</h3>
-              <p>
-                Creates <code>99-</code> rules that deauthorize USB devices or
-                deny access to input nodes, so false positives stay out of your
-                way.
               </p>
             </div>
             <div class="card">

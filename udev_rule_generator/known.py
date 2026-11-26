@@ -36,6 +36,18 @@ def _sha256(content: str) -> str:
     return hashlib.sha256(content.encode("utf-8")).hexdigest()
 
 
+def _is_legacy_ignore(content: str) -> bool:
+    """Detecta reglas antiguas de ignorar que ya no se admiten."""
+    return any(
+        marker in content
+        for marker in (
+            'ATTR{authorized}="0"',
+            'TAG-="uaccess"',
+            'MODE="0000"',
+        )
+    )
+
+
 def _strip_transient_comments(content: str) -> str:
     lines = [
         line
@@ -83,7 +95,7 @@ class KnownDevice:
 
     @property
     def action_label(self) -> str:
-        return RuleAction(self.action).label
+        return RuleAction.ALLOW.label
 
     def to_joystick(self) -> Joystick:
         return Joystick(
@@ -108,12 +120,19 @@ class KnownDevice:
         Cuando hay metadata suficiente se usa el nombre de archivo actual, de
         modo que una regla antigua se migre al activarla de nuevo.
         """
-        action = RuleAction(self.action)
+        action = RuleAction.ALLOW
         if self.vendor_id and self.product_id and self.name:
             try:
                 return build_rule(self.to_joystick(), action)
             except ValueError:
                 pass
+        if _is_legacy_ignore(self.content):
+            raise ValueError(
+                tr(
+                    "Esta regla guardada es de una versión anterior que "
+                    "ignoraba el dispositivo y ya no se puede reactivar."
+                )
+            )
         trigger = "add" if 'ATTR{authorized}="0"' in self.content else "change"
         return RuleSpec(
             filename=self.filename,
@@ -170,7 +189,7 @@ class KnownDevice:
             bus=str(data.get("bus", "")),
             serial=str(data.get("serial", "")),
             input_names=tuple(str(name) for name in raw_names),
-            action="ignore" if data.get("action") == "ignore" else "allow",
+            action="allow",
             filename=str(data.get("filename", "")),
             content=str(data.get("content", "")),
             sha256=str(data.get("sha256", "")),
@@ -250,14 +269,7 @@ class KnownDevice:
         else:
             bus = ""
         serial = _first(content, r"^# Serial: (.+)$")
-        action = (
-            "ignore"
-            if rule.filename.startswith(
-                ("99-ignore-", "99-udev-rule-generator-ignore-")
-            )
-            or 'TAG-="uaccess"' in content
-            else "allow"
-        )
+        action = "allow"
         if vendor_id and product_id:
             identity = "|".join((vendor_id, product_id, name, serial))
         else:
@@ -305,7 +317,11 @@ class KnownDevices:
             for key, value in devices.items():
                 if not isinstance(value, dict):
                     continue
+                if value.get("action") == "ignore":
+                    continue
                 record = KnownDevice.from_dict(value)
+                if _is_legacy_ignore(record.content):
+                    continue
                 loaded[record.id or key] = record
             self._devices = loaded
 
@@ -402,6 +418,8 @@ class KnownDevices:
             }
             for filename, rule in by_filename.items():
                 if filename in known_filenames:
+                    continue
+                if _is_legacy_ignore(rule.content):
                     continue
                 record = KnownDevice.from_installed(rule)
                 identity = record.id

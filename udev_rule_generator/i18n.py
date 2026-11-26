@@ -66,11 +66,10 @@ def is_english() -> bool:
 _EN.update(
     {
         # Aplicación / ventana principal
-        "Crea reglas udev para permitir o ignorar joysticks y gamepads": (
-            "Create udev rules to allow or ignore joysticks and gamepads"
+        "Habilita joysticks y gamepads con reglas udev": (
+            "Enable joysticks and gamepads with udev rules"
         ),
         "Buscando mandos…": "Looking for controllers…",
-        "Permitir o ignorar mandos conectados": "Allow or ignore connected controllers",
         "Buscar joysticks de nuevo (Ctrl+R)": "Scan for joysticks again (Ctrl+R)",
         "Menú principal": "Main menu",
         "Reglas preconfiguradas": "Presets",
@@ -118,6 +117,12 @@ _EN.update(
         "instala steam-devices (Valve)": "install steam-devices (Valve)",
         "Instalar reglas de Steam": "Install Steam rules",
         "  2) Instalar reglas de Steam": "  2) Install Steam rules",
+        "  2) Volver": "  2) Back",
+        "índice, VID:PID o parte del nombre del joystick; instala su "
+        "regla de habilitación": (
+            "index, VID:PID or part of the joystick name; installs its enable "
+            "rule"
+        ),
         "  r) Actualizar   p) Instalar Steam   q) Volver": (
             "  r) Refresh   p) Install Steam   q) Back"
         ),
@@ -457,6 +462,19 @@ _EN.update(
         "No existe la regla preconfigurada {id!r}.": (
             "Preset {id!r} does not exist."
         ),
+        "Esta regla guardada es de una versión anterior que ignoraba el "
+        "dispositivo y ya no se puede reactivar.": (
+            "This saved rule comes from an older version that ignored the "
+            "device and can no longer be re-enabled."
+        ),
+        "La regla {filename!r} contiene datos binarios no permitidos.": (
+            "Rule {filename!r} contains disallowed binary data."
+        ),
+        "La regla {filename!r} contiene una directiva ejecutable no "
+        "permitida en la línea {line}.": (
+            "Rule {filename!r} contains a disallowed executable directive on "
+            "line {line}."
+        ),
         "No se seleccionó ninguna regla preconfigurada.": (
             "No preset was selected."
         ),
@@ -569,8 +587,8 @@ _EN.update(
             "  sudo dnf install python3-gobject gtk4 libadwaita\n\n"
             "Details: {error}"
         ),
-        "Reglas udev para permitir o ignorar joysticks y gamepads": (
-            "udev rules to allow or ignore joysticks and gamepads"
+        "Reglas udev para habilitar joysticks y gamepads": (
+            "udev rules to enable joysticks and gamepads"
         ),
         "No se detectaron joysticks conectados.": (
             "No connected joysticks were detected."
@@ -688,17 +706,17 @@ _EN.update(
         "\nOpción: ": "\nOption: ",
         "Hasta luego.": "Goodbye.",
         "Opción no válida.": "Invalid option.",
-        "Crea reglas udev para permitir o ignorar joysticks.  Sin argumentos "
-        "abre el menú interactivo; con --gui abre la interfaz gráfica.": (
-            "Create udev rules to allow or ignore joysticks.  With no arguments "
-            "it opens the interactive menu; use --gui for the graphical "
+        "Crea reglas udev para habilitar joysticks.  Sin argumentos abre el "
+        "menú interactivo; con --gui abre la interfaz gráfica.": (
+            "Create udev rules to enable joysticks.  With no arguments it "
+            "opens the interactive menu; use --gui for the graphical "
             "interface."
         ),
         "Ejemplos:\n"
         "  udev-rule-generator --gui\n"
         "  udev-rule-generator --list\n"
-        "  udev-rule-generator --device 1 --action allow\n"
-        "  udev-rule-generator --device 045e:02fd --action ignore --dry-run\n"
+        "  udev-rule-generator --device 1 --dry-run\n"
+        "  udev-rule-generator --device 045e:02fd --yes\n"
         "  udev-rule-generator --presets steam\n"
 
         "  udev-rule-generator --installed\n"
@@ -709,8 +727,8 @@ _EN.update(
             "Examples:\n"
             "  udev-rule-generator --gui\n"
             "  udev-rule-generator --list\n"
-            "  udev-rule-generator --device 1 --action allow\n"
-            "  udev-rule-generator --device 045e:02fd --action ignore --dry-run\n"
+            "  udev-rule-generator --device 1 --dry-run\n"
+            "  udev-rule-generator --device 045e:02fd --yes\n"
             "  udev-rule-generator --presets steam\n"
 
             "  udev-rule-generator --installed\n"

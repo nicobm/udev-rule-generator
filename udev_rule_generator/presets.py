@@ -7,6 +7,7 @@ interruptor de Steam.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from importlib import resources
 from typing import Iterable
@@ -15,6 +16,49 @@ from . import STEAM_DEVICES_URL, __version__
 from .i18n import tr
 
 _PACKAGE = "udev_rule_generator"
+
+# Valve's Steam rules need one well-known command.  Everything else that could
+# execute a program from a compromised upstream repository is rejected.
+_ALLOWED_RUN_LINES = frozenset(
+    {
+        (
+            'KERNEL=="input*", ATTRS{name}=="Lic Pro Controller", '
+            'RUN{program}+="/bin/sh -c \'udevadm test-builtin uaccess '
+            '/sys/%p/../../hidraw/hidraw*\'"'
+        ),
+    }
+)
+_EXECUTABLE_RULE_KEY = re.compile(
+    r"(?:^|,\s*)(?:RUN(?:\{[^}]*\})?|PROGRAM|IMPORT(?:\{[^}]*\})?)"
+    r"\s*\+?="
+)
+
+
+def validate_rule_text(text: str, *, filename: str = "") -> str:
+    """Reject rules that can execute unexpected commands through udev."""
+    if "\x00" in text:
+        raise ValueError(
+            tr(
+                "La regla {filename!r} contiene datos binarios no permitidos.",
+                filename=filename,
+            )
+        )
+    for line_number, line in enumerate(text.splitlines(), start=1):
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        if stripped in _ALLOWED_RUN_LINES:
+            continue
+        if _EXECUTABLE_RULE_KEY.search(stripped):
+            raise ValueError(
+                tr(
+                    "La regla {filename!r} contiene una directiva ejecutable "
+                    "no permitida en la línea {line}.",
+                    filename=filename,
+                    line=line_number,
+                )
+            )
+    return text
 
 
 @dataclass(frozen=True)
@@ -104,7 +148,10 @@ def _preset_dir():
 def read_preset_text(preset: Preset) -> str:
     """Devuelve el contenido original de una regla preconfigurada."""
     path = _preset_dir().joinpath(preset.source)
-    return path.read_text(encoding="utf-8")
+    return validate_rule_text(
+        path.read_text(encoding="utf-8"),
+        filename=preset.source,
+    )
 
 
 def build_preset_content(preset: Preset) -> str:

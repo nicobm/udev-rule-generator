@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.20.0 - 2026-11-26
+
+- Removes the ignore action and ignore rules entirely. A saved device has only
+  two states: **enabled** (its rule is installed) or **disabled** (no rule).
+- Updates the CLI and documentation to use enable/disable language and removes
+  `--action`.
+- Validates Steam preset updates: only allowlisted `.rules` files and the
+  license are accepted, and every executable udev directive must match the
+  reviewed Valve command allowlist.
+
 ## 0.19.0 - 2026-11-26
 
 - Removes the **Ignorar dispositivos** section and all fake-joystick

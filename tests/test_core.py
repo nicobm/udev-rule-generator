@@ -128,10 +128,6 @@ class RuleTests(unittest.TestCase):
             rule_filename(device, RuleAction.ALLOW),
             "10-udev-rule-generator-gamepad-045e-0b12-test-pad.rules",
         )
-        self.assertEqual(
-            rule_filename(device, RuleAction.IGNORE),
-            "99-udev-rule-generator-ignore-045e-0b12-test-pad.rules",
-        )
 
     def test_allow_usb_rule(self) -> None:
         spec = build_rule(_device(), RuleAction.ALLOW)
@@ -152,20 +148,6 @@ class RuleTests(unittest.TestCase):
         self.assertNotIn("# Bus:", spec.content)
         self.assertNotIn("# Acción:", spec.content)
         self.assertNotIn("# Permisos", spec.content)
-
-    def test_ignore_usb_deauthorizes_and_denies(self) -> None:
-        spec = build_rule(_device(), RuleAction.IGNORE)
-        self.assertIn('ACTION=="add"', spec.content)
-        self.assertIn('ATTR{authorized}="0"', spec.content)
-        self.assertIn('MODE="0000"', spec.content)
-        self.assertIn('TAG-="uaccess"', spec.content)
-        self.assertEqual(spec.trigger, "add")
-
-    def test_ignore_bluetooth_is_soft(self) -> None:
-        spec = build_rule(_device(bus="bluetooth"), RuleAction.IGNORE)
-        self.assertNotIn('ATTR{authorized}="0"', spec.content)
-        self.assertIn('KERNELS=="*045E:0B12*"', spec.content)
-        self.assertIn('MODE="0000"', spec.content)
 
     def test_rule_without_ids_does_not_emit_empty_attrs(self) -> None:
         device = _device(vendor_id="", product_id="")

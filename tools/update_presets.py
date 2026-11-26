@@ -12,12 +12,17 @@ from __future__ import annotations
 import argparse
 import sys
 import urllib.error
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+
+from udev_rule_generator.presets import validate_rule_text  # noqa: E402
 
 PRESET_DIR = ROOT / "udev_rule_generator" / "data" / "presets"
+MAX_DOWNLOAD_BYTES = 1_000_000
 
 STEAM_RAW = "https://raw.githubusercontent.com/ValveSoftware/steam-devices/master/"
 USER_AGENT = "udev-rule-generator-preset-updater"
@@ -35,7 +40,15 @@ def fetch(url: str) -> str:
     with urllib.request.urlopen(request, timeout=45) as response:
         if response.status != 200:
             raise RuntimeError(f"HTTP {response.status} for {url}")
-        return normalize(response.read().decode("utf-8"))
+        final_url = urllib.parse.urlparse(response.geturl())
+        if final_url.scheme != "https" or final_url.hostname != (
+            "raw.githubusercontent.com"
+        ):
+            raise RuntimeError(f"Unexpected final URL: {response.geturl()}")
+        data = response.read(MAX_DOWNLOAD_BYTES + 1)
+        if len(data) > MAX_DOWNLOAD_BYTES:
+            raise RuntimeError(f"File too large: {url}")
+        return normalize(data.decode("utf-8"))
 
 
 def remote_files() -> dict[str, str]:
@@ -66,7 +79,19 @@ def main() -> int:
         target = PRESET_DIR / filename
         try:
             content = fetch(url)
-        except (urllib.error.URLError, TimeoutError, RuntimeError, OSError) as exc:
+            if filename.endswith(".rules"):
+                validate_rule_text(content, filename=filename)
+            elif filename != "LICENSE.steam-devices":
+                raise RuntimeError(f"Unexpected preset file: {filename}")
+            if "\x00" in content:
+                raise RuntimeError(f"Binary data in {filename}")
+        except (
+            urllib.error.URLError,
+            TimeoutError,
+            RuntimeError,
+            OSError,
+            ValueError,
+        ) as exc:
             print(f"  ERROR  {filename}: {exc}", file=sys.stderr)
             failed.append(filename)
             continue

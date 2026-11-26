@@ -128,7 +128,7 @@ class KnownDevicesTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "devices.json"
             store = KnownDevices(path)
-            spec = build_rule(_device(), RuleAction.IGNORE)
+            spec = build_rule(_device(), RuleAction.ALLOW)
             parsed = _parse_header(spec.filename, spec.content)
             self.assertIsNotNone(parsed)
 
@@ -136,7 +136,7 @@ class KnownDevicesTests(unittest.TestCase):
             self.assertEqual(len(store), 1)
             imported = store.devices()[0]
             self.assertEqual(imported.filename, spec.filename)
-            self.assertEqual(imported.action, "ignore")
+            self.assertEqual(imported.action, "allow")
             self.assertEqual(imported.vendor_id, "045e")
             self.assertEqual(imported.product_id, "0b12")
             self.assertEqual(imported.name, "Test Pad")
@@ -175,7 +175,7 @@ class KnownDevicesTests(unittest.TestCase):
     def test_bluetooth_rule_reads_ids_from_kernel_line(self) -> None:
         device = _device()
         bluetooth = replace(device, bus="bluetooth")
-        spec = build_rule(bluetooth, RuleAction.IGNORE)
+        spec = build_rule(bluetooth, RuleAction.ALLOW)
         self.assertNotIn("# Bus:", spec.content)
         parsed = _parse_header(spec.filename, spec.content)
         self.assertIsNotNone(parsed)
@@ -184,7 +184,7 @@ class KnownDevicesTests(unittest.TestCase):
         self.assertEqual(record.vendor_id, "045e")
         self.assertEqual(record.product_id, "0b12")
         self.assertEqual(record.bus, "bluetooth")
-        self.assertEqual(record.action, "ignore")
+        self.assertEqual(record.action, "allow")
         self.assertIn("KERNELS", record.build_spec().content)
 
     def test_batch_disable_saves_once(self) -> None:

@@ -11,7 +11,7 @@ from typing import Callable, Iterable, Sequence
 from . import ISSUE_URL, PROJECT_URL, __version__, version_string
 from .devices import Joystick, detect_joysticks, find_joystick
 from .host import CommandNotAvailable, Host, HostError
-from .i18n import tr
+from .i18n import is_english, tr
 from .installed import list_installed_rules
 from .known import KnownDevice, KnownDevices
 from .presets import (
@@ -79,7 +79,7 @@ def _confirm(prompt: str, *, default: bool = False) -> bool:
 def _print_banner(colors: Colors) -> None:
     print()
     print(colors.bold(version_string()))
-    print(colors.dim(tr("Reglas udev para permitir o ignorar joysticks y gamepads")))
+    print(colors.dim(tr("Reglas udev para habilitar joysticks y gamepads")))
     print(colors.dim(PROJECT_URL))
     print()
 
@@ -145,12 +145,6 @@ def _print_install_result(result: InstallResult, colors: Colors) -> None:
         print(colors.dim(tr("  Reglas recargadas con udevadm.")))
     elif result.warning:
         print(colors.yellow(f"  {result.warning}"))
-
-
-def _resolve_action(value: str | None, device: Joystick) -> RuleAction:
-    if value:
-        return RuleAction(value)
-    return RuleAction.ALLOW
 
 
 def _save_known_device(
@@ -594,8 +588,6 @@ def _cmd_known(
     for index, device in enumerate(devices, start=1):
         state = tr("Activa") if device.active else tr("Desactivada")
         details = [device.bus_label, device.identifier]
-        if device.action == "ignore":
-            details.append(device.action_label)
         if device.hidden:
             details.append(tr("Oculto"))
         details.append(state)
@@ -655,7 +647,6 @@ def _cmd_presets(
 def _cmd_device(
     host: Host,
     selector: str,
-    action_value: str | None,
     *,
     assume_yes: bool,
     dry_run: bool,
@@ -673,21 +664,10 @@ def _cmd_device(
                 selector=selector,
             )
         )
-    action = _resolve_action(action_value, device)
-    spec = build_rule(device, action)
+    spec = build_rule(device, RuleAction.ALLOW)
     print(colors.bold(device.display_name))
     print(colors.dim(device.hardware_label))
     _print_rule_preview(spec, colors)
-    if action is RuleAction.IGNORE and device.is_bluetooth:
-        print(
-            colors.yellow(
-                tr(
-                    "Aviso: en Bluetooth el ignorar es best effort; se deniega el "
-                    "acceso a los nodos de entrada, pero el dispositivo puede seguir "
-                    "existiendo para root."
-                )
-            )
-        )
     if dry_run:
         print(colors.dim(tr("Modo --dry-run: no se escribió nada.")))
         return 0
@@ -754,20 +734,15 @@ def _interactive_device(host: Host, args: argparse.Namespace, colors: Colors) ->
             f"  1) {colors.green(tr('Habilitar'))}  "
             f"({RuleAction.ALLOW.description})"
         )
-        print(
-            f"  2) {colors.yellow(tr('Ignorar'))}            "
-            f"({RuleAction.IGNORE.description})"
-        )
-        print(tr("  3) Volver"))
+        print(tr("  2) Volver"))
         choice = _ask(tr("\nAcción: "))
-        if choice in {"3", "q", ""}:
+        if choice in {"2", "q", ""}:
             return
-        if choice not in {"1", "2"}:
+        if choice != "1":
             print(colors.red(tr("Acción no válida.")))
             continue
-        action = RuleAction.ALLOW if choice == "1" else RuleAction.IGNORE
         try:
-            spec = build_rule(device, action)
+            spec = build_rule(device, RuleAction.ALLOW)
         except ValueError as exc:
             print(
                 colors.red(
@@ -776,16 +751,6 @@ def _interactive_device(host: Host, args: argparse.Namespace, colors: Colors) ->
             )
             return
         _print_rule_preview(spec, colors)
-        if action is RuleAction.IGNORE and device.is_bluetooth:
-            print(
-                colors.yellow(
-                    tr(
-                        "Aviso: en Bluetooth no se puede desautorizar el USB. La regla "
-                        "deniega el acceso a los nodos de entrada; es un ignorar "
-                        "'best effort'."
-                    )
-                )
-            )
         if _confirm(
             tr("¿Instalar en /etc/udev/rules.d con permisos de administrador?"),
             default=False,
@@ -895,20 +860,49 @@ def _interactive(host: Host, args: argparse.Namespace) -> int:
             print(colors.red(tr("Opción no válida.")))
 
 
+_ARGPARSE_ES = {
+    "usage: ": "uso: ",
+    "options:": "opciones:",
+    "positional arguments:": "argumentos posicionales:",
+    "show this help message and exit": "muestra esta ayuda y sale",
+    "show program's version number and exit": "muestra la versión y sale",
+    "the following arguments are required: %s": (
+        "faltan los siguientes argumentos: %s"
+    ),
+    "unrecognized arguments: %s": "argumentos no reconocidos: %s",
+    "expected one argument": "se esperaba un argumento",
+    "expected at least one argument": "se esperaba al menos un argumento",
+    "argument %(argument_name)s: %(message)s": (
+        "argumento %(argument_name)s: %(message)s"
+    ),
+    "invalid choice: %(value)r (choose from %(choices)s)": (
+        "opción no válida: %(value)r (elegí entre %(choices)s)"
+    ),
+    "ambiguous option: %(option)s could match %(matches)s": (
+        "opción ambigua: %(option)s podría coincidir con %(matches)s"
+    ),
+}
+
+
+def _translate_argparse(text: str) -> str:
+    return text if is_english() else _ARGPARSE_ES.get(text, text)
+
+
 def build_parser() -> argparse.ArgumentParser:
+    argparse._ = _translate_argparse
     parser = argparse.ArgumentParser(
         prog="udev-rule-generator",
         description=tr(
-            "Crea reglas udev para permitir o ignorar joysticks.  Sin argumentos "
-            "abre el menú interactivo; con --gui abre la interfaz gráfica."
+            "Crea reglas udev para habilitar joysticks.  Sin argumentos abre el "
+            "menú interactivo; con --gui abre la interfaz gráfica."
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=tr(
             "Ejemplos:\n"
             "  udev-rule-generator --gui\n"
             "  udev-rule-generator --list\n"
-            "  udev-rule-generator --device 1 --action allow\n"
-            "  udev-rule-generator --device 045e:02fd --action ignore --dry-run\n"
+            "  udev-rule-generator --device 1 --dry-run\n"
+            "  udev-rule-generator --device 045e:02fd --yes\n"
             "  udev-rule-generator --presets steam\n"
             "  udev-rule-generator --installed\n"
             "  udev-rule-generator --known\n"
@@ -919,6 +913,9 @@ def build_parser() -> argparse.ArgumentParser:
             issues=ISSUE_URL,
         ),
     )
+    if not is_english():
+        parser._optionals.title = "opciones"
+        parser._positionals.title = "argumentos posicionales"
     parser.add_argument(
         "--version",
         action="version",
@@ -942,12 +939,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--device",
         metavar="ID",
-        help=tr("índice, VID:PID o parte del nombre del joystick"),
-    )
-    parser.add_argument(
-        "--action",
-        choices=[action.value for action in RuleAction],
-        help=tr("acción a aplicar con --device"),
+        help=tr(
+            "índice, VID:PID o parte del nombre del joystick; instala su "
+            "regla de habilitación"
+        ),
     )
     parser.add_argument(
         "--presets",
@@ -1019,7 +1014,6 @@ def main(argv: Sequence[str] | None = None) -> int:
                 (
                     args.list,
                     args.device,
-                    args.action,
                     args.presets is not None,
                     args.installed,
                     args.known,
@@ -1094,13 +1088,10 @@ def main(argv: Sequence[str] | None = None) -> int:
             return _cmd_device(
                 host,
                 args.device,
-                args.action,
                 assume_yes=args.yes,
                 dry_run=args.dry_run,
                 colors=colors,
             )
-        if args.action:
-            parser.error(tr("--action requiere --device."))
         if not sys.stdin.isatty() or not sys.stdout.isatty():
             parser.print_help()
             return 2

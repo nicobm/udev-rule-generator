@@ -7,11 +7,11 @@ El paquete no depende de bibliotecas externas: toda la detección se hace con
 
 from __future__ import annotations
 
-__version__ = "0.19.0"
+__version__ = "0.20.0"
 
 APP_ID = "io.github.nicobm.UdevRuleGenerator"
 APP_NAME = "udev-rule-generator"
-APP_SUMMARY = "Crea reglas udev para permitir o ignorar joysticks y gamepads"
+APP_SUMMARY = "Habilita joysticks y gamepads con reglas udev"
 PROJECT_URL = "https://github.com/nicobm/udev-rule-generator"
 ISSUE_URL = f"{PROJECT_URL}/issues"
 STEAM_DEVICES_URL = "https://github.com/ValveSoftware/steam-devices"

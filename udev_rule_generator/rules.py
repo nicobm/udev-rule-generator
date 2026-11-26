@@ -17,34 +17,19 @@ _FILENAME_RE = re.compile(r"^[0-9]{2}-[A-Za-z0-9._+-]+\.rules$")
 
 
 class RuleAction(str, Enum):
-    """Acción que se quiere aplicar al dispositivo."""
+    """La única acción es habilitar el dispositivo."""
 
     ALLOW = "allow"
-    IGNORE = "ignore"
 
     @property
     def label(self) -> str:
-        return tr(
-            {
-                RuleAction.ALLOW: "Habilitar (predeterminado)",
-                RuleAction.IGNORE: "Ignorar",
-            }[self]
-        )
+        return tr("Habilitar")
 
     @property
     def description(self) -> str:
         return tr(
-            {
-                RuleAction.ALLOW: (
-                    "Da permisos de lectura/escritura al usuario de la sesión "
-                    "(MODE 0660 y TAG uaccess) y marca el dispositivo como joystick."
-                ),
-                RuleAction.IGNORE: (
-                    "Impide que el dispositivo se use como joystick. En USB se "
-                    "desautoriza el dispositivo; en Bluetooth se deniega el acceso "
-                    "a los nodos de entrada."
-                ),
-            }[self]
+            "Da permisos de lectura/escritura al usuario de la sesión "
+            "(MODE 0660 y TAG uaccess) y marca el dispositivo como joystick."
         )
 
 
@@ -92,25 +77,21 @@ def slugify(text: str, max_length: int = 42) -> str:
 
 def rule_filename(device: Joystick, action: RuleAction) -> str:
     """Nombre estable y descriptivo para la regla generada."""
+    del action  # La única acción válida es habilitar.
     if device.vendor_id and device.product_id:
         hardware = f"{device.vendor_id}-{device.product_id}"
     else:
         digest = hashlib.sha1(device.key.encode("utf-8")).hexdigest()[:8]
         hardware = digest
-    kind = "gamepad" if action is RuleAction.ALLOW else "ignore"
-    # Las reglas de permiso pueden ir temprano.  Las de ignorar van al final
-    # (99-) para que TAG-="uaccess" y MODE="0000" no sean sobrescritos por
-    # 70-uaccess.rules ni por las reglas de fabricante instaladas como 71-.
-    prefix = "10" if action is RuleAction.ALLOW else "99"
     return (
-        f"{prefix}-udev-rule-generator-{kind}-{hardware}-"
+        f"10-udev-rule-generator-gamepad-{hardware}-"
         f"{slugify(device.display_name)}.rules"
     )
 
 
 def rule_title(device: Joystick, action: RuleAction) -> str:
-    verb = tr("Habilitar") if action is RuleAction.ALLOW else tr("Ignorar")
-    return f"{verb}: {device.display_name}"
+    del action
+    return f"{tr('Habilitar')}: {device.display_name}"
 
 
 def _escape_rule_value(value: str) -> str:
@@ -215,100 +196,25 @@ def _allow_hidraw_line(device: Joystick) -> str | None:
     )
 
 
-def _ignore_usb_line(device: Joystick) -> str:
-    return (
-        f'ACTION=="add", SUBSYSTEM=="usb", '
-        f'ATTR{{idVendor}}=="{device.vendor_id}", '
-        f'ATTR{{idProduct}}=="{device.product_id}", '
-        f'ATTR{{authorized}}="0"'
-    )
-
-
-def _ignore_input_line(device: Joystick) -> str | None:
-    if device.primary_input_name:
-        match = (
-            f'SUBSYSTEMS=="input", '
-            f'ATTRS{{name}}=="{_escape_rule_value(device.primary_input_name)}"'
-        )
-    elif device.vendor_id and device.product_id:
-        if device.is_bluetooth:
-            match = (
-                f'SUBSYSTEMS=="input", '
-                f'KERNELS=="*{device.vendor_id.upper()}:{device.product_id.upper()}*"'
-            )
-        else:
-            match = (
-                f'SUBSYSTEMS=="input", '
-                f'ATTRS{{idVendor}}=="{device.vendor_id}", '
-                f'ATTRS{{idProduct}}=="{device.product_id}"'
-            )
-    else:
-        return None
-    return (
-        f'ACTION!="remove", {match}, '
-        f'ENV{{ID_INPUT_JOYSTICK}}="0", MODE="0000", TAG-="uaccess"'
-    )
-
-
-def _ignore_hidraw_line(device: Joystick) -> str | None:
-    if not (device.vendor_id and device.product_id):
-        return None
-    if device.is_bluetooth or (not device.is_usb and device.bus):
-        return (
-            f'ACTION!="remove", KERNEL=="hidraw*", SUBSYSTEM=="hidraw", '
-            f'KERNELS=="*{device.vendor_id.upper()}:{device.product_id.upper()}*", '
-            f'MODE="0000", TAG-="uaccess"'
-        )
-    return (
-        f'ACTION!="remove", SUBSYSTEM=="hidraw", '
-        f'ATTRS{{idVendor}}=="{device.vendor_id}", '
-        f'ATTRS{{idProduct}}=="{device.product_id}", '
-        f'MODE="0000", TAG-="uaccess"'
-    )
-
-
 def build_rule(device: Joystick, action: RuleAction) -> RuleSpec:
-    """Construye la regla udev para ``device`` y ``action``."""
+    """Construye la regla udev de habilitación para ``device``."""
+    del action  # La única acción válida es habilitar.
     _require_ids(device)
     lines = _header(device)
 
-    if action is RuleAction.ALLOW:
-        body: list[str] = []
-        if (device.is_usb or not device.bus) and device.vendor_id and device.product_id:
-            body.append(_allow_usb_line(device))
-        body.append(_allow_input_line(device))
-        hidraw = _allow_hidraw_line(device)
-        if hidraw:
-            body.append(hidraw)
-        lines.extend(body)
-        trigger = "change"
-    else:
-        body = []
-        if (device.is_usb or not device.bus) and device.vendor_id and device.product_id:
-            body.append(_ignore_usb_line(device))
-        input_line = _ignore_input_line(device)
-        hidraw_line = _ignore_hidraw_line(device)
-        if input_line:
-            body.append(input_line)
-        if hidraw_line:
-            body.append(hidraw_line)
-        if not body:
-            raise ValueError(
-                tr("No hay suficientes datos para generar una regla de ignorar.")
-            )
-        lines.extend(body)
-        trigger = (
-            "add"
-            if (device.is_usb or not device.bus)
-            and device.vendor_id
-            and device.product_id
-            else "change"
-        )
+    body: list[str] = []
+    if (device.is_usb or not device.bus) and device.vendor_id and device.product_id:
+        body.append(_allow_usb_line(device))
+    body.append(_allow_input_line(device))
+    hidraw = _allow_hidraw_line(device)
+    if hidraw:
+        body.append(hidraw)
+    lines.extend(body)
 
     return RuleSpec(
-        filename=rule_filename(device, action),
+        filename=rule_filename(device, RuleAction.ALLOW),
         content="\n".join(lines) + "\n",
-        action=action,
-        title=rule_title(device, action),
-        trigger=trigger,
+        action=RuleAction.ALLOW,
+        title=rule_title(device, RuleAction.ALLOW),
+        trigger="change",
     )

@@ -5,14 +5,14 @@
   <project_license>MIT</project_license>
   <name>udev-rule-generator</name>
   <name xml:lang="en">udev-rule-generator</name>
-  <summary>Permitir o ignorar joysticks y gamepads con reglas udev</summary>
-  <summary xml:lang="en">Allow or ignore joysticks and gamepads with udev rules</summary>
+  <summary>Habilitar joysticks y gamepads con reglas udev</summary>
+  <summary xml:lang="en">Enable joysticks and gamepads with udev rules</summary>
 
   <description>
     <p>
       udev-rule-generator es una herramienta para Linux que detecta los
       joysticks y gamepads conectados y crea reglas en /etc/udev/rules.d para
-      permitir su uso o para ignorarlos.
+      habilitar su uso.
     </p>
     <p>
       Permite generar una regla para un mando concreto y activar, de forma
@@ -22,7 +22,6 @@
     <ul>
       <li>Detección de mandos USB y Bluetooth con udevadm.</li>
       <li>Reglas de permiso con MODE 0660 y TAG uaccess.</li>
-      <li>Reglas para ignorar dispositivos USB o Bluetooth.</li>
       <li>Detección automática al conectar un mando y notificaciones de GNOME.</li>
       <li>Dispositivos guardados para activar o desactivar sus reglas sin conectarlos.</li>
       <li>Ocultar dispositivos guardados y recuperarlos desde el menú Dispositivos ocultos.</li>
@@ -34,8 +33,7 @@
   <description xml:lang="en">
     <p>
       udev-rule-generator is a Linux tool that detects connected joysticks and
-      gamepads and creates rules in /etc/udev/rules.d to allow their use or to
-      ignore them.
+      gamepads and creates rules in /etc/udev/rules.d to enable their use.
     </p>
     <p>
       It can generate a rule for a specific controller and optionally enable
@@ -44,7 +42,6 @@
     <ul>
       <li>USB and Bluetooth controller detection with udevadm.</li>
       <li>Permission rules with MODE 0660 and the uaccess tag.</li>
-      <li>Ignore rules for USB or Bluetooth devices.</li>
       <li>Automatic detection when a controller is connected and GNOME notifications.</li>
       <li>Saved devices whose rules can be enabled or disabled without connecting them.</li>
       <li>Hide saved devices and restore them from the Hidden devices menu.</li>
@@ -65,6 +62,15 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.20.0" date="2026-11-26">
+      <description>
+        <p>
+          Removes ignore rules; saved devices now have only enabled and
+          disabled states. Adds validation for downloaded and bundled Steam
+          rules.
+        </p>
+      </description>
+    </release>
     <release version="0.19.0" date="2026-11-26">
       <description>
         <p>
