@@ -65,6 +65,14 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="1.4.2" date="2026-11-26">
+      <description>
+        <p>
+          Escapes `&amp;` and other markup characters in device-name
+          notifications.
+        </p>
+      </description>
+    </release>
     <release version="1.4.1" date="2026-11-26">
       <description>
         <p>

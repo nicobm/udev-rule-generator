@@ -22,7 +22,7 @@ from udev_rule_generator.monitor import UdevMonitor
 from udev_rule_generator.uinput import uinput_available
 
 from .device_manager import DeviceManager
-from .gi_compat import Adw, Gio, GLib, Gtk
+from .gi_compat import Adw, Gio, GLib, Gtk, markup_escape
 
 
 class MainWindow(Adw.ApplicationWindow):
@@ -293,11 +293,11 @@ class MainWindow(Adw.ApplicationWindow):
         self._test_dialog = None
 
     def _on_hidden_changed(self, message: str) -> None:
-        self.toast_overlay.add_toast(Adw.Toast(title=message, timeout=5))
+        self.add_toast(message)
         self.manager.reload()
 
     def _on_known_changed(self, message: str) -> None:
-        self.toast_overlay.add_toast(Adw.Toast(title=message, timeout=5))
+        self.add_toast(message)
         self._refresh_rule_metadata()
         GLib.timeout_add(1200, self._refresh_after_change)
 
@@ -528,7 +528,7 @@ class MainWindow(Adw.ApplicationWindow):
         return False
 
     def _on_rule_installed(self, message: str) -> None:
-        self.toast_overlay.add_toast(Adw.Toast(title=message, timeout=5))
+        self.add_toast(message)
         self.manager.reload()
         self._refresh_rule_metadata()
         # Si se ignoró un dispositivo, udev puede tardar un instante en
@@ -540,7 +540,9 @@ class MainWindow(Adw.ApplicationWindow):
         return False
 
     def add_toast(self, message: str) -> None:
-        self.toast_overlay.add_toast(Adw.Toast(title=message, timeout=5))
+        self.toast_overlay.add_toast(
+            Adw.Toast(title=markup_escape(message), timeout=5)
+        )
 
     def show_error(self, heading: str, body: str) -> None:
         dialog = Adw.AlertDialog(heading=heading, body=body)

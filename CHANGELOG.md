@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.4.2 - 2026-11-26
+
+- Escapes device names in toast notifications. Names containing `&` no longer
+  trigger Pango markup warnings when hiding or unhiding a device.
+
 ## 1.4.1 - 2026-11-26
 
 - Shows the hide, alias-edit, and alias-delete buttons only while hovering a
