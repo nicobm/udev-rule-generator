@@ -65,6 +65,13 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="1.11.8" date="2026-11-26">
+      <description>
+        <p>
+          Keeps the accent border visible around the card being dragged.
+        </p>
+      </description>
+    </release>
     <release version="1.11.7" date="2026-11-26">
       <description>
         <p>

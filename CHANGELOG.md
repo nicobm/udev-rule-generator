@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.11.8 - 2026-11-26
+
+- Keeps the accent border visible on the held card by drawing a real border
+  instead of an inset shadow hidden by the card snapshot.
+
 ## 1.11.7 - 2026-11-26
 
 - Uses a static snapshot of the source card so the original can be hidden
