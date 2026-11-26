@@ -45,6 +45,16 @@
   border-radius: 12px;
 }
 
+.device-drag-placeholder {
+  background-color: @window_bg_color;
+  border-radius: 12px;
+}
+
+.device-reorder-card {
+  background-color: @window_bg_color;
+  border-radius: 12px;
+}
+
 .device-icon-color {
   min-width: 34px;
   min-height: 34px;

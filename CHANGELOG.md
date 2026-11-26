@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.11.6 - 2026-11-26
+
+- While dragging, the source card is masked by an opaque placeholder so only
+  the moving card is visible.
+- Animates the displaced destination row with a fast 160 ms eased transition
+  when the order changes.
+
 ## 1.11.5 - 2026-11-26
 
 - Keeps the dragged card fully opaque.

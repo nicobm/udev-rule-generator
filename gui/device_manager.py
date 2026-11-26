@@ -863,6 +863,7 @@ class DeviceManager(Gtk.Box):
         drag_state: dict[str, object] = {
             "timer": 0,
             "preview": None,
+            "placeholder": None,
             "origin": None,
             "hot_y": 0,
         }
@@ -945,6 +946,16 @@ class DeviceManager(Gtk.Box):
             )
             picture.set_size_request(width, height)
             picture.set_can_target(False)
+            placeholder = Gtk.Box()
+            placeholder.add_css_class("device-drag-placeholder")
+            placeholder.set_size_request(width, height)
+            placeholder.set_can_target(False)
+            self.preview_layer.put(
+                placeholder,
+                int(origin[0]),
+                int(origin[1]),
+            )
+
             preview = Gtk.Box()
             preview.add_css_class("device-dragging-card")
             preview.set_size_request(width, height)
@@ -952,6 +963,7 @@ class DeviceManager(Gtk.Box):
             preview.append(picture)
             self.preview_layer.put(preview, int(origin[0]), int(origin[1]))
             drag_state["preview"] = preview
+            drag_state["placeholder"] = placeholder
             drag_state["origin"] = origin
             drag_state["hot_y"] = min(20, max(0, int(position[1])))
             drag_state["timer"] = GLib.timeout_add(16, update_preview)
@@ -964,7 +976,11 @@ class DeviceManager(Gtk.Box):
             preview = drag_state.get("preview")
             if preview is not None:
                 self.preview_layer.remove(preview)  # type: ignore[arg-type]
+            placeholder = drag_state.get("placeholder")
+            if placeholder is not None:
+                self.preview_layer.remove(placeholder)  # type: ignore[arg-type]
             drag_state["preview"] = None
+            drag_state["placeholder"] = None
             drag_state["origin"] = None
 
         source = Gtk.DragSource()
@@ -1022,6 +1038,11 @@ class DeviceManager(Gtk.Box):
             target_index += 1
         order.insert(target_index, dragged_id)
 
+        target_origin = self._origin_in_overlay(target_row)
+        target_width = max(1, target_row.get_width())
+        target_height = max(1, target_row.get_height())
+        target_snapshot = Gtk.WidgetPaintable.new(target_row)
+
         try:
             self.store.set_order(order)
         except OSError as exc:
@@ -1031,7 +1052,101 @@ class DeviceManager(Gtk.Box):
             )
             return False
         self.reload()
+        if target_origin is not None:
+            self._animate_dropped_row(
+                target_id,
+                target_origin[1],
+                target_width,
+                target_height,
+                target_snapshot,
+            )
         return True
+
+    @staticmethod
+    def _tuple_xy(value: object) -> tuple[float, float] | None:
+        if not value:
+            return None
+        if len(value) >= 3:  # type: ignore[arg-type]
+            if not value[0]:  # type: ignore[index]
+                return None
+            return float(value[1]), float(value[2])  # type: ignore[index]
+        if len(value) >= 2:  # type: ignore[arg-type]
+            return float(value[0]), float(value[1])  # type: ignore[index]
+        return None
+
+    def _origin_in_overlay(
+        self,
+        widget: Gtk.Widget,
+    ) -> tuple[float, float] | None:
+        return self._tuple_xy(
+            widget.translate_coordinates(self.devices_overlay, 0, 0)
+        )
+
+    def _animate_dropped_row(
+        self,
+        device_id: str,
+        old_y: float,
+        width: int,
+        height: int,
+        snapshot: Gtk.WidgetPaintable,
+    ) -> None:
+        """Anima la fila que fue desplazada al soltar la tarjeta."""
+        attempts = 0
+
+        def start() -> bool:
+            nonlocal attempts
+            row = next(
+                (
+                    candidate
+                    for _group, candidate in self._rows
+                    if self._row_identities.get(candidate) == device_id
+                ),
+                None,
+            )
+            if row is None or row.get_width() == 0:
+                attempts += 1
+                return attempts < 8
+            origin = self._origin_in_overlay(row)
+            if origin is None:
+                return False
+            new_y = origin[1]
+            if abs(new_y - old_y) < 2:
+                return False
+
+            picture = Gtk.Picture.new_for_paintable(snapshot)
+            picture.set_size_request(width, height)
+            picture.set_can_target(False)
+            card = Gtk.Box()
+            card.add_css_class("device-reorder-card")
+            card.set_size_request(width, height)
+            card.set_can_target(False)
+            card.append(picture)
+            self.preview_layer.put(card, int(origin[0]), int(old_y))
+            row.set_opacity(0.0)
+
+            now = GLib.get_monotonic_time()
+            duration = 160_000
+
+            def tick() -> bool:
+                elapsed = GLib.get_monotonic_time() - now
+                progress = min(1.0, elapsed / duration)
+                eased = 1.0 - (1.0 - progress) ** 3
+                current_y = old_y + (new_y - old_y) * eased
+                self.preview_layer.move(
+                    card,
+                    int(origin[0]),
+                    int(current_y),
+                )
+                if progress >= 1.0:
+                    self.preview_layer.remove(card)
+                    row.set_opacity(1.0)
+                    return False
+                return True
+
+            GLib.timeout_add(16, tick)
+            return False
+
+        GLib.timeout_add(16, start)
 
     def _known_row(
         self,
