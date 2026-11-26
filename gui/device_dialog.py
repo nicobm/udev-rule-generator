@@ -57,13 +57,6 @@ class DeviceDialog(Adw.Dialog):
                 subtitle=self.device.display_name,
             )
         )
-        close_button = Gtk.Button(
-            icon_name="window-close-symbolic",
-            tooltip_text=tr("Cerrar"),
-        )
-        close_button.add_css_class("flat")
-        close_button.connect("clicked", lambda *_: self.close())
-        header.pack_end(close_button)
         toolbar.add_top_bar(header)
 
         self.banner = Adw.Banner(
@@ -155,7 +148,7 @@ class DeviceDialog(Adw.Dialog):
         group = Adw.PreferencesGroup(
             title=tr("Acción"),
             description=tr(
-                "Permitir da acceso al usuario de la sesión y marca el "
+                "Habilitar da acceso al usuario de la sesión y marca el "
                 "dispositivo como joystick.  Ignorar lo desautoriza (USB) o "
                 "deniega el acceso a sus nodos (Bluetooth)."
             ),
@@ -167,7 +160,7 @@ class DeviceDialog(Adw.Dialog):
 
         group.add(
             self._radio_row(
-                tr("Permitir / detectar"),
+                tr("Habilitar (predeterminado)"),
                 RuleAction.ALLOW.description,
                 self.allow_radio,
             )

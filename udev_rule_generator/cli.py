@@ -696,7 +696,7 @@ def _interactive_device(host: Host, args: argparse.Namespace, colors: Colors) ->
         print()
         print(colors.bold(tr("¿Qué querés hacer con este dispositivo?")))
         print(
-            f"  1) {colors.green(tr('Permitir / detectar'))}  "
+            f"  1) {colors.green(tr('Habilitar (predeterminado)'))}  "
             f"({RuleAction.ALLOW.description})"
         )
         print(

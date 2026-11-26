@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.12.5 - 2026-11-26
+
+- Removes the duplicate close button from all `Adw.Dialog` windows. The
+  automatic header-bar close button is kept.
+- Renames the allow action to **Habilitar (predeterminado)** / **Enable
+  (default)** in the GUI and CLI. The underlying udev action remains `allow`.
+- Updates translations, README, website, and tests for the new label.
+
 ## 0.12.4 - 2026-11-26
 
 - Prints a short startup line with the app version and a final `Closing…`

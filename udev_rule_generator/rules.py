@@ -26,7 +26,7 @@ class RuleAction(str, Enum):
     def label(self) -> str:
         return tr(
             {
-                RuleAction.ALLOW: "Permitir / detectar",
+                RuleAction.ALLOW: "Habilitar (predeterminado)",
                 RuleAction.IGNORE: "Ignorar",
             }[self]
         )
@@ -106,7 +106,7 @@ def rule_filename(device: Joystick, action: RuleAction) -> str:
 
 
 def rule_title(device: Joystick, action: RuleAction) -> str:
-    verb = tr("Permitir") if action is RuleAction.ALLOW else tr("Ignorar")
+    verb = tr("Habilitar") if action is RuleAction.ALLOW else tr("Ignorar")
     return f"{verb}: {device.display_name}"
 
 

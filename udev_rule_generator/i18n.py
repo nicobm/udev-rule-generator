@@ -145,14 +145,14 @@ _EN.update(
         "Nodos": "Nodes",
         "Nombre de entrada": "Input name",
         "Acción": "Action",
-        "Permitir da acceso al usuario de la sesión y marca el dispositivo "
+        "Habilitar da acceso al usuario de la sesión y marca el dispositivo "
         "como joystick.  Ignorar lo desautoriza (USB) o deniega el acceso a "
         "sus nodos (Bluetooth).": (
-            "Allow gives the session user access and marks the device as a "
+            "Enable gives the session user access and marks the device as a "
             "joystick.  Ignore deauthorizes it (USB) or denies access to its "
             "nodes (Bluetooth)."
         ),
-        "Permitir / detectar": "Allow / detect",
+        "Habilitar (predeterminado)": "Enable (default)",
         "Ignorar": "Ignore",
         "Da permisos de lectura/escritura al usuario de la sesión "
         "(MODE 0660 y TAG uaccess) y marca el dispositivo como joystick.": (
@@ -317,6 +317,7 @@ _EN.update(
         "Bus desconocido": "Unknown bus",
         "sin nodos visibles": "no visible nodes",
         "Permitir": "Allow",
+        "Habilitar": "Enable",
         "El nombre del dispositivo contiene saltos de línea.": (
             "The device name contains line breaks."
         ),

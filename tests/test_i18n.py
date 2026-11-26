@@ -35,7 +35,9 @@ class LanguageDetectionTests(unittest.TestCase):
 class TranslationTests(unittest.TestCase):
     def test_translates_when_english(self) -> None:
         with mock.patch.object(i18n, "LANGUAGE", "en"):
-            self.assertEqual(i18n.tr("Permitir / detectar"), "Allow / detect")
+            self.assertEqual(
+                i18n.tr("Habilitar (predeterminado)"), "Enable (default)"
+            )
             self.assertEqual(
                 i18n.tr(
                     "Se instalará como /etc/udev/rules.d/{filename}",
@@ -46,7 +48,10 @@ class TranslationTests(unittest.TestCase):
 
     def test_keeps_spanish_by_default(self) -> None:
         with mock.patch.object(i18n, "LANGUAGE", "es"):
-            self.assertEqual(i18n.tr("Permitir / detectar"), "Permitir / detectar")
+            self.assertEqual(
+                i18n.tr("Habilitar (predeterminado)"),
+                "Habilitar (predeterminado)",
+            )
 
     def test_unknown_text_is_returned_as_is(self) -> None:
         with mock.patch.object(i18n, "LANGUAGE", "en"):

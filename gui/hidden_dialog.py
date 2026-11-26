@@ -42,13 +42,6 @@ class HiddenDialog(Adw.Dialog):
                 subtitle=tr("No aparecen en la lista principal"),
             )
         )
-        close_button = Gtk.Button(
-            icon_name="window-close-symbolic",
-            tooltip_text=tr("Cerrar"),
-        )
-        close_button.add_css_class("flat")
-        close_button.connect("clicked", lambda *_: self.close())
-        header.pack_end(close_button)
         toolbar.add_top_bar(header)
 
         self.stack = Gtk.Stack()

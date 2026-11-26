@@ -66,6 +66,15 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.12.5" date="2026-11-26">
+      <description>
+        <p>
+          Removes the duplicate close button from dialogs and renames the
+          default action to Enable (default), while keeping the underlying
+          udev action as allow.
+        </p>
+      </description>
+    </release>
     <release version="0.12.4" date="2026-11-26">
       <description>
         <p>
