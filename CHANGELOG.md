@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.7 - 2026-11-26
+
+- Places the grey alias pencil immediately to the right of the device name
+  instead of at the far right of the row.
+
 ## 1.3.6 - 2026-11-26
 
 - Adds per-device aliases. The pencil next to each name opens an inline field

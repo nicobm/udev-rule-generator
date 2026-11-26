@@ -302,27 +302,62 @@ class DeviceManager(Gtk.Box):
         if row not in self._controls:
             self._controls.append(row)
 
+    @staticmethod
+    def _find_title_label(row: Adw.ActionRow) -> Gtk.Label | None:
+        """Localiza la etiqueta interna del título de ``Adw.ActionRow``."""
+        def walk(widget: Gtk.Widget) -> Gtk.Label | None:
+            if (
+                isinstance(widget, Gtk.Label)
+                and "title" in widget.get_css_classes()
+            ):
+                return widget
+            child = widget.get_first_child()
+            while child is not None:
+                found = walk(child)
+                if found is not None:
+                    return found
+                child = child.get_next_sibling()
+            return None
+
+        return walk(row)
+
     def _add_alias_control(
         self,
         row: Adw.ActionRow,
         device_id: str,
         original_name: str,
     ) -> None:
-        """Añade el lápiz para editar el alias y la X para eliminarlo."""
-        prefix = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-        prefix.set_valign(Gtk.Align.CENTER)
-        row.add_prefix(prefix)
+        """Añade el lápiz pegado al título y la X para eliminarlo."""
+        title = self._find_title_label(row)
+        if title is None or title.get_parent() is None:
+            return
+        title_box = title.get_parent()
+        if not isinstance(title_box, Gtk.Box):
+            return
+        title_row = Gtk.Box(
+            orientation=Gtk.Orientation.HORIZONTAL,
+            spacing=2,
+        )
+        title_row.set_valign(Gtk.Align.CENTER)
+        title_row.set_hexpand(True)
+        title.unparent()
+        title.set_hexpand(False)
+        title_row.append(title)
+        title_box.prepend(title_row)
 
         button = Gtk.Button()
         button.add_css_class("flat")
         button.set_valign(Gtk.Align.CENTER)
-        row.add_suffix(button)
+        title_row.append(button)
+
+        spacer = Gtk.Box()
+        spacer.set_hexpand(True)
+        title_row.append(spacer)
 
         entry: Gtk.Entry | None = None
         editing = False
 
         def update_state() -> None:
-            nonlocal entry
             alias = self.store.alias_for(device_id)
             if editing:
                 has_text = entry is not None and bool(entry.get_text().strip())
@@ -336,9 +371,10 @@ class DeviceManager(Gtk.Box):
                     if has_text
                     else tr("Agregar alias")
                 )
-                button.set_opacity(1.0)
+                button.set_opacity(1.0 if has_text else 0.55)
                 return
             row.set_title(markup_escape(alias or original_name))
+            title.set_visible(True)
             if alias:
                 button.set_icon_name("window-close-symbolic")
                 button.set_tooltip_text(tr("Eliminar alias"))
@@ -346,7 +382,7 @@ class DeviceManager(Gtk.Box):
             else:
                 button.set_icon_name("document-edit-symbolic")
                 button.set_tooltip_text(tr("Agregar alias"))
-                button.set_opacity(1.0)
+                button.set_opacity(0.55)
 
         def finish_edit(save: bool) -> None:
             nonlocal entry, editing
@@ -366,7 +402,7 @@ class DeviceManager(Gtk.Box):
             editing = False
             entry = None
             current.unparent()
-            prefix.set_hexpand(False)
+            title.set_visible(True)
             update_state()
 
         def focus_entry() -> bool:
@@ -392,18 +428,17 @@ class DeviceManager(Gtk.Box):
                 update_state()
                 return
             editing = True
-            row.set_title("")
-            prefix.set_hexpand(True)
+            title.set_visible(False)
             entry = Gtk.Entry()
             entry.set_placeholder_text(original_name)
             entry.set_text("")
-            entry.set_hexpand(True)
-            entry.set_width_chars(18)
+            entry.set_hexpand(False)
+            entry.set_width_chars(22)
             entry.set_valign(Gtk.Align.CENTER)
             entry.add_css_class("alias-entry")
             entry.connect("changed", lambda *_: update_state())
             entry.connect("activate", lambda *_: finish_edit(True))
-            prefix.append(entry)
+            title_row.prepend(entry)
             update_state()
             GLib.idle_add(focus_entry)
 
