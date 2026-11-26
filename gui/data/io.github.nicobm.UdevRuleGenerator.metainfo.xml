@@ -64,6 +64,15 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.17.0" date="2026-11-26">
+      <description>
+        <p>
+          Batches device switch changes behind an Apply changes button so a
+          group of rule installs and removals uses one polkit authentication.
+          Also fixes the Ctrl+C shutdown hang.
+        </p>
+      </description>
+    </release>
     <release version="0.16.0" date="2026-11-26">
       <description>
         <p>

@@ -11,6 +11,7 @@ from udev_rule_generator import privileged
 from udev_rule_generator.host import Host
 from udev_rule_generator.installed import list_installed_rules
 from udev_rule_generator.privileged import (
+    apply_rule_changes,
     install_rule_files,
     remove_rule_files,
 )
@@ -54,6 +55,30 @@ class RootInstallTests(unittest.TestCase):
                 removed = remove_rule_files(host, ["10-test-device.rules"])
                 self.assertFalse(target.exists())
                 self.assertEqual(removed.filenames, ("10-test-device.rules",))
+
+    def test_apply_changes_installs_and_removes_in_one_operation(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            old = Path(directory) / "10-old.rules"
+            old.write_text("old", encoding="utf-8")
+            with (
+                mock.patch.object(privileged, "RULES_DIR", directory),
+                mock.patch.object(privileged.os, "geteuid", return_value=0),
+                mock.patch.object(
+                    privileged, "_run_udevadm_local", return_value=True
+                ),
+            ):
+                result = apply_rule_changes(
+                    Host(in_flatpak=False),
+                    {"10-new.rules": "new content"},
+                    ["10-old.rules"],
+                )
+            self.assertFalse(old.exists())
+            self.assertEqual(
+                (Path(directory) / "10-new.rules").read_text(encoding="utf-8"),
+                "new content",
+            )
+            self.assertEqual(result.filenames, ("10-new.rules",))
+            self.assertTrue(result.reloaded)
 
 
 class InstalledParsingTests(unittest.TestCase):

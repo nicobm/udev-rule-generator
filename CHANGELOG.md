@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.17.0 - 2026-11-26
+
+- Adds a pending-changes bar with **Apply changes**. Toggling several devices
+  now uses a single pkexec authentication for all installs and removals.
+- Adds `apply_rule_changes()` to install and remove rules in one root
+  operation.
+- Replaces the GUI ThreadPoolExecutor with daemon threads so Ctrl+C returns to
+  the shell prompt instead of hanging at shutdown.
+
 ## 0.16.0 - 2026-11-26
 
 - New generated rule filenames include the application name:

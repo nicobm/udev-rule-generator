@@ -9,7 +9,7 @@ from udev_rule_generator.devices import Joystick
 from udev_rule_generator.host import Host
 from udev_rule_generator.i18n import tr
 from udev_rule_generator.known import KnownDevice, KnownDevices
-from udev_rule_generator.privileged import install_rule_files, remove_rule_files
+from udev_rule_generator.privileged import apply_rule_changes
 from udev_rule_generator.rules import RuleAction, build_rule
 from udev_rule_generator.userconfig import device_identity
 
@@ -33,9 +33,11 @@ class DeviceManager(Gtk.Box):
         self.parent_window = parent
         self.on_changed = on_changed
         self._connected: list[Joystick] = []
+        self._pending_known: dict[str, bool] = {}
+        self._pending_unknown: dict[str, Joystick] = {}
         self._rows: list[Gtk.Widget] = []
         self._controls: list[Gtk.Widget] = []
-        self._known_busy = False
+        self._busy = False
         self._updating = False
 
         self._build_ui()
@@ -49,6 +51,29 @@ class DeviceManager(Gtk.Box):
         self.devices_group.set_separate_rows(True)
         self.devices_group.set_hexpand(True)
         self.append(self.devices_group)
+
+        self.action_bar = Gtk.Box(
+            orientation=Gtk.Orientation.HORIZONTAL,
+            spacing=10,
+        )
+        self.action_bar.set_margin_top(10)
+        self.action_bar.set_margin_bottom(10)
+        self.action_bar.set_margin_start(14)
+        self.action_bar.set_margin_end(14)
+
+        self.pending_label = Gtk.Label(label="", xalign=0)
+        self.pending_label.set_hexpand(True)
+        self.pending_label.add_css_class("dim-label")
+        self.spinner = Gtk.Spinner()
+        self.spinner.set_visible(False)
+        self.apply_button = Gtk.Button(label=tr("Aplicar cambios"))
+        self.apply_button.add_css_class("suggested-action")
+        self.apply_button.set_sensitive(False)
+        self.apply_button.connect("clicked", lambda *_: self._apply_pending())
+        self.action_bar.append(self.pending_label)
+        self.action_bar.append(self.spinner)
+        self.action_bar.append(self.apply_button)
+        self.action_bar.set_visible(False)
 
     def set_connected_devices(self, devices: list[Joystick]) -> None:
         fingerprint = tuple(
@@ -71,9 +96,19 @@ class DeviceManager(Gtk.Box):
         self._controls.clear()
 
         known = self.store.devices()
+        known_ids = {device.id for device in known}
+        for key in list(self._pending_known):
+            record = next(
+                (device for device in known if device.id == key), None
+            )
+            if record is None or record.active == self._pending_known[key]:
+                self._pending_known.pop(key, None)
+        for key in list(self._pending_unknown):
+            if key in known_ids:
+                self._pending_unknown.pop(key, None)
+
         connected = self._connected
         connected_ids = {device_identity(device) for device in connected}
-        known_ids = {device.id for device in known}
 
         for record in known:
             self._append(self._known_row(record, record.id in connected_ids))
@@ -92,6 +127,7 @@ class DeviceManager(Gtk.Box):
             self._append(row)
 
         self._apply_sensitivity()
+        self._update_pending_ui()
         self._updating = False
 
     def _append(self, row: Gtk.Widget) -> None:
@@ -111,11 +147,13 @@ class DeviceManager(Gtk.Box):
         if connected:
             row.add_suffix(self._connected_badge())
 
-        switch = Gtk.Switch(active=device.active)
+        switch = Gtk.Switch(
+            active=self._pending_known.get(device.id, device.active)
+        )
         switch.set_valign(Gtk.Align.CENTER)
         switch.connect(
             "notify::active",
-            lambda selected_switch, _pspec, selected=device: self._toggle_known(
+            lambda selected_switch, _pspec, selected=device: self._set_known_pending(
                 selected, selected_switch.get_active()
             ),
         )
@@ -124,6 +162,7 @@ class DeviceManager(Gtk.Box):
         return row
 
     def _unknown_row(self, device: Joystick) -> Adw.ActionRow:
+        key = device_identity(device)
         row = Adw.ActionRow(
             title=device.display_name,
             subtitle=f"{device.bus_label} · {device.identifier} · "
@@ -132,15 +171,13 @@ class DeviceManager(Gtk.Box):
         row.set_activatable(False)
         row.add_suffix(self._connected_badge())
 
-        switch = Gtk.Switch(active=False)
+        switch = Gtk.Switch(active=key in self._pending_unknown)
         switch.set_valign(Gtk.Align.CENTER)
         switch.connect(
             "notify::active",
-            lambda selected_switch, _pspec, selected=device: self._enable_unknown(
-                selected
-            )
-            if selected_switch.get_active()
-            else None,
+            lambda selected_switch, _pspec, selected=device: self._set_unknown_pending(
+                selected, selected_switch.get_active()
+            ),
         )
         row.add_suffix(switch)
         self._controls.append(switch)
@@ -153,142 +190,143 @@ class DeviceManager(Gtk.Box):
         badge.set_valign(Gtk.Align.CENTER)
         return badge
 
-    def _enable_unknown(self, device: Joystick) -> None:
-        if self._updating or self._known_busy:
+    def _set_known_pending(self, device: KnownDevice, active: bool) -> None:
+        if self._updating or self._busy:
+            return
+        if active == device.active:
+            self._pending_known.pop(device.id, None)
+        else:
+            self._pending_known[device.id] = active
+        self._update_pending_ui()
+
+    def _set_unknown_pending(self, device: Joystick, active: bool) -> None:
+        if self._updating or self._busy:
+            return
+        key = device_identity(device)
+        if active:
+            self._pending_unknown[key] = device
+        else:
+            self._pending_unknown.pop(key, None)
+        self._update_pending_ui()
+
+    def _update_pending_ui(self) -> None:
+        pending = bool(self._pending_known or self._pending_unknown)
+        self.action_bar.set_visible(pending)
+        self.pending_label.set_text(
+            tr("Cambios pendientes") if pending else ""
+        )
+        self.apply_button.set_sensitive(pending and not self._busy)
+
+    def _apply_pending(self) -> None:
+        if self._busy or not (self._pending_known or self._pending_unknown):
             return
         self._set_busy(True)
         thread = threading.Thread(
-            target=self._unknown_worker,
-            args=(device,),
-            name="udev-rule-generator-known-new",
+            target=self._apply_worker,
+            name="udev-rule-generator-apply",
             daemon=True,
         )
         thread.start()
 
-    def _unknown_worker(self, device: Joystick) -> None:
+    def _apply_worker(self) -> None:
         try:
-            spec = build_rule(device, RuleAction.ALLOW)
-            if not spec.filename:
-                raise ValueError(
-                    tr("No hay una regla guardada para activar.")
-                )
-            install_rule_files(
-                self.host,
-                {spec.filename: spec.content},
-                trigger=spec.trigger,
-            )
-            try:
-                self.store.record_rule(device, spec)
-            except OSError as exc:
-                message = tr(
-                    "Regla activada: {name}.  No se pudo guardar el "
-                    "estado: {error}",
-                    name=device.display_name,
-                    error=exc,
-                )
-            else:
-                message = tr(
-                    "Regla activada: {name}", name=device.display_name
-                )
-        except Exception as exc:  # noqa: BLE001 (se muestra al usuario)
-            GLib.idle_add(self._unknown_failed, str(exc))
-            return
-        GLib.idle_add(self._unknown_succeeded, message)
+            install_files: dict[str, str] = {}
+            updated: list[KnownDevice] = []
+            removed: list[str] = []
+            trigger_add = False
 
-    def _unknown_succeeded(self, message: str) -> bool:
-        self._set_busy(False)
-        self.reload()
-        self.on_changed(message)
-        return False
+            for record in self.store.devices():
+                desired = self._pending_known.get(record.id)
+                if desired is None or desired == record.active:
+                    continue
+                if desired:
+                    spec = record.build_spec()
+                    if not spec.filename:
+                        raise ValueError(
+                            tr("No hay una regla guardada para activar.")
+                        )
+                    install_files[spec.filename] = spec.content
+                    updated.append(record.update_from_spec(spec))
+                    trigger_add = trigger_add or spec.trigger == "add"
+                elif record.filename:
+                    removed.append(record.filename)
 
-    def _unknown_failed(self, message: str) -> bool:
-        self._set_busy(False)
-        self.reload()
-        self._show_error(
-            tr("No se pudo activar el dispositivo"),
-            message,
-        )
-        return False
-
-    def _toggle_known(self, device: KnownDevice, active: bool) -> None:
-        if self._updating or self._known_busy or active == device.active:
-            return
-        self._set_busy(True)
-        thread = threading.Thread(
-            target=self._known_worker,
-            args=(device, active),
-            name="udev-rule-generator-known",
-            daemon=True,
-        )
-        thread.start()
-
-    def _known_worker(self, device: KnownDevice, active: bool) -> None:
-        try:
-            if active:
-                spec = device.build_spec()
+            for device in self._pending_unknown.values():
+                spec = build_rule(device, RuleAction.ALLOW)
                 if not spec.filename:
                     raise ValueError(
                         tr("No hay una regla guardada para activar.")
                     )
-                install_rule_files(
+                install_files[spec.filename] = spec.content
+                updated.append(
+                    KnownDevice.from_joystick(device, spec)
+                )
+                trigger_add = trigger_add or spec.trigger == "add"
+
+            if not install_files and not removed:
+                message = tr("No hay cambios para aplicar.")
+            else:
+                apply_rule_changes(
                     self.host,
-                    {spec.filename: spec.content},
-                    trigger=spec.trigger,
+                    install_files,
+                    removed,
+                    trigger="add" if trigger_add else "change",
                 )
                 try:
-                    self.store.update(device.update_from_spec(spec))
+                    if updated:
+                        self.store.update_many(updated)
+                    if removed:
+                        self.store.mark_inactive_by_filenames(removed)
                 except OSError as exc:
                     message = tr(
-                        "Regla activada: {name}.  No se pudo guardar el "
+                        "Cambios aplicados, pero no se pudo guardar el "
                         "estado: {error}",
-                        name=device.name,
                         error=exc,
                     )
                 else:
-                    message = tr("Regla activada: {name}", name=device.name)
-            else:
-                if not device.filename:
-                    raise ValueError(
-                        tr("No hay una regla guardada para desactivar.")
-                    )
-                remove_rule_files(self.host, [device.filename])
-                try:
-                    self.store.mark_inactive_by_filename(device.filename)
-                except OSError as exc:
-                    message = tr(
-                        "Regla desactivada: {name}.  No se pudo guardar el "
-                        "estado: {error}",
-                        name=device.name,
-                        error=exc,
-                    )
-                else:
-                    message = tr("Regla desactivada: {name}", name=device.name)
+                    message = tr("Cambios aplicados.")
+            self._pending_known.clear()
+            self._pending_unknown.clear()
         except Exception as exc:  # noqa: BLE001 (se muestra al usuario)
-            GLib.idle_add(self._known_failed, str(exc))
+            GLib.idle_add(self._apply_failed, str(exc))
             return
-        GLib.idle_add(self._known_succeeded, message)
+        GLib.idle_add(self._apply_succeeded, message)
 
-    def _known_succeeded(self, message: str) -> bool:
+    def _apply_succeeded(self, message: str) -> bool:
         self._set_busy(False)
         self.reload()
         self.on_changed(message)
         return False
 
-    def _known_failed(self, message: str) -> bool:
+    def _apply_failed(self, message: str) -> bool:
         self._set_busy(False)
         self.reload()
         self._show_error(
-            tr("No se pudo cambiar la regla guardada"),
+            tr("No se pudieron aplicar los cambios"),
             message,
         )
         return False
 
     def _set_busy(self, busy: bool) -> None:
-        self._known_busy = busy
-        self._apply_sensitivity()
+        self._busy = busy
+        for control in self._controls:
+            control.set_sensitive(not busy)
+        self.apply_button.set_sensitive(
+            not busy and bool(self._pending_known or self._pending_unknown)
+        )
+        self.spinner.set_visible(busy)
+        if busy:
+            self.spinner.start()
+            self.action_bar.set_visible(True)
+            self.pending_label.set_text(
+                tr("Esperando el diálogo de autenticación de GNOME/polkit…")
+            )
+            return
+        self.spinner.stop()
+        self._update_pending_ui()
 
     def _apply_sensitivity(self) -> None:
-        enabled = not self._known_busy
+        enabled = not self._busy
         for control in self._controls:
             control.set_sensitive(enabled)
 

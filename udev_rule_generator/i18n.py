@@ -92,6 +92,15 @@ _EN.update(
         "No se pudo activar el dispositivo": (
             "Could not enable the device"
         ),
+        "Aplicar cambios": "Apply changes",
+        "Cambios pendientes": "Pending changes",
+        "Cambios aplicados.": "Changes applied.",
+        "Cambios aplicados, pero no se pudo guardar el estado: {error}": (
+            "Changes applied, but the state could not be saved: {error}"
+        ),
+        "No se pudieron aplicar los cambios": (
+            "Could not apply the changes"
+        ),
         "Dispositivos ocultos": "Hidden devices",
         "Acerca de": "About",
         "Buscando joysticks…": "Looking for joysticks…",
@@ -445,6 +454,16 @@ _EN.update(
         "Autenticación cancelada. No se instaló nada.": (
             "Authentication cancelled. Nothing was installed."
         ),
+        "Autenticación cancelada. No se cambió nada.": (
+            "Authentication cancelled. Nothing was changed."
+        ),
+        "polkit no autorizó la operación. No se cambió nada.": (
+            "polkit did not authorize the operation. Nothing was changed."
+        ),
+        "No se pudieron aplicar los cambios (código {code}).": (
+            "Could not apply the changes (code {code})."
+        ),
+        "No hay cambios para aplicar.": "There are no changes to apply.",
         "polkit no autorizó la operación. No se instaló nada.": (
             "polkit did not authorize the operation. Nothing was installed."
         ),

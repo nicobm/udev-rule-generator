@@ -248,6 +248,182 @@ def install_rule_files(
     return _install_with_pkexec(host, files, trigger)
 
 
+def _apply_as_root(
+    install_files: dict[str, str],
+    remove_filenames: list[str],
+    trigger: str,
+) -> InstallResult:
+    installed: list[str] = []
+    try:
+        os.makedirs(RULES_DIR, exist_ok=True)
+        for filename in remove_filenames:
+            validate_rule_filename(filename)
+            try:
+                os.unlink(os.path.join(RULES_DIR, filename))
+            except FileNotFoundError:
+                pass
+        for filename, content in install_files.items():
+            validate_rule_filename(filename)
+            target = os.path.join(RULES_DIR, filename)
+            temporary = os.path.join(RULES_DIR, f".{filename}.tmp")
+            with open(temporary, "w", encoding="utf-8") as handle:
+                handle.write(content)
+            os.chmod(temporary, 0o644)
+            os.replace(temporary, target)
+            installed.append(filename)
+    except OSError as exc:
+        raise HostError(
+            tr(
+                "No se pudo escribir en {directory}: {error}",
+                directory=RULES_DIR,
+                error=exc,
+            )
+        ) from exc
+    if shutil.which("restorecon"):
+        try:
+            subprocess.run(
+                ["restorecon", "-F", RULES_DIR],
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=60,
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            pass
+    reloaded = _run_udevadm_local(trigger)
+    return InstallResult(
+        filenames=tuple(installed),
+        used_pkexec=False,
+        reloaded=reloaded,
+        trigger=trigger,
+        warning=None
+        if reloaded
+        else tr("La regla se instaló, pero no se pudo ejecutar udevadm para recargarla."),
+    )
+
+
+def _apply_with_pkexec(
+    host: Host,
+    install_files: dict[str, str],
+    remove_filenames: list[str],
+    trigger: str,
+) -> InstallResult:
+    pkexec = host.which("pkexec")
+    if not pkexec:
+        raise HostError(
+            tr(
+                "No se encontró pkexec. Instalá polkit o ejecutá la aplicación como root."
+            )
+        )
+
+    stage = None
+    try:
+        script_lines = ["set -eu", "install -d -m 0755 /etc/udev/rules.d"]
+        if remove_filenames:
+            targets = " ".join(
+                f"/etc/udev/rules.d/{filename}" for filename in remove_filenames
+            )
+            script_lines.append(f"rm -f -- {targets}")
+        if install_files:
+            try:
+                stage = host.stage_files(install_files)
+            except OSError as exc:
+                raise HostError(
+                    tr(
+                        "No se pudo preparar el archivo temporal: {error}",
+                        error=exc,
+                    )
+                ) from exc
+            script_lines.append('install -m 0644 -- "$@" /etc/udev/rules.d/')
+        script_lines.extend(
+            [
+                "if command -v restorecon >/dev/null 2>&1; then "
+                "restorecon -F /etc/udev/rules.d/ >/dev/null 2>&1 || true; fi",
+                *_udev_reload_script(trigger),
+            ]
+        )
+        sources = (
+            [str(stage / filename) for filename in install_files]
+            if stage is not None
+            else []
+        )
+        result = host.run(
+            [
+                pkexec,
+                "sh",
+                "-c",
+                "\n".join(script_lines),
+                "udev-rule-generator",
+                *sources,
+            ],
+            timeout=600,
+        )
+        if result.returncode != 0:
+            detail = (result.stderr or result.stdout).strip()
+            if result.returncode == _POLKIT_CANCELLED:
+                raise HostError(
+                    tr("Autenticación cancelada. No se cambió nada.")
+                )
+            if result.returncode == _POLKIT_NOT_AUTHORIZED:
+                raise HostError(
+                    tr("polkit no autorizó la operación. No se cambió nada.")
+                    + (f"\n{detail}" if detail else "")
+                )
+            if result.returncode == _POLKIT_ERROR:
+                raise HostError(
+                    tr("pkexec no pudo iniciar la autenticación.")
+                    + (f"\n{detail}" if detail else "")
+                )
+            raise HostError(
+                tr(
+                    "No se pudieron aplicar los cambios (código {code}).",
+                    code=result.returncode,
+                )
+                + (f"\n{detail}" if detail else "")
+            )
+        reloaded = host.which("udevadm") is not None
+        return InstallResult(
+            filenames=tuple(install_files),
+            used_pkexec=True,
+            reloaded=reloaded,
+            trigger=trigger,
+            warning=None
+            if reloaded
+            else tr(
+                "La regla se instaló, pero no se encontró udevadm para recargarla."
+            ),
+        )
+    finally:
+        if stage is not None:
+            host.cleanup_stage(stage)
+
+
+def apply_rule_changes(
+    host: Host,
+    install_files: dict[str, str],
+    remove_filenames: list[str],
+    *,
+    trigger: str = "change",
+) -> InstallResult:
+    """Aplica instalaciones y eliminaciones en una sola autenticación."""
+    if not install_files and not remove_filenames:
+        raise ValueError(tr("No hay cambios para aplicar."))
+    if trigger not in {"change", "add"}:
+        raise ValueError(
+            tr("Trigger de udev no válido: {trigger!r}", trigger=trigger)
+        )
+    for filename in install_files:
+        validate_rule_filename(filename)
+    for filename in remove_filenames:
+        validate_rule_filename(filename)
+
+    if os.geteuid() == 0 and not host.in_flatpak:
+        return _apply_as_root(install_files, remove_filenames, trigger)
+    return _apply_with_pkexec(
+        host, install_files, remove_filenames, trigger
+    )
+
+
 def _remove_as_root(filenames: list[str]) -> InstallResult:
     removed: list[str] = []
     for filename in filenames:

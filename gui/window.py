@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from concurrent.futures import Future, ThreadPoolExecutor
+import threading
 
 from udev_rule_generator import APP_NAME
 from udev_rule_generator.devices import Joystick, detect_joysticks
@@ -23,9 +23,6 @@ class MainWindow(Adw.ApplicationWindow):
         super().__init__(**kwargs)
         self.host = Host()
         self.known_store = KnownDevices()
-        self._executor = ThreadPoolExecutor(
-            max_workers=3, thread_name_prefix="udev-rule-generator"
-        )
         self._closed = False
         self._refresh_generation = 0
         self._detection_pending = False
@@ -84,6 +81,7 @@ class MainWindow(Adw.ApplicationWindow):
             parent=self,
             on_changed=self._on_known_changed,
         )
+        toolbar.add_bottom_bar(self.manager.action_bar)
         content.append(self.manager)
         content.append(self._build_external_group())
 
@@ -153,16 +151,33 @@ class MainWindow(Adw.ApplicationWindow):
         self._refresh_generation += 1
         generation = self._refresh_generation
         self._detection_pending = True
-        future = self._executor.submit(detect_joysticks, self.host)
-        future.add_done_callback(
-            lambda completed: GLib.idle_add(
-                self._apply_detection, completed, generation, silent, notify
+
+        def worker() -> None:
+            error: Exception | None = None
+            devices: list[Joystick] = []
+            try:
+                devices = detect_joysticks(self.host)
+            except Exception as exc:  # noqa: BLE001 (se muestra al usuario)
+                error = exc
+            GLib.idle_add(
+                self._apply_detection,
+                devices,
+                error,
+                generation,
+                silent,
+                notify,
             )
-        )
+
+        threading.Thread(
+            target=worker,
+            name="udev-rule-generator-detect",
+            daemon=True,
+        ).start()
 
     def _apply_detection(
         self,
-        future: Future,
+        devices: list[Joystick],
+        error: Exception | None,
         generation: int,
         silent: bool,
         notify: bool = True,
@@ -170,16 +185,14 @@ class MainWindow(Adw.ApplicationWindow):
         if self._closed or generation != self._refresh_generation:
             return False
         self._detection_pending = False
-        try:
-            devices = future.result()
-        except Exception as exc:  # noqa: BLE001 (se muestra al usuario)
+        if error is not None:
             if not silent:
                 self.show_error(
                     tr("No se pudieron detectar joysticks"),
                     tr(
                         "{error}\n\nRevisá que udev esté funcionando y que la "
                         "aplicación tenga acceso al host.",
-                        error=exc,
+                        error=error,
                     ),
                 )
             return False
@@ -260,17 +273,26 @@ class MainWindow(Adw.ApplicationWindow):
     def _refresh_rule_metadata(self) -> None:
         if self._closed:
             return
-        future = self._executor.submit(list_installed_rules, self.host)
-        future.add_done_callback(
-            lambda completed: GLib.idle_add(self._apply_rule_metadata, completed)
-        )
 
-    def _apply_rule_metadata(self, future: Future) -> bool:
-        if self._closed:
-            return False
-        try:
-            rules = future.result()
-        except Exception:  # noqa: BLE001 (contador no crítico)
+        def worker() -> None:
+            rules = []
+            error = None
+            try:
+                rules = list_installed_rules(self.host)
+            except Exception as exc:  # noqa: BLE001 (contador no crítico)
+                error = exc
+            GLib.idle_add(self._apply_rule_metadata, rules, error)
+
+        threading.Thread(
+            target=worker,
+            name="udev-rule-generator-metadata",
+            daemon=True,
+        ).start()
+
+    def _apply_rule_metadata(
+        self, rules: list, error: Exception | None = None
+    ) -> bool:
+        if self._closed or error is not None:
             return False
 
         try:
@@ -315,7 +337,6 @@ class MainWindow(Adw.ApplicationWindow):
         if self._auto_refresh_source:
             GLib.source_remove(self._auto_refresh_source)
             self._auto_refresh_source = 0
-        self._executor.shutdown(wait=False, cancel_futures=True)
 
     def _on_close(self, _window) -> bool:
         self.shutdown()
