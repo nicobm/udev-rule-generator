@@ -538,6 +538,38 @@ def _deduplicate_and_sort(joysticks: Iterable[Joystick]) -> list[Joystick]:
     )
 
 
+def _drop_jsless_duplicates(joysticks: Iterable[Joystick]) -> list[Joystick]:
+    """Descarta interfaces sin ``js`` que duplican un gamepad con ``js``.
+
+    Algunos mandos exponen una segunda interfaz de entrada con el mismo
+    VID:PID y nombre, pero sin nodo ``js``.  No aporta un mando adicional y
+    hacía que el mismo dispositivo apareciera dos veces.
+    """
+    devices = list(joysticks)
+    with_js = {
+        (
+            device.vendor_id,
+            device.product_id,
+            device.bus,
+            device.display_name.casefold(),
+        )
+        for device in devices
+        if device.js_devices
+    }
+    return [
+        device
+        for device in devices
+        if device.js_devices
+        or (
+            device.vendor_id,
+            device.product_id,
+            device.bus,
+            device.display_name.casefold(),
+        )
+        not in with_js
+    ]
+
+
 def detect_joysticks(host: Host | None = None) -> list[Joystick]:
     """Detecta los joysticks conectados.
 
@@ -555,17 +587,17 @@ def detect_joysticks(host: Host | None = None) -> list[Joystick]:
     if result is not None and result.ok:
         joysticks = joysticks_from_export_db(result.stdout, host)
         if joysticks:
-            return [
+            return _drop_jsless_duplicates(
                 device
                 for device in joysticks
                 if not is_auxiliary_input(device)
-            ]
+            )
 
-    return [
+    return _drop_jsless_duplicates(
         device
         for device in joysticks_from_proc(host)
         if not is_auxiliary_input(device)
-    ]
+    )
 
 
 def find_joystick(joysticks: Iterable[Joystick], selector: str) -> Joystick | None:

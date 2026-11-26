@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.10.2 - 2026-11-26
+
+- Drops duplicate joystick interfaces that have the same VID:PID and name but
+  no `js` node. This fixes controllers such as the Switch Pro Controller
+  appearing twice.
+
 ## 1.10.1 - 2026-11-26
 
 - Prevents a saved device row from opening its installed rule while the alias
