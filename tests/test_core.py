@@ -15,6 +15,7 @@ from udev_rule_generator.devices import (
 from udev_rule_generator.host import HostError
 from udev_rule_generator.installed import _parse_header
 from udev_rule_generator.presets import (
+    GAME_DEVICES,
     PRESETS,
     STEAM,
     build_preset_content,
@@ -174,35 +175,47 @@ class RuleTests(unittest.TestCase):
 
 
 class PresetTests(unittest.TestCase):
-    def test_only_steam_presets_are_packaged(self) -> None:
-        self.assertEqual(len(PRESETS), 2)
+    def test_presets_are_packaged(self) -> None:
         self.assertEqual(len(STEAM), 2)
-        self.assertEqual({p.id for p in STEAM}, {"steam-input", "steam-vr"})
-        self.assertEqual(PRESETS, STEAM)
+        self.assertEqual(len(GAME_DEVICES), 28)
+        self.assertEqual(len(PRESETS), 30)
+        self.assertEqual(
+            {p.id for p in STEAM}, {"steam-input", "steam-vr"}
+        )
+        self.assertIn("8bitdo", {p.id for p in GAME_DEVICES})
+        self.assertEqual(PRESETS, STEAM + GAME_DEVICES)
 
-    def test_steam_preset_content_has_valve_source(self) -> None:
-        content = build_preset_content(get_preset("steam-input"))
-        self.assertIn("ValveSoftware/steam-devices", content)
+    def test_preset_content_has_upstream_source(self) -> None:
+        steam = build_preset_content(get_preset("steam-input"))
+        gdu = build_preset_content(get_preset("8bitdo"))
+        self.assertIn("ValveSoftware/steam-devices", steam)
+        self.assertIn("fabiscafe/game-devices-udev", gdu)
 
     def test_preset_files(self) -> None:
         files = preset_files(PRESETS)
-        self.assertEqual(
-            set(files),
-            {"71-steam-input.rules", "71-steam-vr.rules"},
-        )
         self.assertEqual(len(files), len(PRESETS))
+        self.assertIn("71-steam-input.rules", files)
+        self.assertIn("71-steam-vr.rules", files)
+        self.assertIn("8bitdo-gdu.rules", files)
 
-    def test_presets_use_change_trigger(self) -> None:
+    def test_presets_use_expected_trigger(self) -> None:
         self.assertEqual(presets_trigger(STEAM), "change")
-        self.assertEqual(presets_trigger(PRESETS), "change")
+        self.assertEqual(presets_trigger(GAME_DEVICES), "add")
+        self.assertEqual(presets_trigger(PRESETS), "add")
 
     def test_select_presets(self) -> None:
         self.assertEqual(
             {p.id for p in select_presets("steam")},
             {"steam-input", "steam-vr"},
         )
-        with self.assertRaises(ValueError):
-            select_presets("all")
+        self.assertEqual(
+            {p.id for p in select_presets("game-devices-udev")},
+            {p.id for p in GAME_DEVICES},
+        )
+        self.assertEqual(
+            {p.id for p in select_presets("all")},
+            {p.id for p in PRESETS},
+        )
         with self.assertRaises(ValueError):
             select_presets("steam-vr")
         with self.assertRaises(ValueError):

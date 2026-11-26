@@ -706,7 +706,19 @@ def _cmd_presets(
     colors: Colors,
 ) -> int:
     if selection in {"menu", "interactive"}:
-        selection = "steam"
+        print(colors.bold(tr("Paquetes de reglas externas:")))
+        print(tr("  1) steam-devices (Valve)"))
+        print(tr("  2) game-devices-udev (fabiscafe)"))
+        print(tr("  3) Ambos"))
+        print(tr("  4) Volver"))
+        choice = _ask(tr("\nPaquete: "))
+        selection = {
+            "1": "steam",
+            "2": "game-devices-udev",
+            "3": "all",
+        }.get(choice, "")
+        if not selection or choice == "4":
+            return 0
     presets = select_presets(selection)
     return _install_presets(
         host,
@@ -920,7 +932,7 @@ def _interactive(host: Host, args: argparse.Namespace) -> int:
     while True:
         print(colors.bold(tr("Menú principal")))
         print(tr("  1) Listar y configurar un joystick"))
-        print(tr("  2) Instalar reglas de Steam"))
+        print(tr("  2) Instalar reglas externas"))
         print(tr("  3) Ver o eliminar reglas instaladas"))
         print(tr("  4) Salir"))
         choice = _ask(tr("\nOpción: ")).casefold()
@@ -1026,7 +1038,7 @@ def build_parser() -> argparse.ArgumentParser:
         nargs="?",
         const="steam",
         metavar=tr("SELECCIÓN"),
-        help=tr("instala steam-devices (Valve)"),
+        help=tr("instala steam-devices, game-devices-udev o all"),
     )
     parser.add_argument(
         "--installed",

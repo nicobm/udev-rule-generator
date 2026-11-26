@@ -11,6 +11,7 @@ from udev_rule_generator.i18n import tr
 from udev_rule_generator.installed import list_installed_rules
 from udev_rule_generator.known import KnownDevices
 from udev_rule_generator.monitor import UdevMonitor
+from udev_rule_generator.uinput import uinput_available
 
 from .device_manager import DeviceManager
 from .gi_compat import Adw, Gio, GLib, Gtk
@@ -263,11 +264,18 @@ class MainWindow(Adw.ApplicationWindow):
         def worker() -> None:
             rules = []
             error = None
+            available = True
             try:
                 rules = list_installed_rules(self.host)
+                available = uinput_available(self.host)
             except Exception as exc:  # noqa: BLE001 (contador no crítico)
                 error = exc
-            GLib.idle_add(self._apply_rule_metadata, rules, error)
+            GLib.idle_add(
+                self._apply_rule_metadata,
+                rules,
+                error,
+                available,
+            )
 
         threading.Thread(
             target=worker,
@@ -276,7 +284,10 @@ class MainWindow(Adw.ApplicationWindow):
         ).start()
 
     def _apply_rule_metadata(
-        self, rules: list, error: Exception | None = None
+        self,
+        rules: list,
+        error: Exception | None = None,
+        uinput_ready: bool = True,
     ) -> bool:
         if self._closed or error is not None:
             return False
@@ -287,6 +298,7 @@ class MainWindow(Adw.ApplicationWindow):
             # El registro es auxiliar; un fallo de escritura no debe romper la
             # ventana principal.
             pass
+        self.manager.set_uinput_available(uinput_ready)
         self.manager.set_installed_rules(rules)
         self.manager.reload()
         return False

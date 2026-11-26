@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Refresh the bundled Steam preset snapshots from Valve's repository.
+"""Refresh the bundled external rule snapshots.
 
 The application itself does not use the network: it ships reviewed copies of
 the rules in ``udev_rule_generator/data/presets``.  This development tool
-downloads the current files from GitHub so they can be reviewed, tested, and
-committed.
+downloads the current files from GitHub and Codeberg so they can be reviewed,
+tested, and committed.
 """
 
 from __future__ import annotations
@@ -19,12 +19,22 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from udev_rule_generator.presets import validate_rule_text  # noqa: E402
+from udev_rule_generator.presets import (  # noqa: E402
+    GAME_DEVICES,
+    validate_rule_text,
+)
 
 PRESET_DIR = ROOT / "udev_rule_generator" / "data" / "presets"
 MAX_DOWNLOAD_BYTES = 1_000_000
 
 STEAM_RAW = "https://raw.githubusercontent.com/ValveSoftware/steam-devices/master/"
+GAME_DEVICES_RAW = (
+    "https://codeberg.org/fabiscafe/game-devices-udev/raw/branch/main/src/"
+)
+GAME_DEVICES_LICENSE = (
+    "https://codeberg.org/fabiscafe/game-devices-udev/raw/branch/main/LICENSE"
+)
+ALLOWED_HOSTS = {"raw.githubusercontent.com", "codeberg.org"}
 USER_AGENT = "udev-rule-generator-preset-updater"
 
 
@@ -41,8 +51,9 @@ def fetch(url: str) -> str:
         if response.status != 200:
             raise RuntimeError(f"HTTP {response.status} for {url}")
         final_url = urllib.parse.urlparse(response.geturl())
-        if final_url.scheme != "https" or final_url.hostname != (
-            "raw.githubusercontent.com"
+        if (
+            final_url.scheme != "https"
+            or final_url.hostname not in ALLOWED_HOSTS
         ):
             raise RuntimeError(f"Unexpected final URL: {response.geturl()}")
         data = response.read(MAX_DOWNLOAD_BYTES + 1)
@@ -57,6 +68,9 @@ def remote_files() -> dict[str, str]:
         for name in ("60-steam-input.rules", "60-steam-vr.rules")
     }
     files["LICENSE.steam-devices"] = f"{STEAM_RAW}LICENSE"
+    for preset in GAME_DEVICES:
+        files[preset.source] = f"{GAME_DEVICES_RAW}{preset.source}"
+    files["LICENSE.game-devices-udev"] = GAME_DEVICES_LICENSE
     return files
 
 
@@ -81,7 +95,10 @@ def main() -> int:
             content = fetch(url)
             if filename.endswith(".rules"):
                 validate_rule_text(content, filename=filename)
-            elif filename != "LICENSE.steam-devices":
+            elif filename not in {
+                "LICENSE.steam-devices",
+                "LICENSE.game-devices-udev",
+            }:
                 raise RuntimeError(f"Unexpected preset file: {filename}")
             if "\x00" in content:
                 raise RuntimeError(f"Binary data in {filename}")

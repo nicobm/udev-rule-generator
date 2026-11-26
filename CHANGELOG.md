@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.1.0 - 2026-11-26
+
+- Adds the optional **game-devices-udev** package from Fabian Bornschein
+  (fabiscafe) below steam-devices in **External rules**.
+- Adds game-devices-udev to the CLI with `--presets game-devices-udev` and
+  `--presets all`.
+- Disables the steam-devices switch when the `uinput` kernel module is not
+  available.
+- Adds `TEST_UINPUT_OFF=1` to test the disabled Steam state in the GUI.
+- Bundles reviewed snapshots and validates their filenames and executable
+  directives.
+
 ## 1.0.0 - 2026-11-26
 
 First production release.

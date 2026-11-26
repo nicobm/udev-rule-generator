@@ -1,23 +1,38 @@
-# Avisos de terceros
+# Third-party notices
 
 ## steam-devices
 
-Las reglas `60-steam-input.rules` y `60-steam-vr.rules` provienen de
-**steam-devices** de Valve Software:
+The `60-steam-input.rules` and `60-steam-vr.rules` files come from
+**steam-devices** by Valve Software:
 
 - GitHub: https://github.com/ValveSoftware/steam-devices
-- Licencia: MIT
+- License: MIT
 - Copyright: 2018 Valve Software
 
-Se incluyen sin cambios.  La aplicación las ofrece como una fuente opcional;
-no se instalan por defecto.
+They are included unchanged. The application offers them as an optional
+source; they are not installed by default.
 
-Texto completo de la licencia MIT de steam-devices:
+## game-devices-udev
+
+The `*-gdu.rules` files come from **game-devices-udev** by Fabian Bornschein
+(fabiscafe):
+
+- Codeberg: https://codeberg.org/fabiscafe/game-devices-udev
+- License: MIT
+- Copyright: 2017-2026 Fabian Bornschein
+
+They are included as an optional source; they are not installed by default.
+
+## MIT license
+
+The steam-devices and game-devices-udev rule files are distributed under the
+MIT license:
 
 ```text
 MIT License
 
 Copyright (c) 2018 Valve Software
+Copyright (c) 2017-2026 Fabian Bornschein
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -38,8 +53,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## GTK, libadwaita y PyGObject
+## GTK, libadwaita, and PyGObject
 
-La interfaz gráfica usa GTK 4, libadwaita y PyGObject, que forman parte del
-runtime `org.gnome.Platform` en Flatpak y de la distribución en una
-instalación nativa. No se redistribuyen en este repositorio.
+The graphical interface uses GTK 4, libadwaita, and PyGObject, which are part
+of the `org.gnome.Platform` runtime in Flatpak and of the distribution in a
+native installation. They are not redistributed in this repository.

@@ -5,12 +5,17 @@ from __future__ import annotations
 import threading
 from typing import Callable
 
-from udev_rule_generator import STEAM_DEVICES_URL
+from udev_rule_generator import GAME_DEVICES_URL, STEAM_DEVICES_URL
 from udev_rule_generator.devices import Joystick
 from udev_rule_generator.host import Host
 from udev_rule_generator.i18n import tr
 from udev_rule_generator.known import KnownDevice, KnownDevices
-from udev_rule_generator.presets import STEAM, preset_files, presets_trigger
+from udev_rule_generator.presets import (
+    GAME_DEVICES,
+    STEAM,
+    preset_files,
+    presets_trigger,
+)
 from udev_rule_generator.privileged import apply_rule_changes, remove_rule_files
 from udev_rule_generator.rules import RuleAction, build_rule
 from udev_rule_generator.userconfig import device_identity
@@ -19,7 +24,7 @@ from .gi_compat import Adw, GLib, Gtk
 
 
 class DeviceManager(Gtk.Box):
-    """Gestiona reglas guardadas, dispositivos ocultos y Steam."""
+    """Gestiona reglas guardadas, dispositivos ocultos y reglas externas."""
 
     def __init__(
         self,
@@ -38,7 +43,10 @@ class DeviceManager(Gtk.Box):
         self._pending_known: dict[str, bool] = {}
         self._pending_unknown: dict[str, Joystick] = {}
         self._pending_steam: bool | None = None
+        self._pending_gdu: bool | None = None
         self._steam_installed = False
+        self._gdu_installed = False
+        self._uinput_available = True
         self._rows: list[tuple[Adw.PreferencesGroup, Gtk.Widget]] = []
         self._controls: list[Gtk.Widget] = []
         self._busy = False
@@ -56,28 +64,41 @@ class DeviceManager(Gtk.Box):
         self.devices_group.set_hexpand(True)
         self.append(self.devices_group)
 
-        self.steam_group = Adw.PreferencesGroup(
+        self.external_group = Adw.PreferencesGroup(
             title=tr("Reglas externas"),
             description=tr(
-                "Reglas oficiales de ValveSoftware/steam-devices (MIT) · "
-                "{url}",
-                url=STEAM_DEVICES_URL,
+                "Paquetes opcionales de reglas udev. No se instalan "
+                "automáticamente."
             ),
         )
-        self.steam_group.set_separate_rows(True)
-        self.steam_group.set_hexpand(True)
+        self.external_group.set_separate_rows(True)
+        self.external_group.set_hexpand(True)
+
         self.steam_switch = Adw.SwitchRow(
             title=tr("steam-devices"),
             subtitle=tr(
                 "Añade las reglas udev de Valve para usar Steam Input y "
-                "SteamVR."
+                "SteamVR. · {url} (MIT)",
+                url=STEAM_DEVICES_URL,
             ),
         )
         self.steam_switch.connect(
             "notify::active", self._on_steam_toggled
         )
-        self.steam_group.add(self.steam_switch)
-        self.append(self.steam_group)
+        self.external_group.add(self.steam_switch)
+
+        self.gdu_switch = Adw.SwitchRow(
+            title=tr("game-devices-udev"),
+            subtitle=tr(
+                "Añade las reglas udev del repositorio de Fabian Bornschein "
+                "fabiscafe/game-devices-udev (MIT) · {url}",
+                url=GAME_DEVICES_URL,
+            ),
+        )
+        self.gdu_switch.connect("notify::active", self._on_gdu_toggled)
+        self.external_group.add(self.gdu_switch)
+
+        self.append(self.external_group)
 
         self.action_bar = Gtk.Box(
             orientation=Gtk.Orientation.HORIZONTAL,
@@ -115,19 +136,38 @@ class DeviceManager(Gtk.Box):
         if fingerprint != previous:
             self.reload()
 
+    def set_uinput_available(self, available: bool) -> None:
+        self._uinput_available = available
+        if not available:
+            self._pending_steam = None
+        tooltip = (
+            ""
+            if available
+            else tr("Requiere el módulo uinput del kernel.")
+        )
+        self.steam_switch.set_tooltip_text(tooltip)
+        self._update_preset_switches()
+        self._apply_sensitivity()
+
     def set_installed_rules(self, rules: list) -> None:
         filenames = {
             rule.filename for rule in rules if rule.kind == "preset"
         }
         self._steam_installed = set(preset_files(STEAM)) <= filenames
+        self._gdu_installed = set(preset_files(GAME_DEVICES)) <= filenames
         if (
             self._pending_steam is not None
             and self._pending_steam == self._steam_installed
         ):
             self._pending_steam = None
-        self._update_steam_switch()
+        if (
+            self._pending_gdu is not None
+            and self._pending_gdu == self._gdu_installed
+        ):
+            self._pending_gdu = None
+        self._update_preset_switches()
 
-    def _update_steam_switch(self) -> None:
+    def _update_preset_switches(self) -> None:
         if self._updating:
             return
         self._updating = True
@@ -135,6 +175,11 @@ class DeviceManager(Gtk.Box):
             self._pending_steam
             if self._pending_steam is not None
             else self._steam_installed
+        )
+        self.gdu_switch.set_active(
+            self._pending_gdu
+            if self._pending_gdu is not None
+            else self._gdu_installed
         )
         self._updating = False
         self._update_pending_ui()
@@ -344,11 +389,20 @@ class DeviceManager(Gtk.Box):
         self._update_pending_ui()
 
     def _on_steam_toggled(self, row: Adw.SwitchRow, _pspec) -> None:
-        if self._updating or self._busy:
+        if self._updating or self._busy or not self._uinput_available:
             return
         active = row.get_active()
         self._pending_steam = (
             None if active == self._steam_installed else active
+        )
+        self._update_pending_ui()
+
+    def _on_gdu_toggled(self, row: Adw.SwitchRow, _pspec) -> None:
+        if self._updating or self._busy:
+            return
+        active = row.get_active()
+        self._pending_gdu = (
+            None if active == self._gdu_installed else active
         )
         self._update_pending_ui()
 
@@ -357,6 +411,7 @@ class DeviceManager(Gtk.Box):
             self._pending_known
             or self._pending_unknown
             or self._pending_steam is not None
+            or self._pending_gdu is not None
         )
         self.action_bar.set_visible(pending)
         self.pending_label.set_text(
@@ -369,6 +424,7 @@ class DeviceManager(Gtk.Box):
             self._pending_known
             or self._pending_unknown
             or self._pending_steam is not None
+            or self._pending_gdu is not None
         ):
             return
         self._set_busy(True)
@@ -414,16 +470,21 @@ class DeviceManager(Gtk.Box):
                 )
                 trigger_add = trigger_add or spec.trigger == "add"
 
-            steam_desired = self._pending_steam
-            if steam_desired is not None:
-                steam_files = preset_files(STEAM)
-                if steam_desired:
-                    install_files.update(steam_files)
+            preset_changes = (
+                (STEAM, self._pending_steam),
+                (GAME_DEVICES, self._pending_gdu),
+            )
+            for presets, desired in preset_changes:
+                if desired is None:
+                    continue
+                package_files = preset_files(presets)
+                if desired:
+                    install_files.update(package_files)
                     trigger_add = trigger_add or (
-                        presets_trigger(STEAM) == "add"
+                        presets_trigger(presets) == "add"
                     )
                 else:
-                    removed.extend(steam_files)
+                    removed.extend(package_files)
 
             if not install_files and not removed:
                 message = tr("No hay cambios para aplicar.")
@@ -447,11 +508,17 @@ class DeviceManager(Gtk.Box):
                     )
                 else:
                     message = tr("Cambios aplicados.")
-            if steam_desired is not None:
-                self._steam_installed = steam_desired
+            for presets, desired in preset_changes:
+                if desired is None:
+                    continue
+                if presets is STEAM:
+                    self._steam_installed = desired
+                else:
+                    self._gdu_installed = desired
             self._pending_known.clear()
             self._pending_unknown.clear()
             self._pending_steam = None
+            self._pending_gdu = None
         except Exception as exc:  # noqa: BLE001 (se muestra al usuario)
             GLib.idle_add(self._apply_failed, str(exc))
             return
@@ -476,13 +543,17 @@ class DeviceManager(Gtk.Box):
         self._busy = busy
         for control in self._controls:
             control.set_sensitive(not busy)
-        self.steam_switch.set_sensitive(not busy)
+        self.steam_switch.set_sensitive(
+            not busy and self._uinput_available
+        )
+        self.gdu_switch.set_sensitive(not busy)
         self.apply_button.set_sensitive(
             not busy
             and bool(
                 self._pending_known
                 or self._pending_unknown
                 or self._pending_steam is not None
+                or self._pending_gdu is not None
             )
         )
         self.spinner.set_visible(busy)
@@ -500,7 +571,10 @@ class DeviceManager(Gtk.Box):
         enabled = not self._busy
         for control in self._controls:
             control.set_sensitive(enabled)
-        self.steam_switch.set_sensitive(enabled)
+        self.steam_switch.set_sensitive(
+            enabled and self._uinput_available
+        )
+        self.gdu_switch.set_sensitive(enabled)
 
     def _show_error(self, heading: str, body: str) -> None:
         dialog = Adw.AlertDialog(heading=heading, body=body)

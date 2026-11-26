@@ -103,6 +103,24 @@ _EN.update(
         "Añade las reglas udev de Valve para usar Steam Input y SteamVR.": (
             "Adds Valve's udev rules for Steam Input and SteamVR."
         ),
+        "Paquetes opcionales de reglas udev. No se instalan "
+        "automáticamente.": (
+            "Optional udev rule packages. They are not installed "
+            "automatically."
+        ),
+        "Añade las reglas udev de Valve para usar Steam Input y SteamVR. · "
+        "{url} (MIT)": (
+            "Adds Valve's udev rules for Steam Input and SteamVR. · {url} "
+            "(MIT)"
+        ),
+        "Requiere el módulo uinput del kernel.": (
+            "Requires the uinput kernel module."
+        ),
+        "Añade las reglas udev del repositorio de Fabian Bornschein "
+        "fabiscafe/game-devices-udev (MIT) · {url}": (
+            "Adds the udev rules from Fabian Bornschein's "
+            "fabiscafe/game-devices-udev repository (MIT) · {url}"
+        ),
         "Dispositivos que el kernel expone como joystick, pero que no "
         "declaran los botones típicos de un mando.  El interruptor azul "
         "significa que están ignorados.": (
@@ -114,7 +132,26 @@ _EN.update(
         "Selección no válida: {selection!r}. Usá steam.": (
             "Invalid selection: {selection!r}. Use steam."
         ),
+        "Selección no válida: {selection!r}. Usá steam, "
+        "game-devices-udev o all.": (
+            "Invalid selection: {selection!r}. Use steam, "
+            "game-devices-udev or all."
+        ),
         "instala steam-devices (Valve)": "install steam-devices (Valve)",
+        "instala steam-devices, game-devices-udev o all": (
+            "install steam-devices, game-devices-udev or all"
+        ),
+        "  2) Instalar reglas externas": (
+            "  2) Install external rules"
+        ),
+        "Paquetes de reglas externas:": "External rule packages:",
+        "  1) steam-devices (Valve)": "  1) steam-devices (Valve)",
+        "  2) game-devices-udev (fabiscafe)": (
+            "  2) game-devices-udev (fabiscafe)"
+        ),
+        "  3) Ambos": "  3) Both",
+        "  4) Volver": "  4) Back",
+        "\nPaquete: ": "\nPackage: ",
         "Instalar reglas de Steam": "Install Steam rules",
         "  2) Instalar reglas de Steam": "  2) Install Steam rules",
         "  2) Volver": "  2) Back",

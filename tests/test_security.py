@@ -5,17 +5,20 @@ from __future__ import annotations
 import unittest
 
 from udev_rule_generator.presets import (
-    STEAM,
+    PRESETS,
     build_preset_content,
     validate_rule_text,
 )
 
 
 class RuleValidationTests(unittest.TestCase):
-    def test_bundled_steam_rules_are_valid(self) -> None:
-        for preset in STEAM:
+    def test_bundled_rules_are_valid(self) -> None:
+        for preset in PRESETS:
             content = build_preset_content(preset)
-            self.assertIn("ValveSoftware/steam-devices", content)
+            if preset.category == "steam":
+                self.assertIn("ValveSoftware/steam-devices", content)
+            else:
+                self.assertIn("fabiscafe/game-devices-udev", content)
 
     def test_rejects_unexpected_run_command(self) -> None:
         with self.assertRaises(ValueError):

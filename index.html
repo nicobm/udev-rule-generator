@@ -670,7 +670,7 @@
         <nav aria-label="Main navigation">
           <a href="#features">Features</a>
           <a href="#install">Install</a>
-          <a href="#steam">Steam</a>
+          <a href="#external">External rules</a>
           <a href="https://github.com/nicobm/udev-rule-generator">GitHub</a>
         </nav>
         <button
@@ -747,7 +747,7 @@
                 <span class="status-icon">✓</span>
                 <span>
                   <span class="status-title">External rules</span>
-                  <span class="status-meta">Steam Input and SteamVR, optional</span>
+                  <span class="status-meta">Steam Input/VR and game-devices-udev, optional</span>
                 </span>
               </div>
             </div>
@@ -861,10 +861,10 @@ flatpak run io.github.nicobm.UdevRuleGenerator</code></pre>
         </div>
       </section>
 
-      <section id="steam">
+      <section id="external">
         <div class="container">
-          <p class="eyebrow">Steam devices</p>
-          <h2>Steam Input and SteamVR, optional.</h2>
+          <p class="eyebrow">External rule packages</p>
+          <h2>Steam and game-devices-udev, optional.</h2>
           <p class="section-intro">
             The Steam rules are copied only when you enable the steam-devices
             switch. They are never installed during package installation.
@@ -879,6 +879,17 @@ flatpak run io.github.nicobm.UdevRuleGenerator</code></pre>
               </p>
               <a href="https://github.com/ValveSoftware/steam-devices"
                 >View on GitHub</a
+              >
+            </div>
+            <div class="card">
+              <h3>game-devices-udev</h3>
+              <p>
+                Fabian Bornschein's community rules for controllers that need
+                a vendor-specific udev rule. MIT licensed. Installed as a
+                separate optional package.
+              </p>
+              <a href="https://codeberg.org/fabiscafe/game-devices-udev"
+                >View on Codeberg</a
               >
             </div>
           </div>

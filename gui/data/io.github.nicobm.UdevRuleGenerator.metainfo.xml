@@ -16,8 +16,8 @@
     </p>
     <p>
       Permite generar una regla para un mando concreto y activar, de forma
-      opcional, las reglas de Steam/SteamVR de Valve.  No se instalan por
-      defecto.
+      opcional, las reglas de Steam/SteamVR de Valve y game-devices-udev de
+      Fabian Bornschein.  No se instalan por defecto.
     </p>
     <ul>
       <li>Detección de mandos USB y Bluetooth con udevadm.</li>
@@ -25,6 +25,7 @@
       <li>Detección automática al conectar un mando y notificaciones de GNOME.</li>
       <li>Dispositivos guardados para activar o desactivar sus reglas sin conectarlos.</li>
       <li>Ocultar dispositivos guardados y recuperarlos desde el menú Dispositivos ocultos.</li>
+      <li>Paquetes opcionales steam-devices y game-devices-udev.</li>
       <li>Instalación con el diálogo de autenticación de polkit de GNOME.</li>
       <li>Interfaz de terminal y aplicación GTK4/libadwaita.</li>
     </ul>
@@ -37,7 +38,8 @@
     </p>
     <p>
       It can generate a rule for a specific controller and optionally enable
-      Valve's Steam/SteamVR rules.  They are not installed by default.
+      Valve's Steam/SteamVR rules and Fabian Bornschein's game-devices-udev
+      rules.  They are not installed by default.
     </p>
     <ul>
       <li>USB and Bluetooth controller detection with udevadm.</li>
@@ -45,6 +47,7 @@
       <li>Automatic detection when a controller is connected and GNOME notifications.</li>
       <li>Saved devices whose rules can be enabled or disabled without connecting them.</li>
       <li>Hide saved devices and restore them from the Hidden devices menu.</li>
+      <li>Optional steam-devices and game-devices-udev packages.</li>
       <li>Installation through the GNOME polkit authentication dialog.</li>
       <li>Terminal interface and GTK4/libadwaita application.</li>
     </ul>
@@ -62,6 +65,16 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="1.1.0" date="2026-11-26">
+      <description>
+        <p>
+          Adds the optional game-devices-udev package from Fabian Bornschein
+          (fabiscafe) below steam-devices in External rules, with the same
+          enable/disable workflow and CLI support. The steam-devices switch
+          is disabled when the uinput kernel module is unavailable.
+        </p>
+      </description>
+    </release>
     <release version="1.0.0" date="2026-11-26">
       <description>
         <p>

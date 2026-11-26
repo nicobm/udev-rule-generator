@@ -1,8 +1,9 @@
-"""Reglas de steam-devices incluidas en la aplicación.
+"""Paquetes opcionales de reglas udev incluidas en la aplicación.
 
-Las reglas provienen de ``steam-devices`` de Valve, publicado bajo licencia
+Las reglas provienen de ``steam-devices`` de Valve y de
+``game-devices-udev`` de Fabian Bornschein (fabiscafe), ambos bajo licencia
 MIT.  No se instalan automáticamente: solo se copian si el usuario activa el
-interruptor de Steam.
+interruptor correspondiente.
 """
 
 from __future__ import annotations
@@ -12,7 +13,7 @@ from dataclasses import dataclass
 from importlib import resources
 from typing import Iterable
 
-from . import STEAM_DEVICES_URL, __version__
+from . import GAME_DEVICES_URL, STEAM_DEVICES_URL, __version__
 from .i18n import tr
 
 _PACKAGE = "udev_rule_generator"
@@ -23,6 +24,12 @@ _ALLOWED_RUN_LINES = frozenset(
     {
         (
             'KERNEL=="input*", ATTRS{name}=="Lic Pro Controller", '
+            'RUN{program}+="/bin/sh -c \'udevadm test-builtin uaccess '
+            '/sys/%p/../../hidraw/hidraw*\'"'
+        ),
+        (
+            'ACTION!="remove", KERNEL=="input*", '
+            'ATTRS{name}=="Lic Pro Controller", '
             'RUN{program}+="/bin/sh -c \'udevadm test-builtin uaccess '
             '/sys/%p/../../hidraw/hidraw*\'"'
         ),
@@ -99,7 +106,54 @@ STEAM: tuple[Preset, ...] = (
     ),
 )
 
-PRESETS: tuple[Preset, ...] = STEAM
+_GAME_DEVICE_RULES = (
+    "8bitdo-gdu.rules",
+    "alpha_imaging_technology_co-gdu.rules",
+    "astro_gaming-gdu.rules",
+    "betop-gdu.rules",
+    "bigscreen-gdu.rules",
+    "cypress_semiconductor_corp-gdu.rules",
+    "google-gdu.rules",
+    "hori-gdu.rules",
+    "htc-gdu.rules",
+    "logitech-gdu.rules",
+    "mad_catz-gdu.rules",
+    "microsoft-gdu.rules",
+    "nacon-gdu.rules",
+    "nintendo-gdu.rules",
+    "nvidia-gdu.rules",
+    "pdp-gdu.rules",
+    "personal_communication_systems_inc-gdu.rules",
+    "pid_codes-gdu.rules",
+    "powera-gdu.rules",
+    "raspberry_pi_ltd-gdu.rules",
+    "razer-gdu.rules",
+    "saitek-gdu.rules",
+    "sony-gdu.rules",
+    "thrustmaster-gdu.rules",
+    "uinput-dev-early-creation.rules",
+    "valve-gdu.rules",
+    "vkb_sim-gdu.rules",
+    "zeroplus_technology_corporation-gdu.rules",
+)
+
+GAME_DEVICES: tuple[Preset, ...] = tuple(
+    Preset(
+        id=source.removesuffix("-gdu.rules").removesuffix(".rules"),
+        title=source.removesuffix("-gdu.rules").removesuffix(".rules")
+        .replace("_", " ")
+        .title(),
+        description="",
+        source=source,
+        install_name=source,
+        category="game-devices",
+        trigger="add",
+        upstream=GAME_DEVICES_URL,
+    )
+    for source in _GAME_DEVICE_RULES
+)
+
+PRESETS: tuple[Preset, ...] = STEAM + GAME_DEVICES
 
 
 def get_preset(preset_id: str) -> Preset:
@@ -113,21 +167,33 @@ def get_preset(preset_id: str) -> Preset:
 
 
 def select_presets(selection: str) -> list[Preset]:
-    """Resuelve la selección ``steam`` (o sus alias)."""
+    """Resuelve paquetes y alias de reglas preconfiguradas."""
     selection = selection.strip()
     result: list[Preset] = []
     for item in selection.split(","):
-        item = item.strip()
+        item = item.strip().casefold()
         if not item:
             continue
-        if item not in {"steam", "valve", "steam-devices"}:
+        if item in {"steam", "valve", "steam-devices"}:
+            selected = STEAM
+        elif item in {
+            "game-devices-udev",
+            "game-devices",
+            "fabiscafe",
+            "gdu",
+        }:
+            selected = GAME_DEVICES
+        elif item == "all":
+            selected = PRESETS
+        else:
             raise ValueError(
                 tr(
-                    "Selección no válida: {selection!r}. Usá steam.",
+                    "Selección no válida: {selection!r}. Usá steam, "
+                    "game-devices-udev o all.",
                     selection=item,
                 )
             )
-        for preset in STEAM:
+        for preset in selected:
             if preset not in result:
                 result.append(preset)
     if not result:
