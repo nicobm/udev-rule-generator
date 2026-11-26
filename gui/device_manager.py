@@ -954,12 +954,25 @@ class DeviceManager(Gtk.Box):
             if preview is None or origin is None:
                 return False
             position = pointer_position()
-            if position is not None:
+            current_origin = overlay_origin()
+            if position is not None and current_origin is not None:
+                pointer_y = current_origin[1] + position[1]
                 self.preview_layer.move(
                     preview,  # type: ignore[arg-type]
                     int(origin[0]),  # type: ignore[index]
-                    int(origin[1] + position[1] - drag_state["hot_y"]),  # type: ignore[index,operator]
+                    int(pointer_y - drag_state["hot_y"]),
                 )
+                target = self._live_target_under_pointer(
+                    pointer_y,
+                    device_id,
+                )
+                if target is not None:
+                    target_row, target_y = target
+                    self._live_reorder(
+                        device_id,
+                        target_row,
+                        target_y,
+                    )
             return True
 
         def on_drag_begin(drag_source, _drag) -> None:
@@ -1049,6 +1062,24 @@ class DeviceManager(Gtk.Box):
         row.add_controller(target)
         row.add_prefix(handle)
         self._add_hover_opacity(row, visual, 0.25, 0.85)
+
+    def _live_target_under_pointer(
+        self,
+        pointer_y: float,
+        dragged_id: str,
+    ) -> tuple[Adw.ActionRow, float] | None:
+        for _group, row in self._rows:
+            row_id = self._row_identities.get(row)
+            if not row_id or row_id == dragged_id:
+                continue
+            origin = self._origin_in_overlay(row)
+            if origin is None:
+                continue
+            top = origin[1]
+            bottom = top + row.get_height()
+            if top <= pointer_y <= bottom:
+                return row, pointer_y - top
+        return None
 
     def _live_reorder(
         self,

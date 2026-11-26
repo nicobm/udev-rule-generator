@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.11.9 - 2026-11-26
+
+- Drives live reordering from the drag preview timer as well as drop-target
+  motion, so crossing another card's midpoint reliably moves the displaced
+  card immediately.
+
 ## 1.11.8 - 2026-11-26
 
 - Keeps the accent border visible on the held card by drawing a real border
