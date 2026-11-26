@@ -59,16 +59,6 @@ class PresetsDialog(Adw.Dialog):
         page = Adw.PreferencesPage()
         page.set_vexpand(True)
 
-        intro = Adw.PreferencesGroup(
-            title=tr("¿Qué se instala?"),
-            description=tr(
-                "Las reglas se copian a /etc/udev/rules.d con permisos de "
-                "administrador.  Se pedirá la contraseña con el diálogo de "
-                "polkit de GNOME."
-            ),
-        )
-        page.add(intro)
-
         steam = Adw.PreferencesGroup(
             title=tr("steam-devices (Valve)"),
             description=tr(

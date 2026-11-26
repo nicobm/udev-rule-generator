@@ -58,18 +58,18 @@ class MainWindow(Adw.ApplicationWindow):
         toolbar = Adw.ToolbarView()
 
         header = Adw.HeaderBar()
-        self.window_title = Adw.WindowTitle(
-            title=tr(APP_NAME),
-            subtitle=tr("Buscando mandos…"),
-        )
+        self.window_title = Adw.WindowTitle(title=tr(APP_NAME))
         header.set_title_widget(self.window_title)
 
         refresh_button = Gtk.Button(
             icon_name="view-refresh-symbolic",
             tooltip_text=tr("Buscar joysticks de nuevo (Ctrl+R)"),
         )
-        refresh_button.add_css_class("flat")
-        refresh_button.connect("clicked", lambda *_: self.refresh())
+        refresh_button.add_css_class("raised")
+        refresh_button.set_size_request(34, 34)
+        refresh_button.connect(
+            "clicked", lambda *_: self.refresh(silent=True)
+        )
         header.pack_start(refresh_button)
 
         menu = Gio.Menu()
@@ -127,11 +127,7 @@ class MainWindow(Adw.ApplicationWindow):
         spinner = Gtk.Spinner()
         spinner.set_size_request(36, 36)
         spinner.start()
-        page = Adw.StatusPage(
-            icon_name="input-gaming-symbolic",
-            title=tr("Buscando joysticks…"),
-            description=tr("Consultando udev y los dispositivos de entrada del sistema."),
-        )
+        page = Adw.StatusPage(title=tr("Buscando joysticks…"))
         page.set_child(spinner)
         self.stack.add_named(page, "loading")
 
@@ -170,6 +166,7 @@ class MainWindow(Adw.ApplicationWindow):
             ),
         )
         self.devices_group.set_hexpand(True)
+        self.devices_group.set_separate_rows(True)
         box.append(self.devices_group)
         self.stack.add_named(box, "list")
 
@@ -287,15 +284,6 @@ class MainWindow(Adw.ApplicationWindow):
         row.add_suffix(arrow)
         return row
 
-    def _count_label(self, count: int) -> str:
-        if count == 0:
-            if len(self.hidden_store):
-                return tr("Sin mandos visibles")
-            return tr("Sin mandos conectados")
-        if count == 1:
-            return tr("1 mando detectado")
-        return tr("{count} mandos detectados", count=count)
-
     def _update_empty_page(self) -> None:
         count = len(self.hidden_store)
         if count:
@@ -401,8 +389,6 @@ class MainWindow(Adw.ApplicationWindow):
             row = self._device_row(device)
             self.devices_group.add(row)
             self._device_rows.append(row)
-
-        self.window_title.set_subtitle(self._count_label(len(devices)))
 
     def _notify_device(self, device: Joystick) -> None:
         app = self.get_application()

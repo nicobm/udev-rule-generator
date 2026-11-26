@@ -43,7 +43,7 @@ class DeviceDialog(Adw.Dialog):
 
         self.set_title(tr("Configurar joystick"))
         self.set_content_width(800)
-        self.set_content_height(700)
+        self.set_content_height(540)
         self._build_ui()
         self._update_rule()
 
@@ -70,7 +70,6 @@ class DeviceDialog(Adw.Dialog):
 
         page = Adw.PreferencesPage()
         page.set_vexpand(True)
-        page.add(self._build_info_group())
         page.add(self._build_action_group())
         page.add(self._build_visibility_group())
 
@@ -113,36 +112,6 @@ class DeviceDialog(Adw.Dialog):
         bottom.append(buttons)
         toolbar.add_bottom_bar(bottom)
         self.set_child(toolbar)
-
-    def _build_info_group(self) -> Adw.PreferencesGroup:
-        group = Adw.PreferencesGroup(
-            title=tr("Dispositivo"),
-            description=tr("Datos leídos de udev para identificar el mando."),
-        )
-        group.add(Adw.ActionRow(title=tr("Nombre"), subtitle=self.device.display_name))
-        hardware = " ".join(
-            part for part in (self.device.vendor, self.device.model) if part
-        )
-        if hardware:
-            group.add(
-                Adw.ActionRow(title=tr("Fabricante y modelo"), subtitle=hardware)
-            )
-        group.add(Adw.ActionRow(title=tr("Bus"), subtitle=self.device.bus_label))
-        group.add(Adw.ActionRow(title="VID:PID", subtitle=self.device.identifier))
-        if self.device.serial:
-            group.add(Adw.ActionRow(title=tr("Serial"), subtitle=self.device.serial))
-        if self.device.nodes:
-            group.add(
-                Adw.ActionRow(title=tr("Nodos"), subtitle=", ".join(self.device.nodes))
-            )
-        if self.device.input_names:
-            group.add(
-                Adw.ActionRow(
-                    title=tr("Nombre de entrada"),
-                    subtitle="\n".join(self.device.input_names),
-                )
-            )
-        return group
 
     def _build_action_group(self) -> Adw.PreferencesGroup:
         group = Adw.PreferencesGroup(

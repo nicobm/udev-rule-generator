@@ -66,6 +66,17 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.12.7" date="2026-11-26">
+      <description>
+        <p>
+          Makes every device row a separate card for consistent shadows,
+          removes the duplicate device-information group from the
+          configuration dialog, removes the intro block from the presets
+          dialog, refreshes silently without flashing the loading page, and
+          removes the redundant controller-count subtitle.
+        </p>
+      </description>
+    </release>
     <release version="0.12.6" date="2026-11-26">
       <description>
         <p>

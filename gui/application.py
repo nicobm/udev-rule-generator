@@ -86,7 +86,7 @@ class Application(Adw.Application):
 
     def _on_refresh(self, _action, _parameter) -> None:
         if self.window is not None:
-            self.window.refresh()
+            self.window.refresh(silent=True)
 
     def _on_presets(self, _action, _parameter) -> None:
         if self.window is not None:

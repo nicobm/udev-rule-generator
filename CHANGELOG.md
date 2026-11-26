@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.12.7 - 2026-11-26
+
+- Uses separate card rows for connected and saved devices, so every row has
+  the same shadow and weight.
+- Removes the duplicate device-information group from the configuration
+  dialog. The main list already shows the device name, VID:PID, bus, and nodes.
+- Removes the introductory “What will be installed?” block from the presets
+  dialog.
+- Refreshing no longer switches to the loading page or flashes a large icon.
+  The header refresh button now has a raised square appearance and keeps the
+  current view.
+- Removes the redundant “N controllers detected” subtitle from the header.
+
 ## 0.12.6 - 2026-11-26
 
 - Fixes the saved-rule count: the row now shows a green tag with the number of

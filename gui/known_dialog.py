@@ -115,6 +115,7 @@ class KnownDialog(Adw.Dialog):
             ),
         )
         self.group.set_hexpand(True)
+        self.group.set_separate_rows(True)
         content.append(self.group)
 
         clamp.set_child(content)
