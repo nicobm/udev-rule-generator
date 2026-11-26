@@ -6,7 +6,7 @@ import threading
 from typing import Callable
 
 from udev_rule_generator import STEAM_DEVICES_URL
-from udev_rule_generator.devices import Joystick, is_probable_fake_joystick
+from udev_rule_generator.devices import Joystick
 from udev_rule_generator.host import Host
 from udev_rule_generator.i18n import tr
 from udev_rule_generator.known import KnownDevice, KnownDevices
@@ -19,7 +19,7 @@ from .gi_compat import Adw, GLib, Gtk
 
 
 class DeviceManager(Gtk.Box):
-    """Gestiona reglas guardadas, Steam y dispositivos para ignorar."""
+    """Gestiona reglas guardadas, dispositivos ocultos y Steam."""
 
     def __init__(
         self,
@@ -37,7 +37,6 @@ class DeviceManager(Gtk.Box):
         self._connected: list[Joystick] = []
         self._pending_known: dict[str, bool] = {}
         self._pending_unknown: dict[str, Joystick] = {}
-        self._pending_ignore: dict[str, Joystick] = {}
         self._pending_steam: bool | None = None
         self._steam_installed = False
         self._rows: list[tuple[Adw.PreferencesGroup, Gtk.Widget]] = []
@@ -69,26 +68,16 @@ class DeviceManager(Gtk.Box):
         self.steam_group.set_hexpand(True)
         self.steam_switch = Adw.SwitchRow(
             title=tr("steam-devices"),
-            subtitle=tr("Steam Input y SteamVR."),
+            subtitle=tr(
+                "Añade las reglas udev de Valve para usar Steam Input y "
+                "SteamVR."
+            ),
         )
         self.steam_switch.connect(
             "notify::active", self._on_steam_toggled
         )
         self.steam_group.add(self.steam_switch)
         self.append(self.steam_group)
-
-        self.ignore_group = Adw.PreferencesGroup(
-            title=tr("Ignorar dispositivos"),
-            description=tr(
-                "Dispositivos que el kernel expone como joystick, pero que no "
-                "declaran los botones típicos de un mando.  El interruptor azul "
-                "significa que están ignorados."
-            ),
-        )
-        self.ignore_group.set_separate_rows(True)
-        self.ignore_group.set_hexpand(True)
-        self.ignore_group.set_visible(False)
-        self.append(self.ignore_group)
 
         self.action_bar = Gtk.Box(
             orientation=Gtk.Orientation.HORIZONTAL,
@@ -115,23 +104,11 @@ class DeviceManager(Gtk.Box):
 
     def set_connected_devices(self, devices: list[Joystick]) -> None:
         fingerprint = tuple(
-            (
-                device.key,
-                device.display_name,
-                device.identifier,
-                device.key_codes,
-                device.abs_codes,
-            )
+            (device.key, device.display_name, device.identifier)
             for device in devices
         )
         previous = tuple(
-            (
-                device.key,
-                device.display_name,
-                device.identifier,
-                device.key_codes,
-                device.abs_codes,
-            )
+            (device.key, device.display_name, device.identifier)
             for device in self._connected
         )
         self._connected = list(devices)
@@ -180,18 +157,10 @@ class DeviceManager(Gtk.Box):
         for key in list(self._pending_unknown):
             if key in known_ids:
                 self._pending_unknown.pop(key, None)
-        ignore_known = [
-            device for device in known if device.action == "ignore"
-        ]
-        ignore_known_ids = {device.id for device in ignore_known}
-        for key in list(self._pending_ignore):
-            if key in ignore_known_ids:
-                self._pending_ignore.pop(key, None)
-
         allow_known = [
             device
             for device in known
-            if device.action == "allow" and device.id not in ignore_known_ids
+            if device.action == "allow" and not device.hidden
         ]
         connected = self._connected
         connected_ids = {device_identity(device) for device in connected}
@@ -199,20 +168,17 @@ class DeviceManager(Gtk.Box):
         regular_connected = [
             device
             for device in connected
-            if not is_probable_fake_joystick(device)
-            and device_identity(device) not in known_ids
-        ]
-        suspicious_connected = [
-            device
-            for device in connected
-            if is_probable_fake_joystick(device)
-            and device_identity(device) not in ignore_known_ids
+            if device_identity(device) not in known_ids
         ]
 
         for record in allow_known:
             self._append(
                 self.devices_group,
-                self._known_row(record, record.id in connected_ids),
+                self._known_row(
+                    record,
+                    record.id in connected_ids,
+                    removable=True,
+                ),
             )
         for device in regular_connected:
             self._append(self.devices_group, self._unknown_row(device))
@@ -226,22 +192,6 @@ class DeviceManager(Gtk.Box):
             )
             row.set_activatable(False)
             self._append(self.devices_group, row)
-
-        ignore_count = 0
-        for record in ignore_known:
-            self._append(
-                self.ignore_group,
-                self._known_row(
-                    record,
-                    record.id in connected_ids,
-                    removable=True,
-                ),
-            )
-            ignore_count += 1
-        for device in suspicious_connected:
-            self._append(self.ignore_group, self._ignore_row(device))
-            ignore_count += 1
-        self.ignore_group.set_visible(ignore_count > 0)
 
         self._apply_sensitivity()
         self._update_pending_ui()
@@ -271,20 +221,19 @@ class DeviceManager(Gtk.Box):
             row.add_suffix(self._connected_badge())
 
         if removable:
-            delete = Gtk.Button(
-                icon_name="user-trash-symbolic",
-                tooltip_text=tr("Eliminar de la lista"),
+            hide = Gtk.Button(
+                icon_name="view-conceal-symbolic",
+                tooltip_text=tr("Ocultar este dispositivo"),
             )
-            delete.add_css_class("flat")
-            delete.add_css_class("destructive-action")
-            delete.set_valign(Gtk.Align.CENTER)
-            delete.connect(
+            hide.add_css_class("flat")
+            hide.set_valign(Gtk.Align.CENTER)
+            hide.connect(
                 "clicked",
-                lambda _button, selected=device: self._confirm_forget(
+                lambda _button, selected=device: self._hide_known(
                     selected
                 ),
             )
-            row.add_suffix(delete)
+            row.add_suffix(hide)
 
         switch = Gtk.Switch(
             active=self._pending_known.get(device.id, device.active)
@@ -322,28 +271,6 @@ class DeviceManager(Gtk.Box):
         self._controls.append(switch)
         return row
 
-    def _ignore_row(self, device: Joystick) -> Adw.ActionRow:
-        key = device_identity(device)
-        row = Adw.ActionRow(
-            title=device.display_name,
-            subtitle=f"{device.bus_label} · {device.identifier} · "
-            f"{tr('Sin regla de ignorar')}",
-        )
-        row.set_activatable(False)
-        row.add_suffix(self._connected_badge())
-
-        switch = Gtk.Switch(active=key in self._pending_ignore)
-        switch.set_valign(Gtk.Align.CENTER)
-        switch.connect(
-            "notify::active",
-            lambda selected_switch, _pspec, selected=device: self._set_ignore_pending(
-                selected, selected_switch.get_active()
-            ),
-        )
-        row.add_suffix(switch)
-        self._controls.append(switch)
-        return row
-
     def _connected_badge(self) -> Gtk.Label:
         badge = Gtk.Label(label=tr("Conectado"))
         badge.add_css_class("device-badge")
@@ -360,73 +287,48 @@ class DeviceManager(Gtk.Box):
             self._pending_known[device.id] = active
         self._update_pending_ui()
 
-    def _confirm_forget(self, device: KnownDevice) -> None:
+    def _hide_known(self, device: KnownDevice) -> None:
         if self._busy:
             return
-        if device.active:
-            body = tr(
-                "Se eliminará el registro guardado de «{name}» y su regla "
-                "de ignorar instalada.",
-                name=device.name,
+        self._pending_known.pop(device.id, None)
+        if not device.active or not device.filename:
+            self.store.set_hidden(device.id, True)
+            self.reload()
+            self.on_changed(
+                tr("Dispositivo oculto: {name}", name=device.name)
             )
-        else:
-            body = tr(
-                "Se eliminará el registro guardado de «{name}».",
-                name=device.name,
-            )
-        dialog = Adw.AlertDialog(
-            heading=tr("¿Eliminar de Ignorar dispositivos?"),
-            body=body,
-        )
-        dialog.add_response("cancel", tr("Cancelar"))
-        dialog.add_response("remove", tr("Eliminar"))
-        dialog.set_response_appearance(
-            "remove", Adw.ResponseAppearance.DESTRUCTIVE
-        )
-        dialog.connect(
-            "response",
-            lambda _dialog, response: self._forget(device)
-            if response == "remove"
-            else None,
-        )
-        root = self.get_root()
-        dialog.present(root if root is not None else self.parent_window)
-
-    def _forget(self, device: KnownDevice) -> None:
-        if self._busy:
             return
         self._set_busy(True)
         thread = threading.Thread(
-            target=self._forget_worker,
+            target=self._hide_worker,
             args=(device,),
-            name="udev-rule-generator-forget",
+            name="udev-rule-generator-hide",
             daemon=True,
         )
         thread.start()
 
-    def _forget_worker(self, device: KnownDevice) -> None:
+    def _hide_worker(self, device: KnownDevice) -> None:
         try:
-            if device.active and device.filename:
-                remove_rule_files(self.host, [device.filename])
-            self.store.remove(device.id)
+            remove_rule_files(self.host, [device.filename])
+            self.store.mark_inactive_by_filenames([device.filename])
+            self.store.set_hidden(device.id, True)
         except Exception as exc:  # noqa: BLE001 (se muestra al usuario)
-            GLib.idle_add(self._forget_failed, str(exc))
+            GLib.idle_add(self._hide_failed, str(exc))
             return
-        GLib.idle_add(self._forget_succeeded, device)
+        GLib.idle_add(self._hide_succeeded, device)
 
-    def _forget_succeeded(self, device: KnownDevice) -> bool:
-        self._pending_known.pop(device.id, None)
+    def _hide_succeeded(self, device: KnownDevice) -> bool:
         self._set_busy(False)
         self.reload()
         self.on_changed(
-            tr("Registro eliminado: {name}", name=device.name)
+            tr("Dispositivo oculto: {name}", name=device.name)
         )
         return False
 
-    def _forget_failed(self, message: str) -> bool:
+    def _hide_failed(self, message: str) -> bool:
         self._set_busy(False)
         self._show_error(
-            tr("No se pudo eliminar el dispositivo"),
+            tr("No se pudo ocultar el dispositivo"),
             message,
         )
         return False
@@ -439,16 +341,6 @@ class DeviceManager(Gtk.Box):
             self._pending_unknown[key] = device
         else:
             self._pending_unknown.pop(key, None)
-        self._update_pending_ui()
-
-    def _set_ignore_pending(self, device: Joystick, active: bool) -> None:
-        if self._updating or self._busy:
-            return
-        key = device_identity(device)
-        if active:
-            self._pending_ignore[key] = device
-        else:
-            self._pending_ignore.pop(key, None)
         self._update_pending_ui()
 
     def _on_steam_toggled(self, row: Adw.SwitchRow, _pspec) -> None:
@@ -464,7 +356,6 @@ class DeviceManager(Gtk.Box):
         pending = bool(
             self._pending_known
             or self._pending_unknown
-            or self._pending_ignore
             or self._pending_steam is not None
         )
         self.action_bar.set_visible(pending)
@@ -477,7 +368,6 @@ class DeviceManager(Gtk.Box):
         if self._busy or not (
             self._pending_known
             or self._pending_unknown
-            or self._pending_ignore
             or self._pending_steam is not None
         ):
             return
@@ -495,18 +385,9 @@ class DeviceManager(Gtk.Box):
             updated: list[KnownDevice] = []
             removed: list[str] = []
             trigger_add = False
-            ignore_identities = {
-                device_identity(device)
-                for device in self._pending_ignore.values()
-            }
 
             for record in self.store.devices():
                 desired = self._pending_known.get(record.id)
-                # Si el usuario activa "ignorar" para un dispositivo que
-                # tenía una regla de permiso guardada, la regla de permiso se
-                # retira en el mismo lote para no dejar dos reglas opuestas.
-                if record.action == "allow" and record.id in ignore_identities:
-                    desired = False
                 if desired is None or desired == record.active:
                     continue
                 if desired:
@@ -523,18 +404,6 @@ class DeviceManager(Gtk.Box):
 
             for device in self._pending_unknown.values():
                 spec = build_rule(device, RuleAction.ALLOW)
-                if not spec.filename:
-                    raise ValueError(
-                        tr("No hay una regla guardada para activar.")
-                    )
-                install_files[spec.filename] = spec.content
-                updated.append(
-                    KnownDevice.from_joystick(device, spec)
-                )
-                trigger_add = trigger_add or spec.trigger == "add"
-
-            for device in self._pending_ignore.values():
-                spec = build_rule(device, RuleAction.IGNORE)
                 if not spec.filename:
                     raise ValueError(
                         tr("No hay una regla guardada para activar.")
@@ -582,7 +451,6 @@ class DeviceManager(Gtk.Box):
                 self._steam_installed = steam_desired
             self._pending_known.clear()
             self._pending_unknown.clear()
-            self._pending_ignore.clear()
             self._pending_steam = None
         except Exception as exc:  # noqa: BLE001 (se muestra al usuario)
             GLib.idle_add(self._apply_failed, str(exc))
@@ -614,7 +482,6 @@ class DeviceManager(Gtk.Box):
             and bool(
                 self._pending_known
                 or self._pending_unknown
-                or self._pending_ignore
                 or self._pending_steam is not None
             )
         )

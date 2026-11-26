@@ -69,6 +69,7 @@ class KnownDevice:
     sha256: str
     active: bool
     updated_at: str
+    hidden: bool = False
 
     @property
     def identifier(self) -> str:
@@ -151,6 +152,7 @@ class KnownDevice:
             "sha256": self.sha256,
             "active": self.active,
             "updated_at": self.updated_at,
+            "hidden": self.hidden,
         }
 
     @classmethod
@@ -174,6 +176,7 @@ class KnownDevice:
             sha256=str(data.get("sha256", "")),
             active=bool(data.get("active", False)),
             updated_at=str(data.get("updated_at", "")),
+            hidden=bool(data.get("hidden", False)),
         )
 
     @classmethod
@@ -336,6 +339,18 @@ class KnownDevices:
     def update(self, record: KnownDevice) -> KnownDevice:
         self.update_many([record])
         return record
+
+    def set_hidden(self, device_id: str, hidden: bool) -> KnownDevice | None:
+        with self._lock:
+            record = self._devices.get(device_id)
+            if record is None:
+                return None
+            if record.hidden == hidden:
+                return record
+            updated = replace(record, hidden=hidden, updated_at=_now())
+            self._devices[device_id] = updated
+            self.save()
+            return updated
 
     def update_many(self, records: list[KnownDevice]) -> None:
         with self._lock:

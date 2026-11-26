@@ -57,6 +57,7 @@ class Application(Adw.Application):
     def _add_actions(self) -> None:
         actions = (
             ("refresh", self._on_refresh),
+            ("hidden", self._on_hidden),
             ("about", self._on_about),
             ("show", self._on_show),
             ("quit", self._on_quit),
@@ -83,6 +84,10 @@ class Application(Adw.Application):
     def _on_refresh(self, _action, _parameter) -> None:
         if self.window is not None:
             self.window.refresh(silent=True)
+
+    def _on_hidden(self, _action, _parameter) -> None:
+        if self.window is not None:
+            self.window.show_hidden_devices()
 
     def _on_show(self, _action, _parameter) -> None:
         if self.window is not None:

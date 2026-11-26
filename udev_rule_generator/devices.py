@@ -2,16 +2,15 @@
 
 La fuente principal es ``udevadm info --export-db``, que no necesita permisos
 especiales y trae los datos que usan las reglas udev (VID, PID, bus, serial y
-``ID_INPUT_JOYSTICK``).  Los nombres reales y las capacidades evdev (``KEY`` y
-``ABS``) se obtienen de ``/proc/bus/input/devices`` y, si los nombres fallan,
-de ``udevadm info --attribute-walk``.
+``ID_INPUT_JOYSTICK``).  Los nombres reales de los dispositivos de entrada se
+obtienen de ``/proc/bus/input/devices`` y, si eso falla, de
+``udevadm info --attribute-walk``.
 """
 
 from __future__ import annotations
 
 import re
-import struct
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Mapping
 
@@ -19,33 +18,6 @@ from .host import CommandNotAvailable, Host, HostError
 from .i18n import tr
 
 _HEX_RE = re.compile(r"^[0-9a-fA-F]{4}$")
-_BITS_PER_WORD = struct.calcsize("P") * 8
-
-
-# Botones que un joystick/gamepad real suele declarar.  BTN_SELECT,
-# BTN_START y BTN_MODE quedan fuera a propósito: los controladores LED falsos
-# también los declaran.  Incluye BTN_TRIGGER/BTN_THUMB, botones de volante y
-# los botones frontales de gamepad.
-_GAMEPAD_BUTTONS = (
-    frozenset(range(0x120, 0x13A))
-    | {0x13D, 0x13E, 0x150, 0x151}
-    | frozenset(range(0x220, 0x224))
-    | frozenset(range(0x2C0, 0x2E8))
-)
-
-
-def is_probable_fake_joystick(device: "Joystick") -> bool:
-    """Detecta joysticks declarados por error usando sus capacidades evdev.
-
-    Un dispositivo que declara ejes y botones puede hacer que el kernel cree
-    un ``js`` aunque no sea un mando.  Un mando real suele declarar botones
-    frontales/gatillos; un LED/RGB suele declarar teclas de teclado y ejes
-    pero no esos botones.  La comprobación es genérica y no depende del
-    nombre ni de un VID:PID concreto.
-    """
-    if not device.abs_codes or not device.key_codes:
-        return False
-    return not bool(device.key_codes & _GAMEPAD_BUTTONS)
 
 
 @dataclass(frozen=True)
@@ -65,8 +37,6 @@ class Joystick:
     js_devices: tuple[str, ...]
     input_names: tuple[str, ...]
     properties: Mapping[str, str]
-    key_codes: frozenset[int] = field(default_factory=frozenset)
-    abs_codes: frozenset[int] = field(default_factory=frozenset)
 
     @property
     def display_name(self) -> str:
@@ -133,9 +103,6 @@ class Joystick:
             "input_names": list(self.input_names),
             "is_usb": self.is_usb,
             "is_bluetooth": self.is_bluetooth,
-            "key_codes": sorted(self.key_codes),
-            "abs_codes": sorted(self.abs_codes),
-            "probable_fake": is_probable_fake_joystick(self),
         }
 
 
@@ -150,8 +117,6 @@ class ProcInput:
     handlers: tuple[str, ...]
     vendor_id: str
     product_id: str
-    key_codes: frozenset[int] = field(default_factory=frozenset)
-    abs_codes: frozenset[int] = field(default_factory=frozenset)
 
 
 def _decode_udev_encoding(value: str) -> str:
@@ -218,27 +183,6 @@ def parse_export_db(text: str) -> list[tuple[str, dict[str, str]]]:
     return records
 
 
-def _parse_bitmap(value: str) -> frozenset[int]:
-    """Convierte un mapa de bits de ``/proc`` en códigos evdev.
-
-    El kernel escribe los mapas como palabras hexadecimales de ``unsigned
-    long``, de mayor a menor: la primera palabra contiene el bloque más alto y
-    la última los códigos 0 a ``_BITS_PER_WORD - 1``.
-    """
-    words = value.split()
-    codes: set[int] = set()
-    for word_index, word in enumerate(words):
-        try:
-            bits = int(word, 16)
-        except ValueError:
-            continue
-        block = len(words) - 1 - word_index
-        for bit in range(_BITS_PER_WORD):
-            if bits & (1 << bit):
-                codes.add(block * _BITS_PER_WORD + bit)
-    return frozenset(codes)
-
-
 def parse_proc_blocks(text: str) -> list[ProcInput]:
     """Convierte ``/proc/bus/input/devices`` en una lista de dispositivos."""
     blocks: list[ProcInput] = []
@@ -248,8 +192,6 @@ def parse_proc_blocks(text: str) -> list[ProcInput]:
         name = phys = sysfs = uniq = ""
         handlers: tuple[str, ...] = ()
         vendor_id = product_id = ""
-        key_codes: frozenset[int] = frozenset()
-        abs_codes: frozenset[int] = frozenset()
         for line in block.splitlines():
             if line.startswith("N: Name="):
                 name = _unquote_proc_value(_field(line, "N: Name="))
@@ -261,10 +203,6 @@ def parse_proc_blocks(text: str) -> list[ProcInput]:
                 uniq = _field(line, "U: Uniq=")
             elif line.startswith("H: Handlers="):
                 handlers = tuple(_field(line, "H: Handlers=").split())
-            elif line.startswith("B: KEY="):
-                key_codes = _parse_bitmap(_field(line, "B: KEY="))
-            elif line.startswith("B: ABS="):
-                abs_codes = _parse_bitmap(_field(line, "B: ABS="))
             elif line.startswith("I: Bus="):
                 match = re.search(
                     r"Vendor=([0-9a-fA-F]{4}).*?Product=([0-9a-fA-F]{4})",
@@ -283,8 +221,6 @@ def parse_proc_blocks(text: str) -> list[ProcInput]:
                     handlers=handlers,
                     vendor_id=vendor_id,
                     product_id=product_id,
-                    key_codes=key_codes,
-                    abs_codes=abs_codes,
                 )
             )
     return blocks
@@ -319,41 +255,20 @@ def _group_key(properties: Mapping[str, str], devpath: str) -> str:
     return f"{serial}|{parent}" if serial else parent or path
 
 
-def _proc_inputs_for_handlers(
+def _proc_names_for_handlers(
     host: Host, handlers: Iterable[str]
-) -> dict[str, ProcInput]:
+) -> dict[str, str]:
     try:
         text = host.read_text("/proc/bus/input/devices")
     except HostError:
         return {}
     index = parse_proc_input(text)
-    return {
-        handler: info
-        for handler in handlers
-        if (info := index.get(handler)) is not None
-    }
-
-
-def _capabilities_from_sysfs(
-    host: Host, event_devices: Iterable[str]
-) -> tuple[frozenset[int], frozenset[int]]:
-    """Lee ``KEY``/``ABS`` desde ``/sys`` si ``/proc`` no estaba disponible."""
-    key_codes: frozenset[int] = frozenset()
-    abs_codes: frozenset[int] = frozenset()
-    for device in sorted(event_devices):
-        handler = Path(device).name
-        for kind in ("key", "abs"):
-            path = f"/sys/class/input/{handler}/device/capabilities/{kind}"
-            try:
-                text = host.read_text(path)
-            except HostError:
-                continue
-            codes = _parse_bitmap(text)
-            if kind == "key":
-                key_codes |= codes
-            else:
-                abs_codes |= codes
-    return key_codes, abs_codes
+    names: dict[str, str] = {}
+    for handler in handlers:
+        info = index.get(handler)
+        if info and info.name:
+            names[handler] = info.name
+    return names
 
 
 def _names_from_attribute_walk(host: Host, event_devices: Iterable[str]) -> dict[str, str]:
@@ -382,24 +297,10 @@ def _build_joystick(
     event_devices: set[str],
     js_devices: set[str],
     names: Mapping[str, str],
-    inputs: Mapping[str, ProcInput],
-    host: Host,
     fallback_names: Iterable[str] = (),
 ) -> Joystick:
     def name_for(device: str) -> str:
         return names.get(Path(device).name) or names.get(device) or ""
-
-    input_infos = [
-        inputs[Path(device).name]
-        for device in [*sorted(js_devices), *sorted(event_devices)]
-        if Path(device).name in inputs
-    ]
-    key_codes = frozenset().union(*(info.key_codes for info in input_infos))
-    abs_codes = frozenset().union(*(info.abs_codes for info in input_infos))
-    if not key_codes or not abs_codes:
-        sysfs_key, sysfs_abs = _capabilities_from_sysfs(host, event_devices)
-        key_codes |= sysfs_key
-        abs_codes |= sysfs_abs
 
     js_names = [
         name_for(device) for device in sorted(js_devices) if name_for(device)
@@ -445,8 +346,6 @@ def _build_joystick(
         js_devices=tuple(sorted(js_devices)),
         input_names=tuple(all_names),
         properties=dict(base_properties),
-        key_codes=key_codes,
-        abs_codes=abs_codes,
     )
 
 
@@ -485,10 +384,7 @@ def joysticks_from_export_db(text: str, host: Host) -> list[Joystick]:
     for group in groups.values():
         for device in [*group["events"], *group["js"]]:  # type: ignore[misc]
             handlers.add(Path(device).name)
-    inputs = _proc_inputs_for_handlers(host, handlers)
-    names = {
-        handler: info.name for handler, info in inputs.items() if info.name
-    }
+    names = _proc_names_for_handlers(host, handlers)
 
     all_events = sorted(
         {
@@ -508,8 +404,6 @@ def joysticks_from_export_db(text: str, host: Host) -> list[Joystick]:
             event_devices=group["events"],  # type: ignore[arg-type]
             js_devices=group["js"],  # type: ignore[arg-type]
             names=names,
-            inputs=inputs,
-            host=host,
         )
         for key, group in groups.items()
     ]
@@ -549,14 +443,6 @@ def joysticks_from_proc(host: Host) -> list[Joystick]:
             if handler.startswith("js")
         }
         bus = _infer_bus_from_sysfs(info.sysfs or info.phys)
-        key_codes = info.key_codes
-        abs_codes = info.abs_codes
-        if not key_codes or not abs_codes:
-            sysfs_key, sysfs_abs = _capabilities_from_sysfs(
-                host, event_devices
-            )
-            key_codes |= sysfs_key
-            abs_codes |= sysfs_abs
         properties = {
             "ID_INPUT_JOYSTICK": "1",
             "ID_VENDOR_ID": info.vendor_id,
@@ -582,8 +468,6 @@ def joysticks_from_proc(host: Host) -> list[Joystick]:
                 js_devices=tuple(sorted(js_devices)),
                 input_names=(name,) if name else (),
                 properties=properties,
-                key_codes=key_codes,
-                abs_codes=abs_codes,
             )
         )
     return _deduplicate_and_sort(joysticks)
@@ -606,27 +490,11 @@ def _deduplicate_and_sort(joysticks: Iterable[Joystick]) -> list[Joystick]:
     )
 
 
-def _device_nodes(device: Joystick) -> set[str]:
-    return {*device.event_devices, *device.js_devices}
-
-
-def _merge_capabilities(device: Joystick, other: Joystick) -> Joystick:
-    """Completa las capacidades de ``udevadm`` con las de ``/proc``."""
-    key_codes = device.key_codes | other.key_codes
-    abs_codes = device.abs_codes | other.abs_codes
-    if key_codes == device.key_codes and abs_codes == device.abs_codes:
-        return device
-    return replace(device, key_codes=key_codes, abs_codes=abs_codes)
-
-
 def detect_joysticks(host: Host | None = None) -> list[Joystick]:
     """Detecta los joysticks conectados.
 
     Se intenta primero ``udevadm``.  Si no está instalado o no devuelve nada,
-    se usa el fallback de ``/proc``/``/sys``.  Los dispositivos que solo
-    aparecen en ``/proc`` se agregan al resultado de udevadm: algunos
-    controladores LED tienen un nodo ``js`` pero no llevan
-    ``ID_INPUT_JOYSTICK``.
+    se usa el fallback de ``/proc``/``/sys``.
     """
     host = host or Host()
     try:
@@ -636,34 +504,12 @@ def detect_joysticks(host: Host | None = None) -> list[Joystick]:
     except HostError:
         result = None
 
-    udev_devices = (
-        joysticks_from_export_db(result.stdout, host)
-        if result is not None and result.ok
-        else []
-    )
-    proc_devices = joysticks_from_proc(host)
-    if not udev_devices:
-        return _deduplicate_and_sort(proc_devices)
+    if result is not None and result.ok:
+        joysticks = joysticks_from_export_db(result.stdout, host)
+        if joysticks:
+            return joysticks
 
-    merged = list(udev_devices)
-    udev_nodes: dict[str, int] = {}
-    for index, device in enumerate(merged):
-        for node in _device_nodes(device):
-            udev_nodes[node] = index
-
-    for device in proc_devices:
-        indexes = {
-            udev_nodes[node]
-            for node in _device_nodes(device)
-            if node in udev_nodes
-        }
-        if indexes:
-            for index in indexes:
-                merged[index] = _merge_capabilities(merged[index], device)
-        else:
-            merged.append(device)
-
-    return _deduplicate_and_sort(merged)
+    return joysticks_from_proc(host)
 
 
 def find_joystick(joysticks: Iterable[Joystick], selector: str) -> Joystick | None:

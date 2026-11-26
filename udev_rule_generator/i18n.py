@@ -94,19 +94,15 @@ _EN.update(
         ),
         "Sin regla de ignorar": "No ignore rule",
         "Ignorar dispositivos": "Ignore devices",
-        "Eliminar de la lista": "Remove from list",
-        "¿Eliminar de Ignorar dispositivos?": "Remove from Ignore devices?",
-        "Se eliminará el registro guardado de «{name}» y su regla "
-        "de ignorar instalada.": (
-            "The saved record for “{name}” and its installed ignore rule "
-            "will be removed."
+        "Dispositivos que no se muestran en la ventana principal.": (
+            "Devices that are not shown in the main window."
         ),
-        "Se eliminará el registro guardado de «{name}».": (
-            "The saved record for “{name}” will be removed."
+        "Mostrar de nuevo": "Show again",
+        "No se pudo mostrar el dispositivo": (
+            "Could not show the device"
         ),
-        "Registro eliminado: {name}": "Record removed: {name}",
-        "No se pudo eliminar el dispositivo": (
-            "Could not remove the device"
+        "Añade las reglas udev de Valve para usar Steam Input y SteamVR.": (
+            "Adds Valve's udev rules for Steam Input and SteamVR."
         ),
         "Dispositivos que el kernel expone como joystick, pero que no "
         "declaran los botones típicos de un mando.  El interruptor azul "
@@ -121,6 +117,7 @@ _EN.update(
         ),
         "instala steam-devices (Valve)": "install steam-devices (Valve)",
         "Instalar reglas de Steam": "Install Steam rules",
+        "  2) Instalar reglas de Steam": "  2) Install Steam rules",
         "  r) Actualizar   p) Instalar Steam   q) Volver": (
             "  r) Refresh   p) Install Steam   q) Back"
         ),
@@ -134,6 +131,7 @@ _EN.update(
             "Could not apply the changes"
         ),
         "Dispositivos ocultos": "Hidden devices",
+        "Oculto": "Hidden",
         "Acerca de": "About",
         "Buscando joysticks…": "Looking for joysticks…",
         "Consultando udev y los dispositivos de entrada del sistema.": (
@@ -955,6 +953,10 @@ _EN.update(
         "desactiva la regla guardada de un dispositivo": (
             "disable the saved rule for a device"
         ),
+        "oculta un dispositivo guardado": "hide a saved device",
+        "vuelve a mostrar un dispositivo oculto": (
+            "show a hidden device again"
+        ),
         "salida JSON para --list, --installed o --known": (
             "JSON output for --list, --installed or --known"
         ),
@@ -988,6 +990,24 @@ _EN.update(
         ),
         "--enable-known y --disable-known no se pueden combinar.": (
             "--enable-known and --disable-known cannot be combined."
+        ),
+        "El dispositivo ya está oculto.": "The device is already hidden.",
+        "El dispositivo ya está visible.": (
+            "The device is already visible."
+        ),
+        "Se ocultaría el dispositivo {name}.": (
+            "The device {name} would be hidden."
+        ),
+        "También se eliminaría /etc/udev/rules.d/{filename}": (
+            "It would also remove /etc/udev/rules.d/{filename}"
+        ),
+        "Se mostraría el dispositivo {name}.": (
+            "The device {name} would be shown."
+        ),
+        "--enable-known, --disable-known, --hide-known y "
+        "--unhide-known no se pueden combinar.": (
+            "--enable-known, --disable-known, --hide-known and "
+            "--unhide-known cannot be combined."
         ),
     }
 )

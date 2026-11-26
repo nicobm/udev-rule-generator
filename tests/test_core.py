@@ -7,14 +7,12 @@ from pathlib import Path
 
 from udev_rule_generator.devices import (
     Joystick,
-    detect_joysticks,
-    is_probable_fake_joystick,
     joysticks_from_export_db,
     joysticks_from_proc,
     parse_export_db,
     parse_proc_blocks,
 )
-from udev_rule_generator.host import CommandResult, HostError
+from udev_rule_generator.host import HostError
 from udev_rule_generator.installed import _parse_header
 from udev_rule_generator.presets import (
     PRESETS,
@@ -38,33 +36,17 @@ FIXTURES = Path(__file__).parent / "fixtures"
 class FakeHost:
     """Host mínimo para leer los fixtures sin tocar el sistema."""
 
-    def __init__(
-        self,
-        proc_text: str = "",
-        export_text: str = "",
-        sysfs_text: dict[str, str] | None = None,
-    ) -> None:
+    def __init__(self, proc_text: str = "") -> None:
         self.proc_text = proc_text
-        self.export_text = export_text
-        self.sysfs_text = sysfs_text or {}
 
     def read_text(self, path: str) -> str:
         if path == "/proc/bus/input/devices":
             if not self.proc_text:
                 raise HostError("sin proc")
             return self.proc_text
-        if path in self.sysfs_text:
-            return self.sysfs_text[path]
         raise HostError(f"archivo no disponible: {path}")
 
-    def run(self, argv, **kwargs):
-        if self.export_text and tuple(argv[:2]) == ("udevadm", "info"):
-            return CommandResult(
-                argv=tuple(argv),
-                returncode=0,
-                stdout=self.export_text,
-                stderr="",
-            )
+    def run(self, *args, **kwargs):
         raise HostError("comando no disponible")
 
 
@@ -74,8 +56,6 @@ def _device(
     vendor_id: str = "045e",
     product_id: str = "0b12",
     bus: str = "usb",
-    key_codes: tuple[int, ...] = (),
-    abs_codes: tuple[int, ...] = (),
 ) -> Joystick:
     return Joystick(
         key="test-key",
@@ -91,8 +71,6 @@ def _device(
         js_devices=("/dev/input/js0",),
         input_names=(name,),
         properties={},
-        key_codes=frozenset(key_codes),
-        abs_codes=frozenset(abs_codes),
     )
 
 
@@ -117,10 +95,6 @@ class DetectionTests(unittest.TestCase):
         self.assertIn("js0", xbox.handlers)
         self.assertEqual(xbox.vendor_id, "045e")
         self.assertEqual(xbox.product_id, "0b12")
-        self.assertIn(304, xbox.key_codes)
-        self.assertIn(0, xbox.abs_codes)
-        power = next(block for block in blocks if block.name == "Power Button")
-        self.assertIn(116, power.key_codes)
 
     def test_groups_event_and_js_by_physical_device(self) -> None:
         devices = joysticks_from_export_db(self.export_text, FakeHost(self.proc_text))
@@ -134,8 +108,6 @@ class DetectionTests(unittest.TestCase):
         )
         self.assertTrue(xbox.is_usb)
         self.assertEqual(xbox.identifier, "045e:0b12")
-        self.assertIn(304, xbox.key_codes)
-        self.assertIn(0, xbox.abs_codes)
 
     def test_detects_bluetooth(self) -> None:
         devices = joysticks_from_export_db(self.export_text, FakeHost(self.proc_text))
@@ -147,96 +119,6 @@ class DetectionTests(unittest.TestCase):
         devices = joysticks_from_proc(FakeHost(self.proc_text))
         self.assertEqual(len(devices), 2)
         self.assertTrue(all(device.js_devices for device in devices))
-        self.assertTrue(
-            all(device.key_codes and device.abs_codes for device in devices)
-        )
-
-    def test_proc_pipeline_flags_fake_js_node(self) -> None:
-        text = (FIXTURES / "proc-bus-input-devices-fake.txt").read_text(
-            encoding="utf-8"
-        )
-        devices = joysticks_from_proc(FakeHost(text))
-        self.assertEqual(len(devices), 1)
-        device = devices[0]
-        self.assertIn(314, device.key_codes)
-        self.assertIn(0, device.abs_codes)
-        self.assertTrue(is_probable_fake_joystick(device))
-
-    def test_detect_merges_proc_only_fake_device(self) -> None:
-        proc_text = (FIXTURES / "proc-bus-input-devices-fake.txt").read_text(
-            encoding="utf-8"
-        )
-        devices = detect_joysticks(FakeHost(proc_text, self.export_text))
-        self.assertEqual(len(devices), 3)
-        fake = next(
-            device for device in devices if device.display_name == "Generic HID"
-        )
-        self.assertTrue(is_probable_fake_joystick(fake))
-
-    def test_sysfs_capability_fallback(self) -> None:
-        text = (FIXTURES / "proc-bus-input-devices-fake.txt").read_text(
-            encoding="utf-8"
-        )
-        proc_text = "\n".join(
-            line
-            for line in text.splitlines()
-            if not line.startswith(("B: KEY=", "B: ABS="))
-        )
-        sysfs = {
-            "/sys/class/input/event99/device/capabilities/key": (
-                "c00000000000000 0 0 10168000000000 0"
-            ),
-            "/sys/class/input/event99/device/capabilities/abs": "3",
-        }
-        devices = joysticks_from_proc(FakeHost(proc_text, sysfs_text=sysfs))
-        self.assertEqual(len(devices), 1)
-        self.assertTrue(is_probable_fake_joystick(devices[0]))
-
-
-class FakeJoystickTests(unittest.TestCase):
-    def test_device_with_axes_but_no_gamepad_buttons_is_probable_fake(self) -> None:
-        # Teclas de teclado y SELECT/START, sin botones frontales ni gatillos.
-        device = _device(
-            key_codes=(103, 105, 106, 108, 116, 314, 315),
-            abs_codes=(0, 1),
-        )
-        self.assertTrue(is_probable_fake_joystick(device))
-
-    def test_mouse_like_js_node_is_probable_fake(self) -> None:
-        device = _device(
-            name="Generic HID",
-            key_codes=(272, 273, 274, 275, 276),
-            abs_codes=(0, 1),
-        )
-        self.assertTrue(is_probable_fake_joystick(device))
-
-    def test_real_gamepad_is_not_probable_fake(self) -> None:
-        device = _device(
-            key_codes=(304, 305, 307, 308, 310, 311, 314, 315, 317, 318),
-            abs_codes=(0, 1, 2, 3, 4, 5, 16, 17),
-        )
-        self.assertFalse(is_probable_fake_joystick(device))
-
-    def test_name_and_ids_do_not_change_detection(self) -> None:
-        fake = _device(
-            name="Xbox Wireless Controller",
-            vendor_id="045e",
-            product_id="0b12",
-            key_codes=(103, 105, 106, 108),
-            abs_codes=(0, 1),
-        )
-        real = _device(
-            name="LED Controller",
-            vendor_id="0000",
-            product_id="0000",
-            key_codes=(304, 305, 307, 308),
-            abs_codes=(0, 1),
-        )
-        self.assertTrue(is_probable_fake_joystick(fake))
-        self.assertFalse(is_probable_fake_joystick(real))
-
-    def test_device_without_capabilities_is_not_flagged(self) -> None:
-        self.assertFalse(is_probable_fake_joystick(_device()))
 
 
 class RuleTests(unittest.TestCase):

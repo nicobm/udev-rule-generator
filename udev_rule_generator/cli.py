@@ -367,6 +367,8 @@ def _cmd_known(
     as_json: bool,
     enable: str | None,
     disable: str | None,
+    hide: str | None,
+    unhide: str | None,
     assume_yes: bool,
     dry_run: bool,
     colors: Colors,
@@ -377,7 +379,7 @@ def _cmd_known(
     except (HostError, OSError):
         # La lista de reglas es auxiliar; el registro todavía se puede usar.
         pass
-    selector = enable or disable
+    selector = enable or disable or hide or unhide
     if selector:
         device = _find_known_device(store, selector)
         if device is None:
@@ -388,6 +390,104 @@ def _cmd_known(
                     selector=selector,
                 )
             )
+        if hide is not None:
+            if device.hidden:
+                print(
+                    colors.dim(
+                        tr("El dispositivo ya está oculto.")
+                    )
+                )
+                return 0
+            if dry_run:
+                print(
+                    colors.bold(
+                        tr(
+                            "Se ocultaría el dispositivo {name}.",
+                            name=device.name,
+                        )
+                    )
+                )
+                if device.active and device.filename:
+                    print(
+                        colors.dim(
+                            tr(
+                                "También se eliminaría /etc/udev/rules.d/{filename}",
+                                filename=device.filename,
+                            )
+                        )
+                    )
+                print(colors.dim(tr("Modo --dry-run: no se escribió nada.")))
+                return 0
+            if device.active and device.filename:
+                result = remove_rule_files(host, [device.filename])
+                store.mark_inactive_by_filenames([device.filename])
+                for filename in result.filenames:
+                    print(
+                        colors.green(
+                            tr(
+                                "✓ Eliminada: {path}/{filename}",
+                                path=result.target_dir,
+                                filename=filename,
+                            )
+                        )
+                    )
+                if result.reloaded:
+                    print(
+                        colors.dim(
+                            tr("  Reglas recargadas con udevadm.")
+                        )
+                    )
+            try:
+                store.set_hidden(device.id, True)
+            except OSError as exc:
+                raise ValueError(
+                    tr(
+                        "No se pudo guardar el estado: {error}",
+                        error=exc,
+                    )
+                ) from exc
+            print(
+                colors.green(
+                    tr("Dispositivo oculto: {name}", name=device.name)
+                )
+            )
+            return 0
+
+        if unhide is not None:
+            if not device.hidden:
+                print(
+                    colors.dim(
+                        tr("El dispositivo ya está visible.")
+                    )
+                )
+                return 0
+            if dry_run:
+                print(
+                    colors.bold(
+                        tr(
+                            "Se mostraría el dispositivo {name}.",
+                            name=device.name,
+                        )
+                    )
+                )
+                print(colors.dim(tr("Modo --dry-run: no se escribió nada.")))
+                return 0
+            try:
+                store.set_hidden(device.id, False)
+            except OSError as exc:
+                raise ValueError(
+                    tr(
+                        "No se pudo guardar el estado: {error}",
+                        error=exc,
+                    )
+                ) from exc
+            print(
+                colors.green(
+                    tr("Dispositivo desocultado: {name}", name=device.name)
+                )
+            )
+            return 0
+
         active = enable is not None
         if device.active == active:
             state = tr("activa") if active else tr("desactivada")
@@ -493,11 +593,14 @@ def _cmd_known(
         return 0
     for index, device in enumerate(devices, start=1):
         state = tr("Activa") if device.active else tr("Desactivada")
+        details = [device.bus_label, device.identifier]
+        if device.action == "ignore":
+            details.append(device.action_label)
+        if device.hidden:
+            details.append(tr("Oculto"))
+        details.append(state)
         print(f"  {colors.bold(str(index).rjust(2))}) {colors.bold(device.name)}")
-        print(
-            f"      {colors.cyan(device.bus_label)} · {device.identifier} · "
-            f"{device.action_label} · {state}"
-        )
+        print(f"      {colors.cyan(' · '.join(details))}")
         print(f"      {colors.dim(device.filename)}")
         print(f"      {colors.dim(device.id)}")
     return 0
@@ -648,7 +751,7 @@ def _interactive_device(host: Host, args: argparse.Namespace, colors: Colors) ->
         print()
         print(colors.bold(tr("¿Qué querés hacer con este dispositivo?")))
         print(
-            f"  1) {colors.green(tr('Habilitar (predeterminado)'))}  "
+            f"  1) {colors.green(tr('Habilitar'))}  "
             f"({RuleAction.ALLOW.description})"
         )
         print(
@@ -874,6 +977,16 @@ def build_parser() -> argparse.ArgumentParser:
         help=tr("desactiva la regla guardada de un dispositivo"),
     )
     parser.add_argument(
+        "--hide-known",
+        metavar="ID",
+        help=tr("oculta un dispositivo guardado"),
+    )
+    parser.add_argument(
+        "--unhide-known",
+        metavar="ID",
+        help=tr("vuelve a mostrar un dispositivo oculto"),
+    )
+    parser.add_argument(
         "--remove",
         action="append",
         default=[],
@@ -912,6 +1025,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                     args.known,
                     args.enable_known,
                     args.disable_known,
+                    args.hide_known,
+                    args.unhide_known,
                     args.remove,
                     args.json,
                     args.dry_run,
@@ -934,16 +1049,27 @@ def main(argv: Sequence[str] | None = None) -> int:
 
         if args.list:
             return _cmd_list(host, as_json=args.json, colors=colors)
-        if args.enable_known and args.disable_known:
+        known_actions = [
+            args.enable_known,
+            args.disable_known,
+            args.hide_known,
+            args.unhide_known,
+        ]
+        if sum(value is not None for value in known_actions) > 1:
             parser.error(
-                tr("--enable-known y --disable-known no se pueden combinar.")
+                tr(
+                    "--enable-known, --disable-known, --hide-known y "
+                    "--unhide-known no se pueden combinar."
+                )
             )
-        if args.known or args.enable_known or args.disable_known:
+        if args.known or any(value is not None for value in known_actions):
             return _cmd_known(
                 host,
                 as_json=args.json,
                 enable=args.enable_known,
                 disable=args.disable_known,
+                hide=args.hide_known,
+                unhide=args.unhide_known,
                 assume_yes=args.yes,
                 dry_run=args.dry_run,
                 colors=colors,

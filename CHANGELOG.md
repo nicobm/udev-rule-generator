@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.19.0 - 2026-11-26
+
+- Removes the **Ignorar dispositivos** section and all fake-joystick
+  capability detection. The main window now has only **Gestionar
+  dispositivos** and **Reglas externas**.
+- Adds an eye button to saved devices. Hidden devices are removed from the
+  installed rules when necessary and moved to **Hidden devices** in the header
+  menu, where they can be shown again.
+- Adds `--hide-known` and `--unhide-known` to the CLI so it follows the GUI.
+- Stops printing the redundant default allow label in `--known`.
+- Makes the steam-devices subtitle describe the actual udev rules.
+
 ## 0.18.3 - 2026-11-26
 
 - Adds a trash button to saved rows in **Ignorar dispositivos**. It removes

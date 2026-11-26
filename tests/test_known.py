@@ -3,12 +3,16 @@
 from __future__ import annotations
 
 import hashlib
+import io
+import os
 import tempfile
 import unittest
+from contextlib import redirect_stdout
 from dataclasses import replace
 from pathlib import Path
 from unittest import mock
 
+from udev_rule_generator.cli import Colors, _cmd_known
 from udev_rule_generator.devices import Joystick
 from udev_rule_generator.userconfig import device_identity
 from udev_rule_generator.known import KnownDevice, KnownDevices
@@ -62,6 +66,63 @@ class KnownDevicesTests(unittest.TestCase):
 
             self.assertTrue(reloaded.mark_inactive_by_filename(spec.filename))
             self.assertFalse(KnownDevices(path).devices()[0].active)
+
+    def test_hidden_state_persists(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "devices.json"
+            store = KnownDevices(path)
+            record = store.record_rule(
+                _device(), build_rule(_device(), RuleAction.ALLOW)
+            )
+            self.assertFalse(record.hidden)
+
+            store.set_hidden(record.id, True)
+            self.assertTrue(KnownDevices(path).devices()[0].hidden)
+
+            store.set_hidden(record.id, False)
+            self.assertFalse(KnownDevices(path).devices()[0].hidden)
+
+    def test_cli_hide_and_unhide_known(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            with mock.patch.dict(
+                os.environ, {"XDG_CONFIG_HOME": directory}
+            ), mock.patch(
+                "udev_rule_generator.cli.list_installed_rules",
+                return_value=[],
+            ):
+                store = KnownDevices()
+                device = _device()
+                spec = build_rule(device, RuleAction.ALLOW)
+                record = store.record_rule(device, spec)
+                store.mark_inactive_by_filename(spec.filename)
+
+                with redirect_stdout(io.StringIO()):
+                    _cmd_known(
+                        None,  # type: ignore[arg-type]
+                        as_json=False,
+                        enable=None,
+                        disable=None,
+                        hide=record.id,
+                        unhide=None,
+                        assume_yes=True,
+                        dry_run=False,
+                        colors=Colors(False),
+                    )
+                self.assertTrue(KnownDevices().devices()[0].hidden)
+
+                with redirect_stdout(io.StringIO()):
+                    _cmd_known(
+                        None,  # type: ignore[arg-type]
+                        as_json=False,
+                        enable=None,
+                        disable=None,
+                        hide=None,
+                        unhide=record.id,
+                        assume_yes=True,
+                        dry_run=False,
+                        colors=Colors(False),
+                    )
+                self.assertFalse(KnownDevices().devices()[0].hidden)
 
     def test_reconcile_imports_and_tracks_existing_rules(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

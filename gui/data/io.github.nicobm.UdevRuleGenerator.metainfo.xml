@@ -23,9 +23,9 @@
       <li>Detección de mandos USB y Bluetooth con udevadm.</li>
       <li>Reglas de permiso con MODE 0660 y TAG uaccess.</li>
       <li>Reglas para ignorar dispositivos USB o Bluetooth.</li>
-      <li>Sección para detectar e ignorar dispositivos listados como joystick aunque no lo sean.</li>
       <li>Detección automática al conectar un mando y notificaciones de GNOME.</li>
       <li>Dispositivos guardados para activar o desactivar sus reglas sin conectarlos.</li>
+      <li>Ocultar dispositivos guardados y recuperarlos desde el menú Dispositivos ocultos.</li>
       <li>Instalación con el diálogo de autenticación de polkit de GNOME.</li>
       <li>Interfaz de terminal y aplicación GTK4/libadwaita.</li>
     </ul>
@@ -45,9 +45,9 @@
       <li>USB and Bluetooth controller detection with udevadm.</li>
       <li>Permission rules with MODE 0660 and the uaccess tag.</li>
       <li>Ignore rules for USB or Bluetooth devices.</li>
-      <li>A section to detect and ignore devices listed as joysticks even when they are not.</li>
       <li>Automatic detection when a controller is connected and GNOME notifications.</li>
       <li>Saved devices whose rules can be enabled or disabled without connecting them.</li>
+      <li>Hide saved devices and restore them from the Hidden devices menu.</li>
       <li>Installation through the GNOME polkit authentication dialog.</li>
       <li>Terminal interface and GTK4/libadwaita application.</li>
     </ul>
@@ -65,6 +65,15 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.19.0" date="2026-11-26">
+      <description>
+        <p>
+          Removes the Ignorar dispositivos section and fake-joystick
+          detection. Adds an eye button to hide saved devices and a Hidden
+          devices menu to restore them.
+        </p>
+      </description>
+    </release>
     <release version="0.18.3" date="2026-11-26">
       <description>
         <p>

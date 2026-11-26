@@ -1,8 +1,9 @@
 # udev-rule-generator
 
 A Linux tool written in Python that detects joysticks and gamepads and creates
-udev rules to **allow** or **ignore** them. It includes a terminal interface
-and a GTK4/libadwaita desktop application for GNOME.
+udev rules to **allow** or **ignore** them. The GTK4/libadwaita desktop
+application is the primary interface; the terminal interface exposes the same
+operations for scripting and headless use.
 
 The app **never installs rules automatically**. It only writes to
 `/etc/udev/rules.d` after you choose a rule and authenticate through the GNOME
@@ -12,6 +13,25 @@ The optional **steam-devices** rules come from
 **[ValveSoftware/steam-devices](https://github.com/ValveSoftware/steam-devices/)**.
 They are disabled by default and are never installed as part of the
 application installation.
+
+## What it solves
+
+Controller support on Linux depends on udev rules that grant the active user
+access to each device. Many distributions do not ship rules for every
+controller, and some do not package rule sets such as `game-udev-devices`
+and/or `steam-devices` at all. This is especially common on immutable systems
+such as Fedora Silverblue.
+
+Copying rules from the internet is fragile: they are often tied to a specific
+vendor, model, or old VID:PID, and they may grant permissions to devices you do
+not own. udev-rule-generator avoids that by detecting the controller that is
+actually connected, generating a narrow rule for it, and installing only that
+rule after polkit authentication. The generated file is readable and can be
+removed at any time.
+
+The same interface works when a controller is not currently connected: saved
+devices can be enabled or disabled later, and devices you no longer use can be
+hidden from the main list.
 
 ## Features
 
@@ -25,8 +45,8 @@ application installation.
 - List and remove rules managed by the application.
 - Saved devices registry with the latest rule for each controller, so the rule
   can be enabled or disabled without connecting the controller again.
-- **Ignore devices** section for devices that the kernel lists as joysticks
-  but whose capabilities do not match a real gamepad.
+- Hide saved devices with the eye button; restore them from the hidden-devices
+  menu.
 - Inline steam-devices switch in the main window.
 - GTK4/libadwaita GUI with automatic connection detection, GNOME
   notifications, and centered Pika Backup-style cards.
@@ -91,7 +111,8 @@ python3 -m udev_rule_generator
 
 The main menu lets you list controllers, install preset packages, and
 view/remove installed rules. The non-interactive `--known`,
-`--enable-known`, and `--disable-known` options manage saved devices.
+`--enable-known`, `--disable-known`, `--hide-known`, and `--unhide-known`
+options manage saved devices.
 
 ### Non-interactive commands
 
@@ -121,15 +142,21 @@ view/remove installed rules. The non-interactive `--known`,
 ./udev-rule-generator --enable-known 045e:02fd --yes
 ./udev-rule-generator --disable-known 045e:02fd --yes
 
+# Hide a saved device or show it again
+./udev-rule-generator --hide-known 045e:02fd
+./udev-rule-generator --unhide-known 045e:02fd
+
 # Remove a managed rule
 ./udev-rule-generator --remove 10-udev-rule-generator-gamepad-045e-02fd-xbox-wireless-controller.rules
 ```
 
 `--device` accepts a 1-based list index, a `VID:PID` pair, or part of the
 device name. `--known` accepts a 1-based index from its own list, a saved
-device ID, a rule filename, or part of the device name. `--dry-run` never
-writes anything. `--yes` skips the terminal confirmation; the polkit
-authentication dialog is still shown.
+device ID, a rule filename, or part of the device name. `--hide-known` removes
+the active rule when necessary and marks the device hidden; `--unhide-known`
+only makes the saved device visible again. `--dry-run` never writes anything.
+`--yes` skips the terminal confirmation; the polkit authentication dialog is
+still shown.
 
 ## GUI
 
@@ -153,17 +180,16 @@ connected controllers that do not have a saved rule yet.
   default allow rule.
 - Switch changes are applied together with **Apply changes**, so several
   devices can be enabled or disabled with one polkit authentication.
+- The eye button hides a saved device. If its rule is active, hiding removes
+  the rule first. Hidden devices live under the header menu **Hidden devices**,
+  where they can be shown again.
 
-The main window also has:
-
-- **External rules** with the steam-devices switch.
-- **Ignore devices** for devices whose evdev capabilities do not match a real
-  gamepad. A blue switch means the device is ignored.
+The main window also has **External rules** with the steam-devices switch.
 
 The GUI monitors `udevadm monitor` while open and also polls every 5 seconds as
 a fallback. When a controller connects, the list updates automatically and a
 **GNOME notification** is shown. Clicking the notification opens the window.
-The header menu contains only About.
+The header menu contains **Hidden devices** and About.
 
 ### Saved devices
 
@@ -284,7 +310,7 @@ For a USB controller, the file is named for example
 `10-udev-rule-generator-gamepad-045e-02fd-xbox-wireless-controller.rules` and contains:
 
 ```udev
-# Generated by udev-rule-generator 0.18.3
+# Generated by udev-rule-generator 0.19.0
 
 # Device: Xbox Wireless Controller
 ACTION!="remove", SUBSYSTEM=="usb", ATTRS{idVendor}=="045e", ATTRS{idProduct}=="02fd", MODE="0660", TAG+="uaccess"
@@ -352,6 +378,12 @@ window, or when you run:
 ./udev-rule-generator --presets steam
 ```
 
+To remove it from the CLI:
+
+```bash
+./udev-rule-generator --remove 71-steam-input.rules 71-steam-vr.rules --yes
+```
+
 The package provides the uinput/Steam Input permissions used by Steam and
 SteamVR. It is not installed automatically.
 
@@ -374,37 +406,6 @@ The updater downloads Valve's files from
 diff before committing it. The rules are MIT, by
 [Valve Software](https://github.com/ValveSoftware/). The full license text is
 in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
-
-## Ignore devices
-
-Some LED/RGB controllers, keyboards, tablets and other HID devices declare a
-few axes and buttons and make the kernel create a `/dev/input/js*` node. They
-look like joysticks at the capability level, so there is no perfect test.
-
-The app reads the `B: KEY` and `B: ABS` capability bitmaps from
-`/proc/bus/input/devices`; if they are not available there, it reads
-`/sys/class/input/*/device/capabilities/{key,abs}`. It flags a device when all
-of these are true:
-
-- It declares at least one absolute axis.
-- It declares at least one key/button.
-- It does not declare any button typical of a real gamepad, joystick, wheel or
-  flight stick (`BTN_TRIGGER`, `BTN_THUMB`, `BTN_SOUTH` … `BTN_THUMB*`,
-  `BTN_DPAD_*`, `BTN_TRIGGER_HAPPY*` or wheel buttons).
-
-`BTN_SELECT`, `BTN_START` and `BTN_MODE` alone are not taken as proof of a
-gamepad because fake controllers often declare them too. The detection never
-uses a device name, vendor name, or VID:PID.
-
-Flagged devices appear in **Ignore devices**. Enabling their switch creates an
-ignore rule; a blue switch means they are ignored. Saved rows have a trash
-button that removes the saved record and, if active, its ignore rule. If
-capabilities are not available, or a device needs to be ignored explicitly,
-use the CLI:
-
-```bash
-./udev-rule-generator --device VID:PID --action ignore --yes
-```
 
 ## Authentication
 
@@ -537,6 +538,7 @@ gui/
   application.py
   window.py
   device_manager.py  # main saved-device list and switches
+  hidden_dialog.py   # restore hidden saved devices
   installed_dialog.py
   data/           # .desktop, metainfo, and icon
 tools/

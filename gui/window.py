@@ -31,6 +31,7 @@ class MainWindow(Adw.ApplicationWindow):
         self._auto_refresh_source = 0
         self._poll_source = 0
         self._monitor: UdevMonitor | None = None
+        self._hidden_dialog = None
 
         self.set_title(tr(APP_NAME))
         self.set_default_size(780, 760)
@@ -56,6 +57,7 @@ class MainWindow(Adw.ApplicationWindow):
         header.set_title_widget(self.window_title)
 
         menu = Gio.Menu()
+        menu.append(tr("Dispositivos ocultos"), "app.hidden")
         menu.append(tr("Acerca de"), "app.about")
         menu_button = Gtk.MenuButton(
             icon_name="open-menu-symbolic",
@@ -212,6 +214,29 @@ class MainWindow(Adw.ApplicationWindow):
     def _on_monitor_failed(self) -> None:
         # El sondeo de respaldo sigue activo; no hace falta molestar al usuario.
         pass
+
+    def show_hidden_devices(self) -> None:
+        if self._closed:
+            return
+        if self._hidden_dialog is None:
+            from .hidden_dialog import HiddenDevicesDialog
+
+            self._hidden_dialog = HiddenDevicesDialog(
+                store=self.known_store,
+                parent=self,
+                on_changed=self._on_hidden_changed,
+            )
+            self._hidden_dialog.connect(
+                "destroy", self._on_hidden_destroyed
+            )
+        self._hidden_dialog.present()
+
+    def _on_hidden_destroyed(self, _dialog) -> None:
+        self._hidden_dialog = None
+
+    def _on_hidden_changed(self, message: str) -> None:
+        self.toast_overlay.add_toast(Adw.Toast(title=message, timeout=5))
+        self.manager.reload()
 
     def _on_known_changed(self, message: str) -> None:
         self.toast_overlay.add_toast(Adw.Toast(title=message, timeout=5))
