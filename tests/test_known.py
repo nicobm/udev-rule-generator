@@ -89,9 +89,9 @@ class KnownDevicesTests(unittest.TestCase):
             store = KnownDevices(path)
             spec = build_rule(_device(), RuleAction.ALLOW)
             legacy = spec.content.replace(
-                "# Permisos del dispositivo USB\n",
-                "# Nodos: /dev/input/js0, /dev/input/event30\n"
-                "# Permisos del dispositivo USB\n",
+                "# Dispositivo: Test Pad\n",
+                "# Dispositivo: Test Pad\n"
+                "# Nodos: /dev/input/js0, /dev/input/event30\n",
             )
             parsed = _parse_header(spec.filename, legacy)
             self.assertIsNotNone(parsed)
@@ -106,10 +106,11 @@ class KnownDevicesTests(unittest.TestCase):
             self.assertNotIn("# Nodos:", rebuilt.content)
             self.assertIn('ENV{ID_INPUT_JOYSTICK}="1"', rebuilt.content)
 
-    def test_bluetooth_rule_reads_ids_from_header(self) -> None:
+    def test_bluetooth_rule_reads_ids_from_kernel_line(self) -> None:
         device = _device()
         bluetooth = replace(device, bus="bluetooth")
         spec = build_rule(bluetooth, RuleAction.IGNORE)
+        self.assertNotIn("# Bus:", spec.content)
         parsed = _parse_header(spec.filename, spec.content)
         self.assertIsNotNone(parsed)
 

@@ -66,6 +66,15 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.10.1" date="2026-11-26">
+      <description>
+        <p>
+          Makes generated rule files easier to read: only the app version, a
+          blank line, the device name, and the rule lines.  The app still uses
+          one file per controller, so each file has one device block.
+        </p>
+      </description>
+    </release>
     <release version="0.10.0" date="2026-11-26">
       <description>
         <p>

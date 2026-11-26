@@ -8,7 +8,7 @@ import unicodedata
 from dataclasses import dataclass
 from enum import Enum
 
-from . import PROJECT_URL, __version__
+from . import __version__
 from .devices import Joystick
 from .i18n import tr
 
@@ -146,26 +146,13 @@ def _require_ids(device: Joystick) -> None:
             )
 
 
-def _header(device: Joystick, action: RuleAction) -> list[str]:
-    lines = [
+def _header(device: Joystick) -> list[str]:
+    """Encabezado mínimo: origen, línea en blanco y nombre del dispositivo."""
+    return [
         tr("# Generado por udev-rule-generator {version}", version=__version__),
+        "",
         tr("# Dispositivo: {name}", name=_comment_value(device.display_name)),
-        tr(
-            "# Bus: {bus} · ID: {identifier}",
-            bus=_comment_value(device.bus_label),
-            identifier=_comment_value(device.identifier),
-        ),
     ]
-    if device.serial:
-        lines.append(tr("# Serial: {serial}", serial=_comment_value(device.serial)))
-    lines.extend(
-        [
-            tr("# Acción: {action}", action=action.label.lower()),
-            tr("# Proyecto: {url}", url=PROJECT_URL),
-            "",
-        ]
-    )
-    return lines
 
 
 def _allow_usb_line(device: Joystick) -> str:
@@ -280,32 +267,22 @@ def _ignore_hidraw_line(device: Joystick) -> str | None:
 def build_rule(device: Joystick, action: RuleAction) -> RuleSpec:
     """Construye la regla udev para ``device`` y ``action``."""
     _require_ids(device)
-    lines = _header(device, action)
+    lines = _header(device)
 
     if action is RuleAction.ALLOW:
         body: list[str] = []
         if (device.is_usb or not device.bus) and device.vendor_id and device.product_id:
-            body.append(tr("# Permisos del dispositivo USB"))
             body.append(_allow_usb_line(device))
-        body.append(tr("# Permisos y detección del nodo de entrada"))
         body.append(_allow_input_line(device))
         hidraw = _allow_hidraw_line(device)
         if hidraw:
-            body.append(tr("# Permisos de hidraw (Steam, SDL y herramientas HID)"))
             body.append(hidraw)
         lines.extend(body)
         trigger = "change"
     else:
         body = []
         if (device.is_usb or not device.bus) and device.vendor_id and device.product_id:
-            body.append(tr("# Desautorizar el dispositivo USB antes de que se enumere"))
             body.append(_ignore_usb_line(device))
-        if device.is_bluetooth:
-            body.append(
-                tr(
-                    "# Bluetooth no se puede desautorizar como USB; se deniega el acceso"
-                )
-            )
         input_line = _ignore_input_line(device)
         hidraw_line = _ignore_hidraw_line(device)
         if input_line:

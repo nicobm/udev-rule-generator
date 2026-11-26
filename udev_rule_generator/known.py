@@ -213,6 +213,13 @@ class KnownDevice:
         product_id = _first(
             content, r'(?:ATTRS|ATTR)\{idProduct\}=="([0-9a-fA-F]{4})"'
         ).lower()
+        kernel_ids = re.search(
+            r'KERNELS=="\*([0-9a-fA-F]{4}):([0-9a-fA-F]{4})\*"', content
+        )
+        if not vendor_id or not product_id:
+            if kernel_ids:
+                vendor_id = vendor_id or kernel_ids.group(1).lower()
+                product_id = product_id or kernel_ids.group(2).lower()
         if not vendor_id or not product_id:
             header_ids = re.search(
                 r"^# Bus: .*ID: ([0-9a-fA-F]{4}):([0-9a-fA-F]{4})",
@@ -238,6 +245,12 @@ class KnownDevice:
             bus = "pci"
         elif "platform" in bus_text:
             bus = "platform"
+        elif 'SUBSYSTEM=="usb"' in content or 'ATTR{authorized}="0"' in content:
+            bus = "usb"
+        elif kernel_ids or 'KERNELS=="*' in content:
+            # Las reglas nuevas no escriben el bus; un KERNELS con VID:PID
+            # corresponde a un mando Bluetooth o a otro bus no USB.
+            bus = "bluetooth"
         else:
             bus = ""
         serial = _first(content, r"^# Serial: (.+)$")

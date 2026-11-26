@@ -145,6 +145,15 @@ class RuleTests(unittest.TestCase):
         self.assertNotIn("VID/PID desconocido", spec.content)
         self.assertNotIn("# Nodos:", spec.content)
         self.assertNotIn("# Nodes:", spec.content)
+        lines = spec.content.splitlines()
+        self.assertTrue(
+            lines[0].startswith("# Generado por udev-rule-generator ")
+        )
+        self.assertEqual(lines[1], "")
+        self.assertEqual(lines[2], "# Dispositivo: Test Pad")
+        self.assertNotIn("# Bus:", spec.content)
+        self.assertNotIn("# Acción:", spec.content)
+        self.assertNotIn("# Permisos", spec.content)
 
     def test_ignore_usb_deauthorizes_and_denies(self) -> None:
         spec = build_rule(_device(), RuleAction.IGNORE)

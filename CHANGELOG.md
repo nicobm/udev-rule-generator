@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.10.1 - 2026-11-26
+
+- Simplifies generated rule files for human reading. The header is now only
+  the app version, a blank line, and `# Device:`; the descriptive comments
+  between rule lines were removed.
+- Keeps one file per controller, so each file has one `# Device:` block.
+- Imported saved devices can still recover the VID:PID and bus from USB
+  attributes or Bluetooth `KERNELS` lines when the header does not include
+  them.
+
 ## 0.10.0 - 2026-11-26
 
 - Adds a JSON registry of **Saved devices** at
