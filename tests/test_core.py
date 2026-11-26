@@ -196,7 +196,9 @@ class PresetTests(unittest.TestCase):
         self.assertEqual(len(files), len(PRESETS))
         self.assertIn("71-steam-input.rules", files)
         self.assertIn("71-steam-vr.rules", files)
-        self.assertIn("8bitdo-gdu.rules", files)
+        self.assertIn("71-8bitdo-gdu.rules", files)
+        for filename in files:
+            validate_rule_filename(filename)
 
     def test_presets_use_expected_trigger(self) -> None:
         self.assertEqual(presets_trigger(STEAM), "change")

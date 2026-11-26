@@ -145,7 +145,7 @@ GAME_DEVICES: tuple[Preset, ...] = tuple(
         .title(),
         description="",
         source=source,
-        install_name=source,
+        install_name=f"71-{source}",
         category="game-devices",
         trigger="add",
         upstream=GAME_DEVICES_URL,

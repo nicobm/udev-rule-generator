@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.3 - 2026-11-26
+
+- Fixes game-devices-udev installation names: they now use the required `71-`
+  prefix, matching the upstream Meson default and the udev filename
+  validation.
+
 ## 1.1.2 - 2026-11-26
 
 - Replaces the steam-devices description with a red warning when uinput is
