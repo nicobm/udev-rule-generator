@@ -8,6 +8,7 @@ import os
 import sys
 import tempfile
 import unittest
+from pathlib import Path
 from unittest import mock
 
 from udev_rule_generator.cli import _collect_devices, build_parser, main
@@ -74,6 +75,54 @@ class DeviceListTests(unittest.TestCase):
         self.assertFalse(entries[0].connected)
         self.assertIsNotNone(entries[0].saved)
         self.assertEqual(entries[0].device.display_name, "Saved Pad")
+
+
+class BackupArgumentTests(unittest.TestCase):
+    def test_parser_accepts_backup_actions(self) -> None:
+        args = build_parser().parse_args(["--export", "backup.tar.gz"])
+        self.assertEqual(args.export, "backup.tar.gz")
+        args = build_parser().parse_args(["--import", "backup.tar.gz"])
+        self.assertEqual(args.import_backup, "backup.tar.gz")
+
+    def test_cli_export_writes_archive(self) -> None:
+        device = Joystick(
+            key="export-key",
+            name="Export Pad",
+            vendor="Test",
+            model="Export Pad",
+            vendor_id="045e",
+            product_id="0b12",
+            serial="export-serial",
+            bus="usb",
+            devpaths=(),
+            event_devices=(),
+            js_devices=(),
+            input_names=("Export Pad",),
+            properties={},
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            archive = Path(directory) / "backup.tar.gz"
+            with (
+                mock.patch.dict(os.environ, {"XDG_CONFIG_HOME": directory}),
+                mock.patch(
+                    "udev_rule_generator.backup.list_installed_rules",
+                    return_value=[],
+                ),
+                mock.patch(
+                    "udev_rule_generator.cli.list_installed_rules",
+                    return_value=[],
+                ),
+                contextlib.redirect_stdout(io.StringIO()),
+            ):
+                store = KnownDevices()
+                store.record_rule(
+                    device,
+                    build_rule(device, RuleAction.ALLOW),
+                )
+                result = main(["--export", str(archive)])
+            self.assertEqual(result, 0)
+            self.assertTrue(archive.is_file())
+            self.assertGreater(archive.stat().st_size, 0)
 
 
 class AliasArgumentTests(unittest.TestCase):

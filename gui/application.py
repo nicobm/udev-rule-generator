@@ -57,6 +57,8 @@ class Application(Adw.Application):
     def _add_actions(self) -> None:
         actions = (
             ("refresh", self._on_refresh),
+            ("export", self._on_export),
+            ("import", self._on_import),
             ("hidden", self._on_hidden),
             ("test", self._on_test),
             ("about", self._on_about),
@@ -85,6 +87,14 @@ class Application(Adw.Application):
     def _on_refresh(self, _action, _parameter) -> None:
         if self.window is not None:
             self.window.refresh(silent=True)
+
+    def _on_export(self, _action, _parameter) -> None:
+        if self.window is not None:
+            self.window.export_backup()
+
+    def _on_import(self, _action, _parameter) -> None:
+        if self.window is not None:
+            self.window.import_backup()
 
     def _on_hidden(self, _action, _parameter) -> None:
         if self.window is not None:

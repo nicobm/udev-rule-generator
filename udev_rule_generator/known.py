@@ -338,16 +338,22 @@ class KnownDevices:
                 loaded[record.id or key] = record
             self._devices = loaded
 
-    def save(self) -> None:
+    def snapshot(self) -> dict[str, object]:
+        """Devuelve los datos actuales en el mismo formato que ``devices.json``."""
         with self._lock:
-            self.path.parent.mkdir(parents=True, exist_ok=True)
-            payload = {
+            return {
                 "version": 1,
                 "devices": {
-                    key: device.to_dict() for key, device in self._devices.items()
+                    key: device.to_dict()
+                    for key, device in self._devices.items()
                 },
                 "aliases": dict(self._aliases),
             }
+
+    def save(self) -> None:
+        with self._lock:
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+            payload = self.snapshot()
             temporary = self.path.with_suffix(self.path.suffix + ".tmp")
             temporary.write_text(
                 json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
@@ -355,6 +361,43 @@ class KnownDevices:
             )
             os.chmod(temporary, 0o644)
             os.replace(temporary, self.path)
+
+    def merge_snapshot(self, raw: object) -> tuple[int, int]:
+        """Fusiona un ``devices.json`` importado sin borrar datos locales.
+
+        Devuelve la cantidad de dispositivos y alias importados.
+        """
+        if not isinstance(raw, dict):
+            raise ValueError(tr("El archivo de dispositivos no es válido."))
+        devices = raw.get("devices", {})
+        aliases = raw.get("aliases", {})
+        if not isinstance(devices, dict) or not isinstance(aliases, dict):
+            raise ValueError(tr("El archivo de dispositivos no es válido."))
+
+        imported_devices = 0
+        imported_aliases = 0
+        with self._lock:
+            for key, value in devices.items():
+                if not isinstance(value, dict):
+                    continue
+                if value.get("action") == "ignore":
+                    continue
+                record = KnownDevice.from_dict(value)
+                if _is_legacy_ignore(record.content):
+                    continue
+                identity = record.id or str(key)
+                if not identity:
+                    continue
+                self._devices[identity] = record
+                imported_devices += 1
+            for key, value in aliases.items():
+                if not isinstance(value, str) or not value.strip():
+                    continue
+                self._aliases[str(key)] = value.strip()
+                imported_aliases += 1
+            if imported_devices or imported_aliases:
+                self.save()
+        return imported_devices, imported_aliases
 
     def record_rule(self, device: Joystick, spec: RuleSpec) -> KnownDevice:
         with self._lock:

@@ -3,8 +3,16 @@
 from __future__ import annotations
 
 import threading
+from datetime import datetime
 
 from udev_rule_generator import APP_NAME
+from udev_rule_generator.backup import (
+    BackupError,
+    BackupInfo,
+    ImportResult,
+    create_backup,
+)
+from udev_rule_generator.backup import import_backup as restore_backup
 from udev_rule_generator.devices import Joystick, detect_joysticks
 from udev_rule_generator.host import Host
 from udev_rule_generator.i18n import tr
@@ -34,6 +42,8 @@ class MainWindow(Adw.ApplicationWindow):
         self._monitor: UdevMonitor | None = None
         self._hidden_dialog = None
         self._test_dialog = None
+        self._file_dialog = None
+        self._backup_busy = False
 
         self.set_title(tr(APP_NAME))
         self.set_default_size(780, 760)
@@ -59,6 +69,8 @@ class MainWindow(Adw.ApplicationWindow):
         header.set_title_widget(self.window_title)
 
         menu = Gio.Menu()
+        menu.append(tr("Exportar"), "app.export")
+        menu.append(tr("Importar"), "app.import")
         menu.append(tr("Dispositivos ocultos"), "app.hidden")
         menu.append(tr("Test de reglas"), "app.test")
         menu.append(tr("Acerca de"), "app.about")
@@ -288,6 +300,186 @@ class MainWindow(Adw.ApplicationWindow):
         self.toast_overlay.add_toast(Adw.Toast(title=message, timeout=5))
         self._refresh_rule_metadata()
         GLib.timeout_add(1200, self._refresh_after_change)
+
+    def _backup_filters(self) -> Gio.ListStore:
+        filters = Gio.ListStore.new(Gtk.FileFilter)
+        backup_filter = Gtk.FileFilter()
+        backup_filter.set_name(tr("Copias de seguridad (.tar.gz)"))
+        backup_filter.add_pattern("*.tar.gz")
+        backup_filter.add_pattern("*.tgz")
+        filters.append(backup_filter)
+        all_filter = Gtk.FileFilter()
+        all_filter.set_name(tr("Todos los archivos"))
+        all_filter.add_pattern("*")
+        filters.append(all_filter)
+        return filters
+
+    def _backup_dialog(self, title: str) -> Gtk.FileDialog:
+        dialog = Gtk.FileDialog()
+        dialog.set_title(title)
+        dialog.set_modal(True)
+        filters = self._backup_filters()
+        dialog.set_filters(filters)
+        dialog.set_default_filter(filters.get_item(0))
+        self._file_dialog = dialog
+        return dialog
+
+    def export_backup(self) -> None:
+        if self._closed or self._backup_busy or self._file_dialog is not None:
+            return
+        dialog = self._backup_dialog(tr("Exportar copia de seguridad"))
+        dialog.set_initial_name(
+            f"udev-rule-generator-backup-{datetime.now():%Y-%m-%d}.tar.gz"
+        )
+        dialog.set_accept_label(tr("Exportar"))
+        dialog.save(self, None, self._on_export_chosen)
+
+    def _on_export_chosen(self, dialog, result, *_args) -> None:
+        self._file_dialog = None
+        try:
+            destination = dialog.save_finish(result)
+        except GLib.Error:
+            return
+        if destination is None:
+            return
+        self._backup_busy = True
+        self.add_toast(tr("Exportando copia de seguridad…"))
+        threading.Thread(
+            target=self._export_worker,
+            args=(destination,),
+            name="udev-rule-generator-export",
+            daemon=True,
+        ).start()
+
+    def _export_worker(self, destination: Gio.File) -> None:
+        try:
+            data, info = create_backup(self.host, self.known_store)
+            try:
+                success, _etag = destination.replace_contents(
+                    data,
+                    None,
+                    False,
+                    Gio.FileCreateFlags.REPLACE_DESTINATION,
+                    None,
+                )
+            except GLib.Error as exc:
+                raise BackupError(str(exc)) from exc
+            if not success:
+                raise BackupError(
+                    tr("No se pudo escribir el archivo de copia de seguridad.")
+                )
+        except Exception as exc:  # noqa: BLE001 (se muestra al usuario)
+            GLib.idle_add(self._export_failed, str(exc))
+            return
+        GLib.idle_add(
+            self._export_finished,
+            info,
+            destination.get_basename() or "",
+        )
+
+    def _export_failed(self, message: str) -> bool:
+        if self._closed:
+            return False
+        self._backup_busy = False
+        self.show_error(
+            tr("No se pudo exportar la copia de seguridad"),
+            message,
+        )
+        return False
+
+    def _export_finished(
+        self,
+        _info: BackupInfo,
+        filename: str,
+    ) -> bool:
+        if self._closed:
+            return False
+        self._backup_busy = False
+        self.add_toast(
+            tr(
+                "Copia de seguridad exportada: {filename}",
+                filename=filename or tr("archivo .tar.gz"),
+            )
+        )
+        return False
+
+    def import_backup(self) -> None:
+        if self._closed or self._backup_busy or self._file_dialog is not None:
+            return
+        dialog = self._backup_dialog(tr("Importar copia de seguridad"))
+        dialog.set_accept_label(tr("Importar"))
+        dialog.open(self, None, self._on_import_chosen)
+
+    def _on_import_chosen(self, dialog, result, *_args) -> None:
+        self._file_dialog = None
+        try:
+            source = dialog.open_finish(result)
+        except GLib.Error:
+            return
+        if source is None:
+            return
+        try:
+            success, contents, _etag = source.load_contents(None)
+        except GLib.Error as exc:
+            self.show_error(
+                tr("No se pudo importar la copia de seguridad"),
+                str(exc),
+            )
+            return
+        if not success or not contents:
+            self.show_error(
+                tr("No se pudo importar la copia de seguridad"),
+                tr("No se pudo leer el archivo de copia de seguridad."),
+            )
+            return
+        self._backup_busy = True
+        self.add_toast(tr("Importando copia de seguridad…"))
+        threading.Thread(
+            target=self._import_worker,
+            args=(bytes(contents),),
+            name="udev-rule-generator-import",
+            daemon=True,
+        ).start()
+
+    def _import_worker(self, contents: bytes) -> None:
+        try:
+            result = restore_backup(self.host, self.known_store, contents)
+        except Exception as exc:  # noqa: BLE001 (se muestra al usuario)
+            GLib.idle_add(self._import_failed, str(exc))
+            return
+        GLib.idle_add(self._import_finished, result)
+
+    def _import_failed(self, message: str) -> bool:
+        if self._closed:
+            return False
+        self._backup_busy = False
+        self.show_error(
+            tr("No se pudo importar la copia de seguridad"),
+            message,
+        )
+        return False
+
+    def _import_finished(self, result: ImportResult) -> bool:
+        if self._closed:
+            return False
+        self._backup_busy = False
+        self.manager.reload()
+        if self._hidden_dialog is not None:
+            try:
+                self._hidden_dialog.reload()
+            except Exception:
+                pass
+        self._refresh_rule_metadata()
+        GLib.timeout_add(1200, self._refresh_after_change)
+        self.add_toast(
+            tr(
+                "Copia de seguridad importada: {devices} dispositivos y "
+                "{rules} reglas.",
+                devices=result.devices,
+                rules=result.rules,
+            )
+        )
+        return False
 
     def _refresh_rule_metadata(self) -> None:
         if self._closed:

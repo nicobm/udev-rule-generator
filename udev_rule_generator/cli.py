@@ -7,9 +7,12 @@ import json
 import os
 import sys
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Callable, Iterable, Sequence
 
 from . import ISSUE_URL, PROJECT_URL, __version__, version_string
+from .backup import BackupError, create_backup
+from .backup import import_backup as restore_backup
 from .devices import Joystick, detect_joysticks, find_joystick
 from .host import CommandNotAvailable, Host, HostError
 from .i18n import is_english, tr
@@ -809,6 +812,76 @@ def _cmd_alias(
     return 0
 
 
+def _cmd_export(host: Host, path: str, colors: Colors) -> int:
+    try:
+        data, info = create_backup(host, KnownDevices())
+        Path(path).write_bytes(data)
+    except (OSError, BackupError) as exc:
+        raise ValueError(str(exc)) from exc
+    print(
+        colors.green(
+            tr(
+                "Copia de seguridad exportada: {filename}",
+                filename=Path(path).name,
+            )
+        )
+    )
+    print(
+        colors.dim(
+            tr(
+                "{devices} dispositivos, {aliases} alias y {rules} reglas",
+                devices=info.devices,
+                aliases=info.aliases,
+                rules=len(info.rules),
+            )
+        )
+    )
+    return 0
+
+
+def _cmd_import(
+    host: Host,
+    path: str,
+    *,
+    assume_yes: bool,
+    colors: Colors,
+) -> int:
+    try:
+        data = Path(path).read_bytes()
+    except OSError as exc:
+        raise ValueError(str(exc)) from exc
+    if not assume_yes:
+        if not sys.stdin.isatty():
+            raise ValueError(
+                tr("Para importar sin interacción usá --yes.")
+            )
+        if not _confirm(
+            tr(
+                "¿Importar dispositivos y reglas generadas desde "
+                "{filename}?",
+                filename=Path(path).name,
+            )
+        ):
+            print(colors.dim(tr("No se modificó nada.")))
+            return 0
+    try:
+        result = restore_backup(host, KnownDevices(), data)
+    except (BackupError, OSError) as exc:
+        raise ValueError(str(exc)) from exc
+    print(
+        colors.green(
+            tr(
+                "Copia de seguridad importada: {devices} dispositivos, "
+                "{aliases} alias y {rules} reglas.",
+                devices=result.devices,
+                aliases=result.aliases,
+                rules=result.rules,
+            )
+        )
+    )
+    return 0
+
+
 def _install_presets(
     host: Host,
     presets: Sequence[Preset],
@@ -1184,6 +1257,17 @@ def build_parser() -> argparse.ArgumentParser:
         help=tr("lista las reglas instaladas por esta aplicación"),
     )
     parser.add_argument(
+        "--export",
+        metavar=tr("ARCHIVO.tar.gz"),
+        help=tr("exporta dispositivos, alias y reglas generadas"),
+    )
+    parser.add_argument(
+        "--import",
+        dest="import_backup",
+        metavar=tr("ARCHIVO.tar.gz"),
+        help=tr("importa una copia de seguridad .tar.gz"),
+    )
+    parser.add_argument(
         "--known",
         action="store_true",
         help=tr("lista los dispositivos guardados"),
@@ -1261,6 +1345,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                     args.unhide_known,
                     args.alias,
                     args.unalias,
+                    args.export,
+                    args.import_backup,
                     args.remove,
                     args.json,
                     args.dry_run,
@@ -1281,8 +1367,40 @@ def main(argv: Sequence[str] | None = None) -> int:
                 return 1
             return gui_main([sys.argv[0]])
 
+        backup_actions = [args.export, args.import_backup]
+        if sum(value is not None for value in backup_actions) > 1:
+            parser.error(
+                tr("--export y --import no se pueden combinar.")
+            )
+        if args.export is not None or args.import_backup is not None:
+            if (
+                args.list
+                or args.known
+                or args.device
+                or args.installed
+                or args.remove
+                or args.presets is not None
+                or args.alias is not None
+                or args.unalias is not None
+            ):
+                parser.error(
+                    tr(
+                        "--export y --import no se combinan con otras "
+                        "acciones."
+                    )
+                )
         if args.list:
             return _cmd_list(host, as_json=args.json, colors=colors)
+        if args.export is not None or args.import_backup is not None:
+            if args.export is not None:
+                return _cmd_export(host, args.export, colors)
+            assert args.import_backup is not None
+            return _cmd_import(
+                host,
+                args.import_backup,
+                assume_yes=args.yes,
+                colors=colors,
+            )
         alias_actions = [args.alias, args.unalias]
         if sum(value is not None for value in alias_actions) > 1:
             parser.error(
