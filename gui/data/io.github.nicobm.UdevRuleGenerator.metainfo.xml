@@ -66,6 +66,16 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.12.0" date="2026-11-26">
+      <description>
+        <p>
+          Simplifies the header menu to Hidden devices and About, keeps a
+          single Installed rules row in Status for the saved-device switches,
+          and adds an External rules section for the optional Valve and
+          fabiscafe packages.
+        </p>
+      </description>
+    </release>
     <release version="0.11.0" date="2026-11-26">
       <description>
         <p>

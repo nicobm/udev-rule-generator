@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.12.0 - 2026-11-26
+
+- Reorganizes the main window. The header menu now contains only Hidden
+  devices and About.
+- The Status section keeps a single **Installed rules** row, which opens the
+  saved-device rules with their enable/disable switches. The count tag now
+  shows the number of saved devices.
+- Adds an **External rules** section with the Presets button for the optional
+  Valve and fabiscafe packages.
+- Updates the README, website, metainfo, and translations for the new layout.
+
 ## 0.11.0 - 2026-11-26
 
 - Removes the rule preview from the device dialog. The dialog now shows only

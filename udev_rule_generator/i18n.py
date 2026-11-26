@@ -761,6 +761,19 @@ _EN.update(
     {
         # Dispositivos guardados
         "Dispositivos guardados": "Saved devices",
+        "Reglas externas": "External rules",
+        "Paquetes opcionales de Valve y fabiscafe que no forman parte "
+        "del núcleo de la aplicación.": (
+            "Optional Valve and fabiscafe packages that are not part of the "
+            "application core."
+        ),
+        "Instalá las reglas de Valve y fabiscafe.": (
+            "Install the Valve and fabiscafe rules."
+        ),
+        "Activá o desactivá las reglas de tus dispositivos "
+        "guardados.": (
+            "Enable or disable the rules of your saved devices."
+        ),
         "Activá o desactivá sus reglas sin conectar el mando": (
             "Enable or disable their rules without connecting the controller"
         ),

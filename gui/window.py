@@ -73,9 +73,6 @@ class MainWindow(Adw.ApplicationWindow):
         header.pack_start(refresh_button)
 
         menu = Gio.Menu()
-        menu.append(tr("Reglas preconfiguradas"), "app.presets")
-        menu.append(tr("Dispositivos guardados"), "app.known")
-        menu.append(tr("Reglas instaladas"), "app.installed")
         menu.append(tr("Dispositivos ocultos"), "app.hidden")
         menu.append(tr("Acerca de"), "app.about")
         menu_button = Gtk.MenuButton(
@@ -92,11 +89,18 @@ class MainWindow(Adw.ApplicationWindow):
         self.stack = Gtk.Stack()
         self.stack.set_transition_type(Gtk.StackTransitionType.CROSSFADE)
         self.stack.set_transition_duration(180)
+        self.stack.set_vexpand(True)
+        self.stack.set_hexpand(True)
 
         self._build_loading_page()
         self._build_empty_page()
         self._build_list_page()
-        self.toast_overlay.set_child(self.stack)
+        self._build_sections()
+
+        root = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        root.append(self.stack)
+        root.append(self.sections)
+        self.toast_overlay.set_child(root)
         toolbar.set_content(self.toast_overlay)
         self.set_content(toolbar)
 
@@ -165,16 +169,25 @@ class MainWindow(Adw.ApplicationWindow):
         self.devices_group.set_hexpand(True)
         content.append(self.devices_group)
 
+        clamp.set_child(content)
+        scroller.set_child(clamp)
+        box.append(scroller)
+        self.stack.add_named(box, "list")
+
+    def _build_sections(self) -> None:
+        clamp = Adw.Clamp()
+        clamp.set_maximum_size(720)
+        clamp.set_tightening_threshold(600)
+        clamp.set_hexpand(True)
+
+        content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18)
+        content.set_margin_top(6)
+        content.set_margin_bottom(24)
+        content.set_margin_start(18)
+        content.set_margin_end(18)
+
         status_group = Adw.PreferencesGroup(title=tr("Estado"))
         status_group.set_hexpand(True)
-        status_group.add(
-            self._action_row(
-                tr("Reglas preconfiguradas"),
-                tr("fabiscafe y Steam/SteamVR opcionales."),
-                "app.presets",
-                icon_name="application-x-addon-symbolic",
-            )
-        )
         self.known_count_label = Gtk.Label(label="…")
         self.known_count_label.add_css_class("device-badge")
         self.known_count_label.set_valign(Gtk.Align.CENTER)
@@ -182,36 +195,44 @@ class MainWindow(Adw.ApplicationWindow):
         self.known_count_label.set_xalign(0.5)
         status_group.add(
             self._action_row(
-                tr("Dispositivos guardados"),
+                tr("Reglas instaladas"),
                 tr(
-                    "Activá o desactivá sus reglas aunque el mando no esté "
-                    "conectado."
+                    "Activá o desactivá las reglas de tus dispositivos "
+                    "guardados."
                 ),
                 "app.known",
-                icon_name="input-gaming-symbolic",
-                badge=self.known_count_label,
-            )
-        )
-        self.rules_count_label = Gtk.Label(label="…")
-        self.rules_count_label.add_css_class("device-badge")
-        self.rules_count_label.set_valign(Gtk.Align.CENTER)
-        self.rules_count_label.set_width_chars(2)
-        self.rules_count_label.set_xalign(0.5)
-        status_group.add(
-            self._action_row(
-                tr("Reglas instaladas"),
-                tr("Ver o eliminar las reglas creadas por esta aplicación."),
-                "app.installed",
                 icon_name="document-open-symbolic",
-                badge=self.rules_count_label,
+                badge=self.known_count_label,
             )
         )
         content.append(status_group)
 
+        external_group = Adw.PreferencesGroup(
+            title=tr("Reglas externas"),
+            description=tr(
+                "Paquetes opcionales de Valve y fabiscafe que no forman parte "
+                "del núcleo de la aplicación."
+            ),
+        )
+        external_group.set_hexpand(True)
+        external_group.add(
+            self._action_row(
+                tr("Reglas preconfiguradas"),
+                tr("Instalá las reglas de Valve y fabiscafe."),
+                "app.presets",
+                icon_name="application-x-addon-symbolic",
+            )
+        )
+        content.append(external_group)
+
         clamp.set_child(content)
+        scroller = Gtk.ScrolledWindow()
+        scroller.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        scroller.set_propagate_natural_height(True)
+        scroller.set_max_content_height(300)
+        scroller.set_hexpand(True)
         scroller.set_child(clamp)
-        box.append(scroller)
-        self.stack.add_named(box, "list")
+        self.sections = scroller
 
     @staticmethod
     def _action_row(
@@ -533,15 +554,8 @@ class MainWindow(Adw.ApplicationWindow):
             return False
         try:
             rules = future.result()
-        except Exception:  # noqa: BLE001 (contadores no críticos)
+        except Exception:  # noqa: BLE001 (contador no crítico)
             return False
-        count = len(rules)
-        self.rules_count_label.set_text(str(count))
-        if count == 1:
-            tooltip = tr("{count} regla instalada", count=count)
-        else:
-            tooltip = tr("{count} reglas instaladas", count=count)
-        self.rules_count_label.set_tooltip_text(tooltip)
 
         try:
             self.known_store.reconcile(rules)

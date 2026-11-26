@@ -37,7 +37,7 @@ class KnownDialog(Adw.Dialog):
         self._busy = False
         self._updating = False
 
-        self.set_title(tr("Dispositivos guardados"))
+        self.set_title(tr("Reglas instaladas"))
         self.set_content_width(740)
         self.set_content_height(680)
         self._build_ui()
@@ -49,8 +49,11 @@ class KnownDialog(Adw.Dialog):
         header = Adw.HeaderBar()
         header.set_title_widget(
             Adw.WindowTitle(
-                title=tr("Dispositivos guardados"),
-                subtitle=tr("Activá o desactivá sus reglas sin conectar el mando"),
+                title=tr("Reglas instaladas"),
+                subtitle=tr(
+                    "Activá o desactivá las reglas de tus dispositivos "
+                    "guardados."
+                ),
             )
         )
         close_button = Gtk.Button(
