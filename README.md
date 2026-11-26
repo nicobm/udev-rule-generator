@@ -136,12 +136,13 @@ diálogo de polkit se sigue mostrando igual.
 ## GUI
 
 ```bash
-./udev-rule-generator-gui
+./udev-rule-generator --gui
 ```
 
 o:
 
 ```bash
+./udev-rule-generator-gui
 python3 -m gui
 ```
 
@@ -236,7 +237,7 @@ Para un mando USB, el archivo se llama por ejemplo
 `10-gamepad-045e-0b12-microsoft-xbox-series-s-x-controller.rules` y contiene:
 
 ```udev
-# Generado por udev-rule-generator 0.3.0
+# Generado por udev-rule-generator 0.3.1
 # Generador de reglas udev
 # Dispositivo: Microsoft Xbox Series S|X Controller
 # Bus: USB · ID: 045e:0b12

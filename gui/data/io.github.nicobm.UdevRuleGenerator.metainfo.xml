@@ -41,6 +41,14 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.3.1" date="2026-11-26">
+      <description>
+        <p>
+          Añade el argumento --gui a udev-rule-generator para abrir la interfaz
+          gráfica desde el mismo lanzador de terminal.
+        </p>
+      </description>
+    </release>
     <release version="0.3.0" date="2026-11-26">
       <description>
         <p>

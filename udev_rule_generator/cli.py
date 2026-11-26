@@ -548,11 +548,12 @@ def build_parser() -> argparse.ArgumentParser:
         prog="udev-rule-generator",
         description=(
             "Crea reglas udev para permitir o ignorar joysticks.  Sin argumentos "
-            "abre el menú interactivo."
+            "abre el menú interactivo; con --gui abre la interfaz gráfica."
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
             "Ejemplos:\n"
+            "  udev-rule-generator --gui\n"
             "  udev-rule-generator --list\n"
             "  udev-rule-generator --device 1 --action allow\n"
             "  udev-rule-generator --device 045e:0b12 --action ignore --dry-run\n"
@@ -570,6 +571,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--version",
         action="version",
         version=f"%(prog)s {__version__}",
+    )
+    parser.add_argument(
+        "--gui",
+        action="store_true",
+        help="abre la interfaz gráfica GTK4/libadwaita",
     )
     parser.add_argument(
         "--list",
@@ -634,6 +640,29 @@ def main(argv: Sequence[str] | None = None) -> int:
     host = Host()
 
     try:
+        if args.gui:
+            conflicting = any(
+                (
+                    args.list,
+                    args.device,
+                    args.action,
+                    args.presets is not None,
+                    args.installed,
+                    args.remove,
+                    args.json,
+                    args.dry_run,
+                    args.yes,
+                )
+            )
+            if conflicting:
+                parser.error("--gui no se puede combinar con otras opciones.")
+            try:
+                from gui.main import main as gui_main
+            except ImportError as exc:
+                print(f"error: no se pudo cargar la GUI: {exc}", file=sys.stderr)
+                return 1
+            return gui_main([sys.argv[0]])
+
         if args.list:
             return _cmd_list(host, as_json=args.json, colors=colors)
         if args.installed or args.remove:

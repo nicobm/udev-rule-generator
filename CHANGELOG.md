@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.1 - 2026-11-26
+
+- Añade `--gui` a `udev-rule-generator` para abrir la interfaz gráfica desde
+  el mismo comando de terminal.
+- Valida que `--gui` no se combine con opciones de CLI incompatibles.
+
 ## 0.3.0 - 2026-11-26
 
 - La GUI monitorea `udevadm monitor` y detecta automáticamente mandos al
