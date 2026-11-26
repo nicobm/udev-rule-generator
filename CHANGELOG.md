@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.16.0 - 2026-11-26
+
+- New generated rule filenames include the application name:
+  `10-udev-rule-generator-gamepad-<vid>-<pid>-<name>.rules` and
+  `99-udev-rule-generator-ignore-<vid>-<pid>-<name>.rules`.
+- Existing rules keep their old filenames until they are disabled and enabled
+  again or reinstalled.
+
 ## 0.15.0 - 2026-11-26
 
 - Removes the Enable all switch and the redundant “connected controllers have

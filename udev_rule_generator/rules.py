@@ -102,7 +102,10 @@ def rule_filename(device: Joystick, action: RuleAction) -> str:
     # (99-) para que TAG-="uaccess" y MODE="0000" no sean sobrescritos por
     # 70-uaccess.rules ni por las reglas de fabricante instaladas como 71-.
     prefix = "10" if action is RuleAction.ALLOW else "99"
-    return f"{prefix}-{kind}-{hardware}-{slugify(device.display_name)}.rules"
+    return (
+        f"{prefix}-udev-rule-generator-{kind}-{hardware}-"
+        f"{slugify(device.display_name)}.rules"
+    )
 
 
 def rule_title(device: Joystick, action: RuleAction) -> str:

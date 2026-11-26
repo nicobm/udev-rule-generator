@@ -104,20 +104,13 @@ class KnownDevice:
     def build_spec(self) -> RuleSpec:
         """Regenera la regla con el formato actual de la app.
 
-        Se conserva el nombre de archivo original para no dejar una copia
-        duplicada cuando la regla vino de una instalación anterior.
+        Cuando hay metadata suficiente se usa el nombre de archivo actual, de
+        modo que una regla antigua se migre al activarla de nuevo.
         """
         action = RuleAction(self.action)
         if self.vendor_id and self.product_id and self.name:
             try:
-                spec = build_rule(self.to_joystick(), action)
-                return RuleSpec(
-                    filename=self.filename or spec.filename,
-                    content=spec.content,
-                    action=spec.action,
-                    title=spec.title,
-                    trigger=spec.trigger,
-                )
+                return build_rule(self.to_joystick(), action)
             except ValueError:
                 pass
         trigger = "add" if 'ATTR{authorized}="0"' in self.content else "change"
@@ -256,7 +249,9 @@ class KnownDevice:
         serial = _first(content, r"^# Serial: (.+)$")
         action = (
             "ignore"
-            if rule.filename.startswith("99-ignore-")
+            if rule.filename.startswith(
+                ("99-ignore-", "99-udev-rule-generator-ignore-")
+            )
             or 'TAG-="uaccess"' in content
             else "allow"
         )

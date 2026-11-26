@@ -128,11 +128,11 @@ class RuleTests(unittest.TestCase):
         device = _device()
         self.assertEqual(
             rule_filename(device, RuleAction.ALLOW),
-            "10-gamepad-045e-0b12-test-pad.rules",
+            "10-udev-rule-generator-gamepad-045e-0b12-test-pad.rules",
         )
         self.assertEqual(
             rule_filename(device, RuleAction.IGNORE),
-            "99-ignore-045e-0b12-test-pad.rules",
+            "99-udev-rule-generator-ignore-045e-0b12-test-pad.rules",
         )
 
     def test_allow_usb_rule(self) -> None:

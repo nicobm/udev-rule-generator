@@ -84,7 +84,7 @@ class KnownDevicesTests(unittest.TestCase):
             store.reconcile([])
             self.assertFalse(store.devices()[0].active)
 
-    def test_build_spec_keeps_filename_and_updates_format(self) -> None:
+    def test_build_spec_migrates_old_filename_and_updates_format(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "devices.json"
             store = KnownDevices(path)
@@ -101,9 +101,13 @@ class KnownDevicesTests(unittest.TestCase):
             record = store.devices()[0]
             self.assertNotIn("# Nodos:", record.content)
 
-            legacy_record = replace(record, content=legacy)
+            legacy_filename = "10-gamepad-045e-0b12-test-pad.rules"
+            legacy_record = replace(
+                record, filename=legacy_filename, content=legacy
+            )
             rebuilt = legacy_record.build_spec()
-            self.assertEqual(rebuilt.filename, record.filename)
+            self.assertEqual(rebuilt.filename, spec.filename)
+            self.assertNotEqual(rebuilt.filename, legacy_filename)
             self.assertNotIn("# Nodos:", rebuilt.content)
             self.assertIn('ENV{ID_INPUT_JOYSTICK}="1"', rebuilt.content)
 

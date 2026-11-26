@@ -64,6 +64,15 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.16.0" date="2026-11-26">
+      <description>
+        <p>
+          New generated rule filenames include the application name, for
+          example 10-udev-rule-generator-gamepad-…. Existing rules are
+          renamed when they are disabled and enabled again or reinstalled.
+        </p>
+      </description>
+    </release>
     <release version="0.15.0" date="2026-11-26">
       <description>
         <p>
