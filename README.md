@@ -42,13 +42,15 @@ hidden from the main list.
 - Permission rules with `MODE="0660"` and `TAG+="uaccess"`.
 - Generated rule filenames use the `10-` prefix.
 - Human-readable generated rules and `--dry-run`.
-- Optional steam-devices package.
+- Optional
+  [steam-devices](https://github.com/ValveSoftware/steam-devices) package.
 - List and remove rules managed by the application.
 - Saved devices registry with the latest rule for each controller, so the rule
   can be enabled or disabled without connecting the controller again.
 - Hide saved devices with the eye button; restore them from the hidden-devices
   menu.
-- Inline steam-devices switch in the main window.
+- Inline [steam-devices](https://github.com/ValveSoftware/steam-devices)
+  switch in the main window.
 - GTK4/libadwaita GUI with automatic connection detection, GNOME
   notifications, and centered Pika Backup-style cards.
 - Automatic language detection for English (US/UK) and Spanish.
@@ -185,7 +187,8 @@ connected controllers that do not have a saved rule yet.
   the rule first. Hidden devices live under the header menu **Hidden devices**,
   where they can be shown again.
 
-The main window also has **External rules** with the steam-devices switch.
+The main window also has **External rules** with the
+[steam-devices](https://github.com/ValveSoftware/steam-devices) switch.
 
 The GUI monitors `udevadm monitor` while open and also polls every 5 seconds as
 a fallback. When a controller connects, the list updates automatically and a
@@ -339,13 +342,16 @@ udev mark the device as a joystick.
 
 ## Steam devices
 
-The optional **steam-devices** package from Valve installs:
+The optional
+**[steam-devices](https://github.com/ValveSoftware/steam-devices)** package
+from Valve installs:
 
 - `71-steam-input.rules`
 - `71-steam-vr.rules`
 
-It is copied only when you enable the **steam-devices** switch in the main
-window, or when you run:
+It is copied only when you enable the
+**[steam-devices](https://github.com/ValveSoftware/steam-devices)** switch in
+the main window, or when you run:
 
 ```bash
 ./udev-rule-generator --presets steam
