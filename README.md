@@ -19,9 +19,10 @@ application installation.
 
 Controller support on Linux depends on udev rules that grant the active user
 access to each device. Many distributions do not ship rules for every
-controller, and some do not package rule sets such as `game-udev-devices`
-and/or `steam-devices` at all. This is especially common on immutable systems
-such as Fedora Silverblue.
+controller, and some do not package rule sets such as
+[`game-devices-udev`](https://codeberg.org/fabiscafe/game-devices-udev) and/or
+[`steam-devices`](https://github.com/ValveSoftware/steam-devices) at all. This
+is especially common on immutable systems such as Fedora Silverblue.
 
 Copying rules from the internet is fragile: they are often tied to a specific
 vendor, model, or old VID:PID, and they may grant permissions to devices you do
