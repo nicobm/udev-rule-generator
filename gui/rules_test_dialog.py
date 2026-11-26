@@ -14,7 +14,7 @@ from udev_rule_generator.i18n import tr
 from udev_rule_generator.known import KnownDevices
 from udev_rule_generator.userconfig import device_identity
 
-from .gi_compat import Adw, GLib, Gtk
+from .gi_compat import Adw, GLib, Gtk, markup_escape
 
 
 class RulesTestDialog(Adw.Window):
@@ -133,8 +133,10 @@ class RulesTestDialog(Adw.Window):
         for device, properties, error in results:
             if error is not None or properties is None:
                 row = Adw.ActionRow(
-                    title=device.display_name,
-                    subtitle=error or tr("No se pudo consultar udev."),
+                    title=markup_escape(device.display_name),
+                    subtitle=markup_escape(
+                        error or tr("No se pudo consultar udev.")
+                    ),
                 )
                 row.set_activatable(False)
                 self._add_test_button(row, device)
@@ -173,8 +175,8 @@ class RulesTestDialog(Adw.Window):
                 rule_state,
             ]
             row = Adw.ActionRow(
-                title=device.display_name,
-                subtitle=" · ".join(details),
+                title=markup_escape(device.display_name),
+                subtitle=markup_escape(" · ".join(details)),
             )
             row.set_activatable(False)
             self._add_test_button(row, device)

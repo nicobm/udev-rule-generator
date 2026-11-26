@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.4 - 2026-11-26
+
+- Escapes device names before passing them to libadwaita rows. Names containing
+  `&`, `<`, or `>` no longer disappear or trigger Pango markup warnings.
+
 ## 1.3.3 - 2026-11-26
 
 - Removes the clipped status icon next to the Test buttons action in the

@@ -7,7 +7,7 @@ from typing import Callable
 from udev_rule_generator.i18n import tr
 from udev_rule_generator.known import KnownDevice, KnownDevices
 
-from .gi_compat import Adw, Gtk
+from .gi_compat import Adw, Gtk, markup_escape
 
 
 class HiddenDevicesDialog(Adw.Window):
@@ -68,8 +68,8 @@ class HiddenDevicesDialog(Adw.Window):
         for device in hidden:
             state = tr("Activa") if device.active else tr("Desactivada")
             row = Adw.ActionRow(
-                title=device.name,
-                subtitle=(
+                title=markup_escape(device.name),
+                subtitle=markup_escape(
                     f"{device.bus_label} · {device.identifier} · {state}"
                 ),
             )

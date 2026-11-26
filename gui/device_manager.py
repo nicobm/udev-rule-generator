@@ -24,7 +24,7 @@ from udev_rule_generator.rules import (
 )
 from udev_rule_generator.userconfig import device_identity
 
-from .gi_compat import Adw, GLib, Gtk
+from .gi_compat import Adw, GLib, Gtk, markup_escape
 
 
 def _js_nodes_label(device: Joystick | None) -> str:
@@ -314,8 +314,8 @@ class DeviceManager(Gtk.Box):
         if js_label:
             details.append(js_label)
         row = Adw.ActionRow(
-            title=device.name,
-            subtitle=" · ".join(details),
+            title=markup_escape(device.name),
+            subtitle=markup_escape(" · ".join(details)),
         )
         can_open = bool(device.active and device.filename)
         row.set_activatable(True)
@@ -368,8 +368,8 @@ class DeviceManager(Gtk.Box):
             details.append(js_label)
         details.append(tr("Sin regla guardada"))
         row = Adw.ActionRow(
-            title=device.display_name,
-            subtitle=" · ".join(details),
+            title=markup_escape(device.display_name),
+            subtitle=markup_escape(" · ".join(details)),
         )
         row.set_activatable(False)
         row.add_suffix(self._connected_badge())
