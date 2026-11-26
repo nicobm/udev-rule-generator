@@ -457,6 +457,18 @@ first line of each file.
 which is what SDL, Steam, and similar tools use. `ID_INPUT_JOYSTICK=1` helps
 udev mark the device as a joystick.
 
+## External rule packages
+
+The application can install three optional external packages. None is
+installed automatically: each one has its own switch under **External rules**
+and can also be installed from the CLI with `--presets`.
+
+| Package | Installed files | What it does | License |
+| --- | --- | --- | --- |
+| steam-devices | `71-steam-input.rules`, `71-steam-vr.rules` | Valve's uinput, Steam Input, and SteamVR permissions. Requires the kernel `uinput` module. | MIT |
+| game-devices-udev | `71-*-gdu.rules` | Fabian Bornschein's community rules for controllers that are not covered by the kernel or by the generated per-device rule. | MIT |
+| udev-joystick-blacklist | `65-these-are-not-joysticks.rules` | Blocks keyboards, mice, tablets, LED controllers, and other non-joysticks that the kernel exposes as `/dev/input/js*`. It is a blocklist: it does not grant permissions or free the `js` index. Use **Ignorados** when you also want to release the node and renumber the remaining controllers. | Public domain |
+
 ## Steam devices
 
 The optional
@@ -524,6 +536,13 @@ The rules are public domain. Enable **udev-joystick-blacklist** in
 ```bash
 ./udev-rule-generator --presets udev-joystick-blacklist
 ```
+
+This package is a blocklist, not a permission package. For every listed
+device it sets `MODE="0000"` on the `js` node and clears
+`ID_INPUT_JOYSTICK`. It does not unregister the kernel input device, so it
+does not free the `jsN` index; if you also want to release the node and
+renumber the remaining controllers, use the **Ignorados** switch. Both
+features are independent.
 
 It is not installed automatically.
 
