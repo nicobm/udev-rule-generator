@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Refresh the bundled preset snapshots from their upstream sources.
+"""Refresh the bundled Steam preset snapshots from Valve's repository.
 
 The application itself does not use the network: it ships reviewed copies of
 the rules in ``udev_rule_generator/data/presets``.  This development tool
-downloads the current files from Codeberg/GitHub so they can be reviewed,
-tested, and committed.
+downloads the current files from GitHub so they can be reviewed, tested, and
+committed.
 """
 
 from __future__ import annotations
@@ -16,13 +16,9 @@ import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT))
-
-from udev_rule_generator.presets import _UPSTREAM_TITLES  # noqa: E402
 
 PRESET_DIR = ROOT / "udev_rule_generator" / "data" / "presets"
 
-FABISCAFE_RAW = "https://codeberg.org/fabiscafe/game-devices-udev/raw/branch/main/"
 STEAM_RAW = "https://raw.githubusercontent.com/ValveSoftware/steam-devices/master/"
 USER_AGENT = "udev-rule-generator-preset-updater"
 
@@ -43,13 +39,10 @@ def fetch(url: str) -> str:
 
 
 def remote_files() -> dict[str, str]:
-    files: dict[str, str] = {}
-    for name in _UPSTREAM_TITLES:
-        files[name] = f"{FABISCAFE_RAW}src/{name}"
-    files["LICENSE.game-devices-udev"] = f"{FABISCAFE_RAW}LICENSE"
-
-    for name in ("60-steam-input.rules", "60-steam-vr.rules"):
-        files[name] = f"{STEAM_RAW}{name}"
+    files = {
+        name: f"{STEAM_RAW}{name}"
+        for name in ("60-steam-input.rules", "60-steam-vr.rules")
+    }
     files["LICENSE.steam-devices"] = f"{STEAM_RAW}LICENSE"
     return files
 

@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.18.0 - 2026-11-26
+
+- Removes the bundled vendor preset library and the CLI `all` / `all,steam`
+  selections. Only the Valve steam-devices package remains.
+- Moves the steam-devices switch and description into the main window. The
+  presets dialog and its menu action are removed.
+- Adds an **Ignorar dispositivos** section for probable fake joysticks. It
+  uses the known ASRock LED VID:PID and LED/RGB name hints, and its blue switch
+  creates an ignore rule.
+- Steam and ignore toggles participate in the same Apply changes batch.
+
 ## 0.17.0 - 2026-11-26
 
 - Adds a pending-changes bar with **Apply changes**. Toggling several devices

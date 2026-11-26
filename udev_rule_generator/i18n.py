@@ -92,6 +92,23 @@ _EN.update(
         "No se pudo activar el dispositivo": (
             "Could not enable the device"
         ),
+        "Sin regla de ignorar": "No ignore rule",
+        "Ignorar dispositivos": "Ignore devices",
+        "Dispositivos detectados como joystick que probablemente no "
+        "lo son, como controladores LED.  El interruptor azul "
+        "significa que están ignorados.": (
+            "Devices detected as joysticks that probably are not, such as LED "
+            "controllers.  The blue switch means they are ignored."
+        ),
+        "Steam Input y SteamVR.": "Steam Input and SteamVR.",
+        "Selección no válida: {selection!r}. Usá steam.": (
+            "Invalid selection: {selection!r}. Use steam."
+        ),
+        "instala steam-devices (Valve)": "install steam-devices (Valve)",
+        "Instalar reglas de Steam": "Install Steam rules",
+        "  r) Actualizar   p) Instalar Steam   q) Volver": (
+            "  r) Refresh   p) Install Steam   q) Back"
+        ),
         "Aplicar cambios": "Apply changes",
         "Cambios pendientes": "Pending changes",
         "Cambios aplicados.": "Changes applied.",
@@ -670,8 +687,7 @@ _EN.update(
         "  udev-rule-generator --device 1 --action allow\n"
         "  udev-rule-generator --device 045e:02fd --action ignore --dry-run\n"
         "  udev-rule-generator --presets steam\n"
-        "  udev-rule-generator --presets all\n"
-        "  udev-rule-generator --presets all,steam --yes\n"
+
         "  udev-rule-generator --installed\n"
         "  udev-rule-generator --known\n"
         "  udev-rule-generator --disable-known 045e:02fd --yes\n\n"
@@ -683,8 +699,7 @@ _EN.update(
             "  udev-rule-generator --device 1 --action allow\n"
             "  udev-rule-generator --device 045e:02fd --action ignore --dry-run\n"
             "  udev-rule-generator --presets steam\n"
-            "  udev-rule-generator --presets all\n"
-            "  udev-rule-generator --presets all,steam --yes\n"
+
             "  udev-rule-generator --installed\n"
             "  udev-rule-generator --known\n"
             "  udev-rule-generator --disable-known 045e:02fd --yes\n\n"

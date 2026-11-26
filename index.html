@@ -670,7 +670,7 @@
         <nav aria-label="Main navigation">
           <a href="#features">Features</a>
           <a href="#install">Install</a>
-          <a href="#presets">Presets</a>
+          <a href="#steam">Steam</a>
           <a href="https://github.com/nicobm/udev-rule-generator">GitHub</a>
         </nav>
         <button
@@ -748,7 +748,14 @@
                 <span class="status-icon">✓</span>
                 <span>
                   <span class="status-title">External rules</span>
-                  <span class="status-meta">Valve and fabiscafe presets, optional</span>
+                  <span class="status-meta">Steam Input and SteamVR, optional</span>
+                </span>
+              </div>
+              <div class="status-card">
+                <span class="status-icon">⦸</span>
+                <span>
+                  <span class="status-title">Ignore devices</span>
+                  <span class="status-meta">LED/RGB controllers detected as joysticks</span>
                 </span>
               </div>
             </div>
@@ -818,6 +825,10 @@
               enable or disable it without plugging it in again.
             </li>
             <li>
+              Detects probable fake joysticks such as LED/RGB controllers and
+              lets you ignore them.
+            </li>
+            <li>
               Batches switch changes and applies them with one authentication.
             </li>
             <li>
@@ -866,32 +877,21 @@ flatpak run io.github.nicobm.UdevRuleGenerator</code></pre>
         </div>
       </section>
 
-      <section id="presets">
+      <section id="steam">
         <div class="container">
-          <p class="eyebrow">Optional presets</p>
-          <h2>Two sources. Both off by default.</h2>
+          <p class="eyebrow">Steam devices</p>
+          <h2>Steam Input and SteamVR, optional.</h2>
           <p class="section-intro">
-            Presets are copied only when you select them. They are never
-            installed during package installation.
+            The Steam rules are copied only when you enable the steam-devices
+            switch. They are never installed during package installation.
           </p>
           <div class="grid">
             <div class="card">
-              <h3>game-devices-udev</h3>
-              <p>
-                27 vendor rules from
-                <a href="https://codeberg.org/fabiscafe/">Fabian Bornschein</a>
-                (fabiscafe). MIT licensed. Installed as a complete package or
-                not at all.
-              </p>
-              <a href="https://codeberg.org/fabiscafe/game-devices-udev"
-                >View on Codeberg</a
-              >
-            </div>
-            <div class="card">
               <h3>steam-devices</h3>
               <p>
-                Valve's Steam Input and SteamVR rules. MIT licensed. Installed
-                together as one package.
+                Valve's Steam Input and SteamVR rules, including the uinput
+                permissions Steam needs. MIT licensed. Installed together as
+                one package.
               </p>
               <a href="https://github.com/ValveSoftware/steam-devices"
                 >View on GitHub</a

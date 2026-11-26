@@ -15,9 +15,7 @@ from .i18n import tr
 from .installed import list_installed_rules
 from .known import KnownDevice, KnownDevices
 from .presets import (
-    ALL_PRESETS,
     STEAM,
-    UPSTREAM,
     Preset,
     preset_files,
     presets_trigger,
@@ -519,28 +517,8 @@ def _install_presets(
     files = preset_files(presets)
     print()
     print(colors.bold(tr("Se instalarán:")))
-    selected_ids = {preset.id for preset in presets}
-    upstream_ids = {preset.id for preset in UPSTREAM}
-    steam_ids = {preset.id for preset in STEAM}
-    complete_upstream = upstream_ids <= selected_ids
-    complete_steam = steam_ids <= selected_ids
-    if complete_upstream:
-        print(
-            tr(
-                "  · game-devices-udev (fabiscafe): {count} archivos",
-                count=len(UPSTREAM),
-            )
-        )
-    if complete_steam:
-        print(
-            tr(
-                "  · steam-devices (Valve): {count} archivos",
-                count=len(STEAM),
-            )
-        )
-    if not complete_upstream and not complete_steam:
-        for preset in presets:
-            print(f"  · {preset.install_name}  ({preset.title})")
+    for preset in presets:
+        print(f"  · {preset.install_name}  ({preset.title})")
     return _confirm_and_install(
         host,
         files,
@@ -560,33 +538,7 @@ def _cmd_presets(
     colors: Colors,
 ) -> int:
     if selection in {"menu", "interactive"}:
-        if not sys.stdin.isatty():
-            raise ValueError(
-                tr("Elegí una selección: steam, all o all,steam.")
-            )
-        print()
-        print(colors.bold(tr("Reglas preconfiguradas")))
-        print(tr("  1) Toda la biblioteca game-devices-udev (fabiscafe)"))
-        print(tr("  2) steam-devices (Valve)"))
-        print(tr("  3) Volver"))
-        choice = _ask(tr("\nSelección: "))
-        if choice in {"3", "q", ""}:
-            return 0
-        if choice == "1":
-            presets = list(ALL_PRESETS)
-        elif choice == "2":
-            presets = list(STEAM)
-        else:
-            print(colors.red(tr("Selección no válida.")))
-            return 1
-        return _install_presets(
-            host,
-            presets,
-            assume_yes=assume_yes,
-            dry_run=dry_run,
-            colors=colors,
-        )
-
+        selection = "steam"
     presets = select_presets(selection)
     return _install_presets(
         host,
@@ -665,7 +617,7 @@ def _interactive_device(host: Host, args: argparse.Namespace, colors: Colors) ->
         print()
         print(
             colors.dim(
-                tr("  r) Actualizar   p) Reglas preconfiguradas   q) Volver")
+                tr("  r) Actualizar   p) Instalar Steam   q) Volver")
             )
         )
         selection = _ask(tr("\nElegí un número: ")).casefold()
@@ -823,7 +775,7 @@ def _interactive(host: Host, args: argparse.Namespace) -> int:
     while True:
         print(colors.bold(tr("Menú principal")))
         print(tr("  1) Listar y configurar un joystick"))
-        print(tr("  2) Instalar reglas preconfiguradas"))
+        print(tr("  2) Instalar reglas de Steam"))
         print(tr("  3) Ver o eliminar reglas instaladas"))
         print(tr("  4) Salir"))
         choice = _ask(tr("\nOpción: ")).casefold()
@@ -855,8 +807,6 @@ def build_parser() -> argparse.ArgumentParser:
             "  udev-rule-generator --device 1 --action allow\n"
             "  udev-rule-generator --device 045e:02fd --action ignore --dry-run\n"
             "  udev-rule-generator --presets steam\n"
-            "  udev-rule-generator --presets all\n"
-            "  udev-rule-generator --presets all,steam --yes\n"
             "  udev-rule-generator --installed\n"
             "  udev-rule-generator --known\n"
             "  udev-rule-generator --disable-known 045e:02fd --yes\n\n"
@@ -899,12 +849,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--presets",
         nargs="?",
-        const="menu",
+        const="steam",
         metavar=tr("SELECCIÓN"),
-        help=tr(
-            "instala paquetes completos: steam, all o all,steam.  "
-            "Sin valor abre el menú"
-        ),
+        help=tr("instala steam-devices (Valve)"),
     )
     parser.add_argument(
         "--installed",

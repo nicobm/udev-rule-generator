@@ -83,7 +83,6 @@ class MainWindow(Adw.ApplicationWindow):
         )
         toolbar.add_bottom_bar(self.manager.action_bar)
         content.append(self.manager)
-        content.append(self._build_external_group())
 
         clamp = Adw.Clamp()
         clamp.set_maximum_size(720)
@@ -100,47 +99,6 @@ class MainWindow(Adw.ApplicationWindow):
         self.toast_overlay.set_child(scroller)
         toolbar.set_content(self.toast_overlay)
         self.set_content(toolbar)
-
-    def _build_external_group(self) -> Adw.PreferencesGroup:
-        group = Adw.PreferencesGroup(
-            title=tr("Reglas externas"),
-            description=tr(
-                "Paquetes opcionales de Valve y fabiscafe que no forman parte "
-                "del núcleo de la aplicación."
-            ),
-        )
-        group.set_hexpand(True)
-        group.set_separate_rows(True)
-        group.add(
-            self._action_row(
-                tr("Reglas preconfiguradas"),
-                tr("Instalá las reglas de Valve y fabiscafe."),
-                "app.presets",
-                icon_name="application-x-addon-symbolic",
-            )
-        )
-        return group
-
-    @staticmethod
-    def _action_row(
-        title: str,
-        subtitle: str,
-        action: str,
-        *,
-        icon_name: str | None = None,
-    ) -> Adw.ActionRow:
-        row = Adw.ActionRow(title=title, subtitle=subtitle)
-        row.set_activatable(True)
-        row.connect("activated", lambda *_: row.activate_action(action, None))
-        if icon_name:
-            prefix = Gtk.Image(icon_name=icon_name)
-            prefix.add_css_class("dim-label")
-            prefix.set_valign(Gtk.Align.CENTER)
-            row.add_prefix(prefix)
-        arrow = Gtk.Image(icon_name="go-next-symbolic")
-        arrow.add_css_class("dim-label")
-        row.add_suffix(arrow)
-        return row
 
     def refresh(self, *, silent: bool = False, notify: bool = True) -> None:
         """Vuelve a detectar joysticks en segundo plano."""
@@ -255,16 +213,6 @@ class MainWindow(Adw.ApplicationWindow):
         # El sondeo de respaldo sigue activo; no hace falta molestar al usuario.
         pass
 
-    def show_presets(self) -> None:
-        from .presets_dialog import PresetsDialog
-
-        dialog = PresetsDialog(
-            host=self.host,
-            parent=self,
-            on_installed=self._on_rule_installed,
-        )
-        dialog.present(self)
-
     def _on_known_changed(self, message: str) -> None:
         self.toast_overlay.add_toast(Adw.Toast(title=message, timeout=5))
         self._refresh_rule_metadata()
@@ -301,6 +249,7 @@ class MainWindow(Adw.ApplicationWindow):
             # El registro es auxiliar; un fallo de escritura no debe romper la
             # ventana principal.
             pass
+        self.manager.set_installed_rules(rules)
         self.manager.reload()
         return False
 

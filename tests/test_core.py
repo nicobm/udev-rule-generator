@@ -7,6 +7,7 @@ from pathlib import Path
 
 from udev_rule_generator.devices import (
     Joystick,
+    is_probable_fake_joystick,
     joysticks_from_export_db,
     joysticks_from_proc,
     parse_export_db,
@@ -15,10 +16,8 @@ from udev_rule_generator.devices import (
 from udev_rule_generator.host import HostError
 from udev_rule_generator.installed import _parse_header
 from udev_rule_generator.presets import (
-    ALL_PRESETS,
     PRESETS,
     STEAM,
-    UPSTREAM,
     build_preset_content,
     get_preset,
     preset_files,
@@ -123,6 +122,30 @@ class DetectionTests(unittest.TestCase):
         self.assertTrue(all(device.js_devices for device in devices))
 
 
+class FakeJoystickTests(unittest.TestCase):
+    def test_asrock_led_controller_is_probable_fake(self) -> None:
+        device = _device(name="ASRock LED Controller")
+        device = Joystick(
+            key=device.key,
+            name=device.name,
+            vendor="ASRock",
+            model="LED Controller",
+            vendor_id="26ce",
+            product_id="01a2",
+            serial="",
+            bus="usb",
+            devpaths=(),
+            event_devices=(),
+            js_devices=("/dev/input/js0",),
+            input_names=(device.name,),
+            properties={},
+        )
+        self.assertTrue(is_probable_fake_joystick(device))
+
+    def test_real_gamepad_is_not_probable_fake(self) -> None:
+        self.assertFalse(is_probable_fake_joystick(_device()))
+
+
 class RuleTests(unittest.TestCase):
     def test_filename_is_stable_and_prefixed(self) -> None:
         device = _device()
@@ -194,53 +217,35 @@ class RuleTests(unittest.TestCase):
 
 
 class PresetTests(unittest.TestCase):
-    def test_presets_are_packaged(self) -> None:
-        self.assertEqual(len(UPSTREAM), 27)
-        self.assertEqual(len(PRESETS), 29)
+    def test_only_steam_presets_are_packaged(self) -> None:
+        self.assertEqual(len(PRESETS), 2)
         self.assertEqual(len(STEAM), 2)
         self.assertEqual({p.id for p in STEAM}, {"steam-input", "steam-vr"})
-        self.assertEqual(len(ALL_PRESETS), 27)
-        self.assertNotIn("steam-input", {p.id for p in ALL_PRESETS})
-        self.assertNotIn("steam-vr", {p.id for p in ALL_PRESETS})
-        ids = {preset.id for preset in PRESETS}
-        self.assertNotIn("asrock-led-disable", ids)
-        self.assertNotIn("microsoft-xbox", ids)
-        self.assertIn("microsoft", ids)
-        self.assertIn("steam-input", ids)
-        self.assertIn("steam-vr", ids)
+        self.assertEqual(PRESETS, STEAM)
 
-    def test_microsoft_preset_has_no_local_series_x_additions(self) -> None:
-        content = build_preset_content(get_preset("microsoft"))
-        self.assertNotIn("0b12", content)
-        self.assertNotIn("0b13", content)
-        self.assertNotIn("Velocity Green", content)
+    def test_steam_preset_content_has_valve_source(self) -> None:
+        content = build_preset_content(get_preset("steam-input"))
+        self.assertIn("ValveSoftware/steam-devices", content)
 
-    def test_preset_files_are_deduplicated(self) -> None:
+    def test_preset_files(self) -> None:
         files = preset_files(PRESETS)
-        self.assertIn("71-microsoft-gdu.rules", files)
-        self.assertIn("71-steam-input.rules", files)
-        self.assertIn("71-steam-vr.rules", files)
-        self.assertNotIn("10-asrock-led-disable.rules", files)
+        self.assertEqual(
+            set(files),
+            {"71-steam-input.rules", "71-steam-vr.rules"},
+        )
         self.assertEqual(len(files), len(PRESETS))
 
     def test_presets_use_change_trigger(self) -> None:
         self.assertEqual(presets_trigger(STEAM), "change")
-        self.assertEqual(presets_trigger(ALL_PRESETS), "change")
         self.assertEqual(presets_trigger(PRESETS), "change")
 
-    def test_select_presets_groups(self) -> None:
+    def test_select_presets(self) -> None:
         self.assertEqual(
             {p.id for p in select_presets("steam")},
             {"steam-input", "steam-vr"},
         )
-        self.assertNotIn(
-            "steam-input",
-            {p.id for p in select_presets("all")},
-        )
-        self.assertEqual(
-            len(select_presets("all,steam")),
-            29,
-        )
+        with self.assertRaises(ValueError):
+            select_presets("all")
         with self.assertRaises(ValueError):
             select_presets("steam-vr")
         with self.assertRaises(ValueError):

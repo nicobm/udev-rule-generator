@@ -1,10 +1,8 @@
-"""Reglas preconfiguradas incluidas en la aplicación.
+"""Reglas de steam-devices incluidas en la aplicación.
 
-Las reglas de fabricantes vienen de ``game-devices-udev`` de Fabian
-Bornschein (fabiscafe), publicado bajo licencia MIT.  Las reglas de Steam y
-SteamVR vienen de ``steam-devices`` de Valve, también MIT.  Ninguna de estas
-fuentes se instala por defecto: Steam y SteamVR solo se instalan si el usuario
-las elige, y ``all`` se refiere únicamente a la biblioteca de fabiscafe.
+Las reglas provienen de ``steam-devices`` de Valve, publicado bajo licencia
+MIT.  No se instalan automáticamente: solo se copian si el usuario activa el
+interruptor de Steam.
 """
 
 from __future__ import annotations
@@ -13,48 +11,10 @@ from dataclasses import dataclass
 from importlib import resources
 from typing import Iterable
 
-from . import (
-    PRESETS_GITHUB_URL,
-    PRESETS_URL,
-    STEAM_DEVICES_URL,
-    __version__,
-)
+from . import STEAM_DEVICES_URL, __version__
 from .i18n import tr
 
 _PACKAGE = "udev_rule_generator"
-
-# Título legible para cada archivo del repositorio upstream.
-_UPSTREAM_TITLES: dict[str, str] = {
-    "8bitdo-gdu.rules": "8BitDo",
-    "alpha_imaging_technology_co-gdu.rules": "Alpha Imaging Technology",
-    "astro_gaming-gdu.rules": "Astro Gaming",
-    "betop-gdu.rules": "Betop",
-    "bigscreen-gdu.rules": "Bigscreen",
-    "cypress_semiconductor_corp-gdu.rules": "Cypress Semiconductor",
-    "google-gdu.rules": "Google (Stadia)",
-    "hori-gdu.rules": "Hori",
-    "htc-gdu.rules": "HTC (Vive)",
-    "logitech-gdu.rules": "Logitech",
-    "mad_catz-gdu.rules": "Mad Catz",
-    "microsoft-gdu.rules": "Microsoft Xbox",
-    "nacon-gdu.rules": "Nacon",
-    "nintendo-gdu.rules": "Nintendo",
-    "nvidia-gdu.rules": "NVIDIA Shield",
-    "pdp-gdu.rules": "PDP",
-    "personal_communication_systems_inc-gdu.rules": "PCS (Performance Designed Products)",
-    "pid_codes-gdu.rules": "PID Codes",
-    "powera-gdu.rules": "PowerA",
-    "raspberry_pi_ltd-gdu.rules": "Raspberry Pi",
-    "razer-gdu.rules": "Razer",
-    "sony-gdu.rules": "Sony PlayStation",
-    "thrustmaster-gdu.rules": "Thrustmaster",
-    "uinput-dev-early-creation.rules": "uinput (creación temprana)",
-    "valve-gdu.rules": "Valve (Steam Controller / Steam Deck)",
-    "vkb_sim-gdu.rules": "VKBsim",
-    "zeroplus_technology_corporation-gdu.rules": "Zeroplus",
-}
-
-_UPSTREAM_ORDER = list(_UPSTREAM_TITLES)
 
 
 @dataclass(frozen=True)
@@ -66,21 +26,13 @@ class Preset:
     description: str
     source: str
     install_name: str
-    category: str
+    category: str = "steam"
     trigger: str = "change"
     license: str = "MIT"
-    upstream: str = PRESETS_URL
-
-    @property
-    def is_upstream(self) -> bool:
-        return self.category == "upstream"
-
-    @property
-    def is_steam(self) -> bool:
-        return self.category == "steam"
+    upstream: str = STEAM_DEVICES_URL
 
 
-_PRESETS: list[Preset] = [
+STEAM: tuple[Preset, ...] = (
     Preset(
         id="steam-input",
         title="Steam Input (Valve)",
@@ -90,9 +42,6 @@ _PRESETS: list[Preset] = [
         ),
         source="60-steam-input.rules",
         install_name="71-steam-input.rules",
-        category="steam",
-        license="MIT",
-        upstream=STEAM_DEVICES_URL,
     ),
     Preset(
         id="steam-vr",
@@ -103,53 +52,10 @@ _PRESETS: list[Preset] = [
         ),
         source="60-steam-vr.rules",
         install_name="71-steam-vr.rules",
-        category="steam",
-        license="MIT",
-        upstream=STEAM_DEVICES_URL,
     ),
-]
-
-for _source in _UPSTREAM_ORDER:
-    _title = _UPSTREAM_TITLES[_source]
-    _PRESETS.append(
-        Preset(
-            id=_source.removesuffix(".rules").removesuffix("-gdu"),
-            title=tr(_title),
-            description=tr(
-                "Reglas de permisos para dispositivos {name} de "
-                "game-devices-udev (fabiscafe).",
-                name=tr(_title),
-            ),
-            source=_source,
-            install_name=f"71-{_source}",
-            category="upstream",
-        )
-    )
-
-# Steam primero y por último la biblioteca de fabiscafe.  Se deduplica por el
-# nombre con el que se instala.
-STEAM: tuple[Preset, ...] = tuple(
-    preset for preset in _PRESETS if preset.is_steam
-)
-UPSTREAM: tuple[Preset, ...] = tuple(
-    preset for preset in _PRESETS if preset.is_upstream
 )
 
-_ordered: list[Preset] = []
-_seen_install_names: set[str] = set()
-for _preset in [*STEAM, *UPSTREAM]:
-    if _preset.install_name in _seen_install_names:
-        continue
-    _seen_install_names.add(_preset.install_name)
-    _ordered.append(_preset)
-PRESETS: tuple[Preset, ...] = tuple(_ordered)
-
-# "all" significa toda la biblioteca de fabricantes de fabiscafe (incluido
-# Microsoft).  No incluye las reglas de Steam/SteamVR: esa es una fuente
-# separada y solo se instala si el usuario la elige.
-ALL_PRESETS: tuple[Preset, ...] = tuple(
-    preset for preset in PRESETS if not preset.is_steam
-)
+PRESETS: tuple[Preset, ...] = STEAM
 
 
 def get_preset(preset_id: str) -> Preset:
@@ -162,41 +68,22 @@ def get_preset(preset_id: str) -> Preset:
     )
 
 
-_GROUPS: dict[str, tuple[Preset, ...]] = {
-    "steam": STEAM,
-    "valve": STEAM,
-    "steam-devices": STEAM,
-    "fabiscafe": ALL_PRESETS,
-    "game-devices-udev": ALL_PRESETS,
-    "gdu": ALL_PRESETS,
-    "all": ALL_PRESETS,
-    "todas": ALL_PRESETS,
-    "todo": ALL_PRESETS,
-}
-
-
 def select_presets(selection: str) -> list[Preset]:
-    """Resuelve paquetes separados por coma.
-
-    Ejemplos: ``steam``, ``all``, ``all,steam``.  No se seleccionan
-    fabricantes individuales: fabiscafe se instala completa o no se instala.
-    """
+    """Resuelve la selección ``steam`` (o sus alias)."""
     selection = selection.strip()
     result: list[Preset] = []
     for item in selection.split(","):
         item = item.strip()
         if not item:
             continue
-        group = _GROUPS.get(item)
-        if group is None:
+        if item not in {"steam", "valve", "steam-devices"}:
             raise ValueError(
                 tr(
-                    "Selección no válida: {selection!r}. Usá steam, all o "
-                    "all,steam.",
+                    "Selección no válida: {selection!r}. Usá steam.",
                     selection=item,
                 )
             )
-        for preset in group:
+        for preset in STEAM:
             if preset not in result:
                 result.append(preset)
     if not result:
@@ -220,13 +107,6 @@ def read_preset_text(preset: Preset) -> str:
     return path.read_text(encoding="utf-8")
 
 
-def read_license_text() -> str:
-    """Texto de la licencia MIT de game-devices-udev."""
-    return _preset_dir().joinpath("LICENSE.game-devices-udev").read_text(
-        encoding="utf-8"
-    )
-
-
 def build_preset_content(preset: Preset) -> str:
     """Añade una cabecera de procedencia y devuelve el archivo final."""
     header = [
@@ -238,10 +118,8 @@ def build_preset_content(preset: Preset) -> str:
             license=preset.license,
         ),
         tr("# Archivo original: {source}", source=preset.source),
+        "",
     ]
-    if preset.upstream == PRESETS_URL:
-        header.append(tr("# Espejo: {url}", url=PRESETS_GITHUB_URL))
-    header.append("")
     return "\n".join(header) + read_preset_text(preset).lstrip("\n")
 
 

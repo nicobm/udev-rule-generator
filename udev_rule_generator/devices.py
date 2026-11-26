@@ -20,6 +20,25 @@ from .i18n import tr
 _HEX_RE = re.compile(r"^[0-9a-fA-F]{4}$")
 
 
+_FAKE_JOYSTICK_IDS = {("26ce", "01a2")}  # ASRock LED Controller
+_FAKE_JOYSTICK_HINTS = ("asrock", "led", "rgb")
+
+
+def is_probable_fake_joystick(device: "Joystick") -> bool:
+    """Heurística para dispositivos que udev lista como joystick sin serlo.
+
+    Algunos controladores LED declaran ejes y botones y el kernel crea un
+    nodo ``js``.  No hay una forma perfecta de distinguirlos, así que usamos
+    el VID:PID conocido de ASRock y palabras clave habituales en el nombre.
+    """
+    if (device.vendor_id, device.product_id) in _FAKE_JOYSTICK_IDS:
+        return True
+    text = " ".join(
+        (device.name, device.vendor, device.model)
+    ).casefold()
+    return any(hint in text for hint in _FAKE_JOYSTICK_HINTS)
+
+
 @dataclass(frozen=True)
 class Joystick:
     """Un joystick/gamepad detectado, agrupado por dispositivo físico."""

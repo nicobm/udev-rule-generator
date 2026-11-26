@@ -57,7 +57,6 @@ class Application(Adw.Application):
     def _add_actions(self) -> None:
         actions = (
             ("refresh", self._on_refresh),
-            ("presets", self._on_presets),
             ("about", self._on_about),
             ("show", self._on_show),
             ("quit", self._on_quit),
@@ -68,7 +67,6 @@ class Application(Adw.Application):
             self.add_action(action)
 
         self.set_accels_for_action("app.refresh", ["<Primary>r"])
-        self.set_accels_for_action("app.presets", ["<Primary>p"])
         self.set_accels_for_action("app.quit", ["<Primary>q"])
 
     def do_activate(self) -> None:  # noqa: N802 (API de GObject)
@@ -85,10 +83,6 @@ class Application(Adw.Application):
     def _on_refresh(self, _action, _parameter) -> None:
         if self.window is not None:
             self.window.refresh(silent=True)
-
-    def _on_presets(self, _action, _parameter) -> None:
-        if self.window is not None:
-            self.window.show_presets()
 
     def _on_show(self, _action, _parameter) -> None:
         if self.window is not None:
