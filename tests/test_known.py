@@ -10,7 +10,7 @@ from pathlib import Path
 from unittest import mock
 
 from udev_rule_generator.devices import Joystick
-from udev_rule_generator.hidden import device_identity
+from udev_rule_generator.userconfig import device_identity
 from udev_rule_generator.known import KnownDevice, KnownDevices
 from udev_rule_generator.installed import _parse_header
 from udev_rule_generator.rules import RuleAction, build_rule

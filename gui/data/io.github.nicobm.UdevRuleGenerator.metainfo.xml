@@ -25,7 +25,6 @@
       <li>Reglas para ignorar dispositivos USB o Bluetooth.</li>
       <li>Detección automática al conectar un mando y notificaciones de GNOME.</li>
       <li>Dispositivos guardados para activar o desactivar sus reglas sin conectarlos.</li>
-      <li>Dispositivos ocultos recuperables desde el menú, sin borrar reglas.</li>
       <li>Instalación con el diálogo de autenticación de polkit de GNOME.</li>
       <li>Interfaz de terminal y aplicación GTK4/libadwaita.</li>
     </ul>
@@ -48,7 +47,6 @@
       <li>Ignore rules for USB or Bluetooth devices.</li>
       <li>Automatic detection when a controller is connected and GNOME notifications.</li>
       <li>Saved devices whose rules can be enabled or disabled without connecting them.</li>
-      <li>Hidden devices recoverable from the menu without deleting rules.</li>
       <li>Installation through the GNOME polkit authentication dialog.</li>
       <li>Terminal interface and GTK4/libadwaita application.</li>
     </ul>
@@ -66,6 +64,15 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.14.0" date="2026-11-26">
+      <description>
+        <p>
+          Removes hidden devices and the Configure dialog. Connected
+          controllers without a saved rule can be added directly with their
+          switch. Fixes the About dialog and simplifies the device rows.
+        </p>
+      </description>
+    </release>
     <release version="0.13.0" date="2026-11-26">
       <description>
         <p>

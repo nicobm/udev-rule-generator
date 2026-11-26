@@ -13,7 +13,6 @@
   font-size: 0.78em;
 }
 
-.device-badge-active,
 .device-badge-connected {
   background-color: alpha(@success_color, 0.18);
   color: @success_color;

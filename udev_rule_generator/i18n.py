@@ -86,6 +86,9 @@ _EN.update(
         ),
         "Configurar": "Configure",
         "Sin regla guardada": "No saved rule",
+        "No se pudo activar el dispositivo": (
+            "Could not enable the device"
+        ),
         "Dispositivos ocultos": "Hidden devices",
         "Acerca de": "About",
         "Buscando joysticks…": "Looking for joysticks…",

@@ -6,13 +6,11 @@ from concurrent.futures import Future, ThreadPoolExecutor
 
 from udev_rule_generator import APP_NAME
 from udev_rule_generator.devices import Joystick, detect_joysticks
-from udev_rule_generator.hidden import HiddenDevices
 from udev_rule_generator.host import Host
 from udev_rule_generator.i18n import tr
 from udev_rule_generator.installed import list_installed_rules
 from udev_rule_generator.known import KnownDevices
 from udev_rule_generator.monitor import UdevMonitor
-from udev_rule_generator.rules import RuleAction
 
 from .device_manager import DeviceManager
 from .gi_compat import Adw, Gio, GLib, Gtk
@@ -24,7 +22,6 @@ class MainWindow(Adw.ApplicationWindow):
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
         self.host = Host()
-        self.hidden_store = HiddenDevices()
         self.known_store = KnownDevices()
         self._executor = ThreadPoolExecutor(
             max_workers=3, thread_name_prefix="udev-rule-generator"
@@ -62,7 +59,6 @@ class MainWindow(Adw.ApplicationWindow):
         header.set_title_widget(self.window_title)
 
         menu = Gio.Menu()
-        menu.append(tr("Dispositivos ocultos"), "app.hidden")
         menu.append(tr("Acerca de"), "app.about")
         menu_button = Gtk.MenuButton(
             icon_name="open-menu-symbolic",
@@ -85,10 +81,8 @@ class MainWindow(Adw.ApplicationWindow):
         self.manager = DeviceManager(
             host=self.host,
             store=self.known_store,
-            hidden_store=self.hidden_store,
             parent=self,
             on_changed=self._on_known_changed,
-            on_configure=self._open_device,
         )
         content.append(self.manager)
         content.append(self._build_external_group())
@@ -191,14 +185,9 @@ class MainWindow(Adw.ApplicationWindow):
             return False
 
         previous_keys = {device.key for device in self._devices}
-        visible = [
-            device
-            for device in devices
-            if not self.hidden_store.is_hidden(device)
-        ]
-        added = [device for device in visible if device.key not in previous_keys]
+        added = [device for device in devices if device.key not in previous_keys]
 
-        self._devices = visible
+        self._devices = devices
         self.manager.set_connected_devices(devices)
 
         if notify and not self._first_detection:
@@ -253,25 +242,6 @@ class MainWindow(Adw.ApplicationWindow):
         # El sondeo de respaldo sigue activo; no hace falta molestar al usuario.
         pass
 
-    def _open_device(
-        self,
-        device: Joystick,
-        action: RuleAction = RuleAction.ALLOW,
-    ) -> None:
-        from .device_dialog import DeviceDialog
-
-        dialog = DeviceDialog(
-            device=device,
-            host=self.host,
-            parent=self,
-            hidden_store=self.hidden_store,
-            known_store=self.known_store,
-            initial_action=action,
-            on_installed=self._on_rule_installed,
-            on_hidden=self._on_device_hidden,
-        )
-        dialog.present(self)
-
     def show_presets(self) -> None:
         from .presets_dialog import PresetsDialog
 
@@ -281,26 +251,6 @@ class MainWindow(Adw.ApplicationWindow):
             on_installed=self._on_rule_installed,
         )
         dialog.present(self)
-
-    def show_hidden(self) -> None:
-        from .hidden_dialog import HiddenDialog
-
-        dialog = HiddenDialog(
-            store=self.hidden_store,
-            parent=self,
-            on_changed=self._on_hidden_changed,
-        )
-        dialog.present(self)
-
-    def _on_device_hidden(self, message: str) -> None:
-        self.toast_overlay.add_toast(Adw.Toast(title=message, timeout=5))
-        self.manager.reload()
-        self.refresh(silent=True, notify=False)
-
-    def _on_hidden_changed(self, message: str) -> None:
-        self.toast_overlay.add_toast(Adw.Toast(title=message, timeout=5))
-        self.manager.reload()
-        self.refresh(silent=True, notify=False)
 
     def _on_known_changed(self, message: str) -> None:
         self.toast_overlay.add_toast(Adw.Toast(title=message, timeout=5))

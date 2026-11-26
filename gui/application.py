@@ -27,6 +27,7 @@ class Application(Adw.Application):
         )
         self.window = None
         self._css_provider = None
+        self._about_dialog = None
 
     def do_startup(self) -> None:  # noqa: N802 (API de GObject)
         Adw.Application.do_startup(self)
@@ -57,7 +58,6 @@ class Application(Adw.Application):
         actions = (
             ("refresh", self._on_refresh),
             ("presets", self._on_presets),
-            ("hidden", self._on_hidden),
             ("about", self._on_about),
             ("show", self._on_show),
             ("quit", self._on_quit),
@@ -90,31 +90,41 @@ class Application(Adw.Application):
         if self.window is not None:
             self.window.show_presets()
 
-    def _on_hidden(self, _action, _parameter) -> None:
-        if self.window is not None:
-            self.window.show_hidden()
-
     def _on_show(self, _action, _parameter) -> None:
         if self.window is not None:
             self.window.present()
 
     def _on_about(self, _action, _parameter) -> None:
-        if self.window is None:
+        window = self.window or self.get_active_window()
+        if window is None:
             return
         license_type = getattr(Gtk.License, "MIT_X11", Gtk.License.MIT)
-        dialog = Adw.AboutDialog(
-            application_name=tr(APP_NAME),
-            application_icon=APP_ID,
-            developer_name="Nicolás (nicobm)",
-            version=__version__,
-            developers=["Nicolás (nicobm)"],
-            copyright="© 2026 Nicolás",
-            license_type=license_type,
-            website=PROJECT_URL,
-            issue_url=ISSUE_URL,
-            comments=tr(APP_SUMMARY),
-        )
-        dialog.present(self.window)
+        try:
+            dialog = Adw.AboutDialog(
+                application_name=tr(APP_NAME),
+                application_icon=APP_ID,
+                developer_name="Nicolás (nicobm)",
+                version=__version__,
+                developers=["Nicolás (nicobm)"],
+                copyright="© 2026 Nicolás",
+                license_type=license_type,
+                website=PROJECT_URL,
+                issue_url=ISSUE_URL,
+                comments=tr(APP_SUMMARY),
+            )
+            dialog.connect("closed", self._on_about_closed)
+            self._about_dialog = dialog
+            dialog.present(window)
+        except Exception:
+            # Si libadwaita no puede crear el AboutDialog, mostramos lo
+            # esencial en un diálogo normal.
+            body = f"{tr(APP_SUMMARY)}\n\n{__version__}\n{PROJECT_URL}"
+            fallback = Adw.AlertDialog(heading=tr(APP_NAME), body=body)
+            fallback.add_response("close", tr("Cerrar"))
+            fallback.present(window)
+
+    def _on_about_closed(self, _dialog) -> None:
+        self._about_dialog = None
 
     def shutdown(self) -> None:
         """Cierra la ventana y limpia los hilos antes de salir."""

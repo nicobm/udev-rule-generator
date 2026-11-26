@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.14.0 - 2026-11-26
+
+- Removes hidden devices and the hidden-devices menu entry. The hamburger menu
+  now only contains About.
+- Removes the Configure joystick dialog and its pencil action. A connected
+  controller without a saved rule gets an off switch; enabling it creates the
+  default allow rule.
+- Removes the action label and the saved-device count tags from each row.
+- Fixes the About dialog by keeping a reference while it is open and adding a
+  fallback information dialog.
+- Removes the hidden-device store and dialog modules.
+
 ## 0.13.0 - 2026-11-26
 
 - Makes the saved-device manager the main window instead of a separate dialog.

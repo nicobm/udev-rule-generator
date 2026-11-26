@@ -18,14 +18,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .devices import Joystick
-from .hidden import bus_label, default_config_path, device_identity
 from .i18n import tr
 from .installed import InstalledRule
 from .rules import RuleAction, RuleSpec, build_rule
+from .userconfig import bus_label, default_config_dir, device_identity
 
 
 def default_path() -> Path:
-    return default_config_path().with_name("devices.json")
+    return default_config_dir() / "devices.json"
 
 
 def _now() -> str:

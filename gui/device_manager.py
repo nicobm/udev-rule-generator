@@ -6,12 +6,12 @@ import threading
 from typing import Callable
 
 from udev_rule_generator.devices import Joystick
-from udev_rule_generator.hidden import HiddenDevices, device_identity
 from udev_rule_generator.host import Host
 from udev_rule_generator.i18n import tr
 from udev_rule_generator.known import KnownDevice, KnownDevices
 from udev_rule_generator.privileged import install_rule_files, remove_rule_files
-from udev_rule_generator.rules import RuleAction, RuleSpec
+from udev_rule_generator.rules import RuleAction, RuleSpec, build_rule
+from udev_rule_generator.userconfig import device_identity
 
 from .gi_compat import Adw, GLib, Gtk
 
@@ -24,18 +24,14 @@ class DeviceManager(Gtk.Box):
         *,
         host: Host,
         store: KnownDevices,
-        hidden_store: HiddenDevices,
         parent: Gtk.Window,
         on_changed: Callable[[str], None],
-        on_configure: Callable[[Joystick, RuleAction], None],
     ) -> None:
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=18)
         self.host = host
         self.store = store
-        self.hidden_store = hidden_store
         self.parent_window = parent
         self.on_changed = on_changed
-        self.on_configure = on_configure
         self._connected: list[Joystick] = []
         self._visible_known: list[KnownDevice] = []
         self._rows: list[Gtk.Widget] = []
@@ -64,29 +60,6 @@ class DeviceManager(Gtk.Box):
         )
         self.devices_group.set_separate_rows(True)
         self.devices_group.set_hexpand(True)
-
-        self.badges = Gtk.Box(
-            orientation=Gtk.Orientation.HORIZONTAL,
-            spacing=6,
-        )
-        self.badges.set_valign(Gtk.Align.CENTER)
-        self.active_label = Gtk.Label(label="")
-        self.active_label.add_css_class("device-badge")
-        self.active_label.add_css_class("device-badge-active")
-        self.active_label.set_valign(Gtk.Align.CENTER)
-        self.active_label.set_width_chars(2)
-        self.active_label.set_xalign(0.5)
-        self.active_label.set_visible(False)
-        self.badges.append(self.active_label)
-
-        self.inactive_label = Gtk.Label(label="")
-        self.inactive_label.add_css_class("device-badge")
-        self.inactive_label.set_valign(Gtk.Align.CENTER)
-        self.inactive_label.set_width_chars(2)
-        self.inactive_label.set_xalign(0.5)
-        self.inactive_label.set_visible(False)
-        self.badges.append(self.inactive_label)
-        self.devices_group.set_header_suffix(self.badges)
         self.append(self.devices_group)
 
     def set_connected_devices(self, devices: list[Joystick]) -> None:
@@ -109,19 +82,9 @@ class DeviceManager(Gtk.Box):
         self._rows.clear()
         self._controls.clear()
 
-        hidden_ids = {device.id for device in self.hidden_store.devices()}
-        known = [
-            device
-            for device in self.store.devices()
-            if device.id not in hidden_ids
-            and not self.hidden_store.is_hidden(device.to_joystick())
-        ]
+        known = self.store.devices()
         self._visible_known = known
-        connected = [
-            device
-            for device in self._connected
-            if not self.hidden_store.is_hidden(device)
-        ]
+        connected = self._connected
         connected_ids = {device_identity(device) for device in connected}
         known_ids = {device.id for device in known}
 
@@ -143,7 +106,6 @@ class DeviceManager(Gtk.Box):
 
         self.master_group.set_visible(bool(known))
         self._update_master(known)
-        self._update_badges(known)
         self._apply_sensitivity()
         self._updating = False
 
@@ -156,28 +118,13 @@ class DeviceManager(Gtk.Box):
     def _known_row(self, device: KnownDevice, connected: bool) -> Adw.ActionRow:
         row = Adw.ActionRow(
             title=device.name,
-            subtitle=f"{device.bus_label} · {device.identifier} · "
-            f"{device.action_label}",
+            subtitle=f"{device.bus_label} · {device.identifier}",
         )
         row.set_activatable(False)
         row.set_tooltip_text(device.filename)
 
         if connected:
             row.add_suffix(self._connected_badge())
-
-        configure = Gtk.Button(
-            icon_name="document-edit-symbolic",
-            tooltip_text=tr("Configurar"),
-        )
-        configure.add_css_class("flat")
-        configure.set_valign(Gtk.Align.CENTER)
-        configure.connect(
-            "clicked",
-            lambda _button, selected=device: self.on_configure(
-                selected.to_joystick(), RuleAction(selected.action)
-            ),
-        )
-        row.add_suffix(configure)
 
         switch = Gtk.Switch(active=device.active)
         switch.set_valign(Gtk.Align.CENTER)
@@ -189,7 +136,6 @@ class DeviceManager(Gtk.Box):
         )
         row.add_suffix(switch)
         self._controls.append(switch)
-        self._controls.append(configure)
         return row
 
     def _unknown_row(self, device: Joystick) -> Adw.ActionRow:
@@ -198,17 +144,21 @@ class DeviceManager(Gtk.Box):
             subtitle=f"{device.bus_label} · {device.identifier} · "
             f"{tr('Sin regla guardada')}",
         )
-        row.set_activatable(True)
-        row.connect(
-            "activated",
-            lambda _row, selected=device: self.on_configure(
-                selected, RuleAction.ALLOW
-            ),
-        )
+        row.set_activatable(False)
         row.add_suffix(self._connected_badge())
-        arrow = Gtk.Image(icon_name="go-next-symbolic")
-        arrow.add_css_class("dim-label")
-        row.add_suffix(arrow)
+
+        switch = Gtk.Switch(active=False)
+        switch.set_valign(Gtk.Align.CENTER)
+        switch.connect(
+            "notify::active",
+            lambda selected_switch, _pspec, selected=device: self._enable_unknown(
+                selected
+            )
+            if selected_switch.get_active()
+            else None,
+        )
+        row.add_suffix(switch)
+        self._controls.append(switch)
         return row
 
     def _connected_badge(self) -> Gtk.Label:
@@ -221,28 +171,6 @@ class DeviceManager(Gtk.Box):
     def _update_master(self, devices: list[KnownDevice]) -> None:
         active = sum(1 for device in devices if device.active)
         self.master_row.set_active(bool(devices) and active == len(devices))
-
-    def _update_badges(self, devices: list[KnownDevice]) -> None:
-        active = sum(1 for device in devices if device.active)
-        inactive = len(devices) - active
-        self.active_label.set_text(str(active))
-        self.active_label.set_visible(active > 0)
-        self.inactive_label.set_text(str(inactive))
-        self.inactive_label.set_visible(inactive > 0)
-        if active == 1:
-            active_tooltip = tr("{count} regla activa", count=active)
-        else:
-            active_tooltip = tr("{count} reglas activas", count=active)
-        self.active_label.set_tooltip_text(active_tooltip)
-        if inactive == 1:
-            inactive_tooltip = tr(
-                "{count} regla desactivada", count=inactive
-            )
-        else:
-            inactive_tooltip = tr(
-                "{count} reglas desactivadas", count=inactive
-            )
-        self.inactive_label.set_tooltip_text(inactive_tooltip)
 
     def _on_master_toggled(self, row: Adw.SwitchRow, _pspec) -> None:
         if self._updating or self._known_busy:
@@ -344,6 +272,63 @@ class DeviceManager(Gtk.Box):
         self.reload()
         self._show_error(
             tr("No se pudieron cambiar los dispositivos guardados"),
+            message,
+        )
+        return False
+
+    def _enable_unknown(self, device: Joystick) -> None:
+        if self._updating or self._known_busy:
+            return
+        self._set_busy(True)
+        thread = threading.Thread(
+            target=self._unknown_worker,
+            args=(device,),
+            name="udev-rule-generator-known-new",
+            daemon=True,
+        )
+        thread.start()
+
+    def _unknown_worker(self, device: Joystick) -> None:
+        try:
+            spec = build_rule(device, RuleAction.ALLOW)
+            if not spec.filename:
+                raise ValueError(
+                    tr("No hay una regla guardada para activar.")
+                )
+            install_rule_files(
+                self.host,
+                {spec.filename: spec.content},
+                trigger=spec.trigger,
+            )
+            try:
+                self.store.record_rule(device, spec)
+            except OSError as exc:
+                message = tr(
+                    "Regla activada: {name}.  No se pudo guardar el "
+                    "estado: {error}",
+                    name=device.display_name,
+                    error=exc,
+                )
+            else:
+                message = tr(
+                    "Regla activada: {name}", name=device.display_name
+                )
+        except Exception as exc:  # noqa: BLE001 (se muestra al usuario)
+            GLib.idle_add(self._unknown_failed, str(exc))
+            return
+        GLib.idle_add(self._unknown_succeeded, message)
+
+    def _unknown_succeeded(self, message: str) -> bool:
+        self._set_busy(False)
+        self.reload()
+        self.on_changed(message)
+        return False
+
+    def _unknown_failed(self, message: str) -> bool:
+        self._set_busy(False)
+        self.reload()
+        self._show_error(
+            tr("No se pudo activar el dispositivo"),
             message,
         )
         return False
