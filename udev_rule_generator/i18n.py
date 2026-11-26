@@ -88,6 +88,31 @@ _EN.update(
         ),
         "Configurar": "Configure",
         "Sin regla guardada": "No saved rule",
+        "Test de reglas": "Rules test",
+        "Comprobación de las reglas udev de los mandos conectados.": (
+            "Checking the udev rules for connected controllers."
+        ),
+        "Probando reglas…": "Testing rules…",
+        "No tiene nodo de entrada visible.": (
+            "It has no visible input node."
+        ),
+        "udevadm no devolvió información.": (
+            "udevadm returned no information."
+        ),
+        "No hay mandos conectados para probar.": (
+            "There are no connected controllers to test."
+        ),
+        "No se pudo consultar udev.": "Could not query udev.",
+        "Regla activa": "Rule enabled",
+        "Regla desactivada": "Rule disabled",
+        "sin nodo": "no node",
+        "ID_INPUT_JOYSTICK: {value}": "ID_INPUT_JOYSTICK: {value}",
+        "uaccess: {value}": "uaccess: {value}",
+        "sí": "yes",
+        "no": "no",
+        "No se pudieron probar las reglas: {error}": (
+            "Could not test the rules: {error}"
+        ),
         "No se pudo activar el dispositivo": (
             "Could not enable the device"
         ),

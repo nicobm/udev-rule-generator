@@ -33,6 +33,7 @@ class MainWindow(Adw.ApplicationWindow):
         self._poll_source = 0
         self._monitor: UdevMonitor | None = None
         self._hidden_dialog = None
+        self._test_dialog = None
 
         self.set_title(tr(APP_NAME))
         self.set_default_size(780, 760)
@@ -59,6 +60,7 @@ class MainWindow(Adw.ApplicationWindow):
 
         menu = Gio.Menu()
         menu.append(tr("Dispositivos ocultos"), "app.hidden")
+        menu.append(tr("Test de reglas"), "app.test")
         menu.append(tr("Acerca de"), "app.about")
         menu_button = Gtk.MenuButton(
             icon_name="open-menu-symbolic",
@@ -247,6 +249,36 @@ class MainWindow(Adw.ApplicationWindow):
 
     def _on_hidden_destroyed(self, _dialog) -> None:
         self._hidden_dialog = None
+
+    def show_rules_test(self) -> None:
+        if self._closed:
+            return
+        previous = self._test_dialog
+        self._test_dialog = None
+        if previous is not None:
+            try:
+                if previous.get_realized():
+                    previous.destroy()
+            except Exception:
+                pass
+        from .rules_test_dialog import RulesTestDialog
+
+        self._test_dialog = RulesTestDialog(
+            host=self.host,
+            store=self.known_store,
+            parent=self,
+        )
+        self._test_dialog.connect("close-request", self._on_test_close)
+        self._test_dialog.connect("destroy", self._on_test_destroyed)
+        self._test_dialog.present()
+
+    def _on_test_close(self, dialog) -> bool:
+        if self._test_dialog is dialog:
+            self._test_dialog = None
+        return False
+
+    def _on_test_destroyed(self, _dialog) -> None:
+        self._test_dialog = None
 
     def _on_hidden_changed(self, message: str) -> None:
         self.toast_overlay.add_toast(Adw.Toast(title=message, timeout=5))

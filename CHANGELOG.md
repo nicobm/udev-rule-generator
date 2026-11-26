@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.0 - 2026-11-26
+
+- Adds a **Rules test** dialog to the header menu. It checks every connected
+  controller with `udevadm info` and reports `ID_INPUT_JOYSTICK`, `uaccess`,
+  the active input node, and the saved rule state.
+
 ## 1.1.9 - 2026-11-26
 
 - Clicking a disabled saved device now shows a prompt to enable the rule

@@ -11,6 +11,7 @@ from udev_rule_generator.devices import (
     joysticks_from_proc,
     parse_export_db,
     parse_proc_blocks,
+    parse_udev_properties,
 )
 from udev_rule_generator.host import HostError
 from udev_rule_generator.installed import _parse_header
@@ -96,6 +97,15 @@ class DetectionTests(unittest.TestCase):
         self.assertIn("js0", xbox.handlers)
         self.assertEqual(xbox.vendor_id, "045e")
         self.assertEqual(xbox.product_id, "0b12")
+
+    def test_parse_udev_properties(self) -> None:
+        properties = parse_udev_properties(
+            "ID_INPUT_JOYSTICK=1\n"
+            "TAGS=:uaccess:seat:\n"
+            "NAME=Test Pad\n"
+        )
+        self.assertEqual(properties["ID_INPUT_JOYSTICK"], "1")
+        self.assertIn("uaccess", properties["TAGS"].split(":"))
 
     def test_groups_event_and_js_by_physical_device(self) -> None:
         devices = joysticks_from_export_db(self.export_text, FakeHost(self.proc_text))

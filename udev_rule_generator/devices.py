@@ -183,6 +183,16 @@ def parse_export_db(text: str) -> list[tuple[str, dict[str, str]]]:
     return records
 
 
+def parse_udev_properties(text: str) -> dict[str, str]:
+    """Convierte ``udevadm info --query=property`` en un diccionario."""
+    properties: dict[str, str] = {}
+    for line in text.splitlines():
+        key, separator, value = line.partition("=")
+        if separator:
+            properties[key.strip()] = value.strip()
+    return properties
+
+
 def parse_proc_blocks(text: str) -> list[ProcInput]:
     """Convierte ``/proc/bus/input/devices`` en una lista de dispositivos."""
     blocks: list[ProcInput] = []
