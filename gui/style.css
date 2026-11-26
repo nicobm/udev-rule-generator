@@ -50,6 +50,16 @@
   border-radius: 12px;
 }
 
+/* Keep target rows visually neutral while a card is being dragged. */
+.drag-in-progress row:hover,
+.drag-in-progress row:active,
+.drag-in-progress row:focus,
+.drag-in-progress row:focus-visible {
+  background-image: none;
+  outline: none;
+  box-shadow: none;
+}
+
 .device-icon-color {
   min-width: 34px;
   min-height: 34px;

@@ -1009,6 +1009,7 @@ class DeviceManager(Gtk.Box):
             preview.append(picture)
             self.preview_layer.put(preview, int(origin[0]), int(origin[1]))
             row.set_opacity(0.0)
+            self.devices_group.add_css_class("drag-in-progress")
             drag_state["preview"] = preview
             drag_state["origin"] = origin
             drag_state["hot_y"] = min(20, max(0, int(position[1])))
@@ -1023,6 +1024,7 @@ class DeviceManager(Gtk.Box):
             if preview is not None:
                 self.preview_layer.remove(preview)  # type: ignore[arg-type]
             row.set_opacity(1.0)
+            self.devices_group.remove_css_class("drag-in-progress")
             drag_state["preview"] = None
             drag_state["origin"] = None
 

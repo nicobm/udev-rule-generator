@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.11.10 - 2026-11-26
+
+- Prevents target rows from showing hover or focus outlines while a device
+  card is being dragged.
+
 ## 1.11.9 - 2026-11-26
 
 - Drives live reordering from the drag preview timer as well as drop-target
