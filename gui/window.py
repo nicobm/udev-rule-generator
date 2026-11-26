@@ -19,6 +19,7 @@ from udev_rule_generator.i18n import tr
 from udev_rule_generator.installed import list_installed_rules
 from udev_rule_generator.known import KnownDevices
 from udev_rule_generator.monitor import UdevMonitor
+from udev_rule_generator.privileged import remove_rule_files
 from udev_rule_generator.uinput import uinput_available
 
 from .device_manager import DeviceManager
@@ -74,6 +75,7 @@ class MainWindow(Adw.ApplicationWindow):
         menu.append(tr("Dispositivos ocultos"), "app.hidden")
         menu.append(tr("Test de reglas"), "app.test")
         menu.append(tr("Acerca de"), "app.about")
+        menu.append(tr("Eliminar todos los datos"), "app.clear")
         menu_button = Gtk.MenuButton(
             icon_name="open-menu-symbolic",
             menu_model=menu,
@@ -479,6 +481,82 @@ class MainWindow(Adw.ApplicationWindow):
                 rules=result.rules,
             )
         )
+        return False
+
+    def clear_all_data(self) -> None:
+        if self._closed or self._backup_busy or self._file_dialog is not None:
+            return
+        dialog = Adw.AlertDialog(
+            heading=tr("¿Eliminar todos los datos?"),
+            body=tr(
+                "Se eliminarán los dispositivos guardados, sus alias, las "
+                "reglas generadas y el estado de los dispositivos ocultos. "
+                "Las reglas de steam-devices y game-devices-udev no se "
+                "modifican. Esta acción no se puede deshacer."
+            ),
+        )
+        dialog.add_response("cancel", tr("Cancelar"))
+        dialog.add_response("clear", tr("Eliminar todos los datos"))
+        dialog.set_response_appearance(
+            "clear", Adw.ResponseAppearance.DESTRUCTIVE
+        )
+        dialog.set_default_response("cancel")
+        dialog.set_close_response("cancel")
+        dialog.connect("response", self._on_clear_response)
+        dialog.present(self)
+
+    def _on_clear_response(self, _dialog, response: str) -> None:
+        if response != "clear" or self._backup_busy:
+            return
+        self._backup_busy = True
+        self.add_toast(tr("Eliminando todos los datos…"))
+        threading.Thread(
+            target=self._clear_worker,
+            name="udev-rule-generator-clear",
+            daemon=True,
+        ).start()
+
+    def _clear_worker(self) -> None:
+        try:
+            rules = list_installed_rules(self.host)
+            filenames = sorted(
+                {
+                    rule.filename
+                    for rule in rules
+                    if rule.kind == "generated"
+                }
+            )
+            if filenames:
+                remove_rule_files(self.host, filenames)
+            self.known_store.clear_all()
+        except Exception as exc:  # noqa: BLE001 (se muestra al usuario)
+            GLib.idle_add(self._clear_failed, str(exc))
+            return
+        GLib.idle_add(self._clear_finished)
+
+    def _clear_failed(self, message: str) -> bool:
+        if self._closed:
+            return False
+        self._backup_busy = False
+        self.show_error(
+            tr("No se pudieron eliminar todos los datos"),
+            message,
+        )
+        return False
+
+    def _clear_finished(self) -> bool:
+        if self._closed:
+            return False
+        self._backup_busy = False
+        self.manager.reset_after_clear()
+        if self._hidden_dialog is not None:
+            try:
+                self._hidden_dialog.reload()
+            except Exception:
+                pass
+        self._refresh_rule_metadata()
+        GLib.timeout_add(1200, self._refresh_after_change)
+        self.add_toast(tr("Todos los datos fueron eliminados."))
         return False
 
     def _refresh_rule_metadata(self) -> None:

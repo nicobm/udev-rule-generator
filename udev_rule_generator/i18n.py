@@ -389,6 +389,21 @@ _EN.update(
         "No se pudo importar la copia de seguridad": (
             "Could not import the backup"
         ),
+        "Eliminar todos los datos": "Delete all data",
+        "¿Eliminar todos los datos?": "Delete all data?",
+        "Se eliminarán los dispositivos guardados, sus alias, las "
+        "reglas generadas y el estado de los dispositivos ocultos. "
+        "Las reglas de steam-devices y game-devices-udev no se "
+        "modifican. Esta acción no se puede deshacer.": (
+            "Saved devices, their aliases, generated rules, and hidden-device "
+            "state will be deleted. Steam-devices and game-devices-udev "
+            "rules are not modified. This action cannot be undone."
+        ),
+        "Eliminando todos los datos…": "Deleting all data…",
+        "No se pudieron eliminar todos los datos": (
+            "Could not delete all data"
+        ),
+        "Todos los datos fueron eliminados.": "All data was deleted.",
         "No se pudo escribir el archivo de copia de seguridad.": (
             "Could not write the backup file."
         ),

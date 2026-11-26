@@ -724,6 +724,12 @@ class DeviceManager(Gtk.Box):
         )
         self._update_pending_ui()
 
+    def reset_after_clear(self) -> None:
+        """Descarta cambios pendientes y recarga tras borrar todos los datos."""
+        self._pending_known.clear()
+        self._pending_unknown.clear()
+        self.reload()
+
     def _update_pending_ui(self) -> None:
         pending = bool(
             self._pending_known

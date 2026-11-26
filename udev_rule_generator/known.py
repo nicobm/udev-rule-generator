@@ -431,6 +431,13 @@ class KnownDevices:
             if self._aliases.pop(device_id, None) is not None:
                 self.save()
 
+    def clear_all(self) -> None:
+        """Elimina todos los dispositivos, alias y estados guardados."""
+        with self._lock:
+            self._devices.clear()
+            self._aliases.clear()
+            self.save()
+
     def set_hidden(self, device_id: str, hidden: bool) -> KnownDevice | None:
         with self._lock:
             record = self._devices.get(device_id)

@@ -61,6 +61,7 @@ class Application(Adw.Application):
             ("import", self._on_import),
             ("hidden", self._on_hidden),
             ("test", self._on_test),
+            ("clear", self._on_clear),
             ("about", self._on_about),
             ("show", self._on_show),
             ("quit", self._on_quit),
@@ -103,6 +104,10 @@ class Application(Adw.Application):
     def _on_test(self, _action, _parameter) -> None:
         if self.window is not None:
             self.window.show_rules_test()
+
+    def _on_clear(self, _action, _parameter) -> None:
+        if self.window is not None:
+            self.window.clear_all_data()
 
     def _on_show(self, _action, _parameter) -> None:
         if self.window is not None:

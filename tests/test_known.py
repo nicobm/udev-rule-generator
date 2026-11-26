@@ -84,6 +84,25 @@ class KnownDevicesTests(unittest.TestCase):
             store.clear_alias(key)
             self.assertEqual(KnownDevices(path).alias_for(key), "")
 
+    def test_clear_all_removes_devices_and_aliases(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "devices.json"
+            store = KnownDevices(path)
+            device = _device()
+            store.record_rule(
+                device,
+                build_rule(device, RuleAction.ALLOW),
+            )
+            store.set_alias(device_identity(device), "Temporal")
+            store.clear_all()
+
+            reloaded = KnownDevices(path)
+            self.assertEqual(reloaded.devices(), [])
+            self.assertEqual(
+                reloaded.alias_for(device_identity(device)),
+                "",
+            )
+
     def test_hidden_state_persists(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "devices.json"
