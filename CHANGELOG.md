@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.13.8 - 2026-11-26
+
+- Adds a master switch in the header to enable or disable every device rule at
+  once, staging the same changes as the individual row switches.
+
 ## 1.13.7 - 2026-11-26
 
 - Shows the alias pencil/X and hide buttons only while hovering a device

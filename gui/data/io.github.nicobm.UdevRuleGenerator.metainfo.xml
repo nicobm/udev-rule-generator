@@ -65,6 +65,13 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="1.13.8" date="2026-11-26">
+      <description>
+        <p>
+          Adds a header switch to enable or disable every device rule at once.
+        </p>
+      </description>
+    </release>
     <release version="1.13.7" date="2026-11-26">
       <description>
         <p>

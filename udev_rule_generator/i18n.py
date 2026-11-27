@@ -1429,5 +1429,8 @@ _EN.update(
         "{count} de {total} archivos instalados": (
             "{count} of {total} files installed"
         ),
+        "Activar o desactivar todos los dispositivos": (
+            "Enable or disable all devices"
+        ),
     }
 )

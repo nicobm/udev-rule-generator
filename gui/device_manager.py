@@ -114,6 +114,8 @@ class DeviceManager(Gtk.Box):
         self._connected: list[Joystick] = []
         self._hid_devices: dict[str, HidDevice] = {}
         self._hid_fingerprint: tuple = ()
+        self._device_switches: list[Gtk.Switch] = []
+        self._master_syncing = False
         self._pending_known: dict[str, bool] = {}
         self._pending_unknown: dict[str, Joystick] = {}
         self._pending_ignored: dict[str, bool] = {}
@@ -251,6 +253,16 @@ class DeviceManager(Gtk.Box):
         self.action_bar.append(self.spinner)
         self.action_bar.append(self.apply_button)
         self.action_bar.set_visible(False)
+
+        self.master_switch = Gtk.Switch()
+        self.master_switch.set_valign(Gtk.Align.CENTER)
+        self.master_switch.set_tooltip_text(
+            tr("Activar o desactivar todos los dispositivos")
+        )
+        self.master_switch.set_sensitive(False)
+        self.master_switch.connect(
+            "notify::active", self._on_master_toggled
+        )
 
     def set_connected_devices(self, devices: list[Joystick]) -> None:
         fingerprint = tuple(
@@ -428,6 +440,7 @@ class DeviceManager(Gtk.Box):
         self._rows.clear()
         self._row_identities.clear()
         self._controls.clear()
+        self._device_switches.clear()
 
         known = self.store.devices()
         known_ids = {device.id for device in known}
@@ -589,6 +602,7 @@ class DeviceManager(Gtk.Box):
         self._apply_sensitivity()
         self._update_pending_ui()
         self._updating = False
+        self._update_master_switch()
 
     def _append(self, group: Adw.PreferencesGroup, row: Gtk.Widget) -> None:
         group.add(row)
@@ -1523,6 +1537,7 @@ class DeviceManager(Gtk.Box):
         )
         row.add_suffix(switch)
         self._controls.append(switch)
+        self._device_switches.append(switch)
 
         def toggle_row(_row) -> None:
             if alias_active() or self._busy or self._updating:
@@ -1561,6 +1576,7 @@ class DeviceManager(Gtk.Box):
         )
         row.add_suffix(switch)
         self._controls.append(switch)
+        self._device_switches.append(switch)
 
         def toggle_row(_row) -> None:
             if alias_active() or self._busy or self._updating:
@@ -1681,6 +1697,36 @@ class DeviceManager(Gtk.Box):
                 self._pending_ignored_joysticks[device_id] = device
         self._update_pending_ui()
 
+    def _on_master_toggled(self, switch: Gtk.Switch, _pspec) -> None:
+        if self._updating or self._busy or self._master_syncing:
+            return
+        active = switch.get_active()
+        self._master_syncing = True
+        try:
+            for device_switch in self._device_switches:
+                if device_switch.get_active() != active:
+                    device_switch.set_active(active)
+        finally:
+            self._master_syncing = False
+        self._update_master_switch()
+        self._update_pending_ui()
+
+    def _update_master_switch(self) -> None:
+        if not hasattr(self, "master_switch"):
+            return
+        switches = self._device_switches
+        if not switches:
+            self._updating = True
+            self.master_switch.set_active(False)
+            self._updating = False
+            self.master_switch.set_sensitive(False)
+            return
+        all_on = all(device_switch.get_active() for device_switch in switches)
+        self._updating = True
+        self.master_switch.set_active(all_on)
+        self._updating = False
+        self.master_switch.set_sensitive(not self._busy)
+
     def _set_known_pending(self, device: KnownDevice, active: bool) -> None:
         if self._updating or self._busy:
             return
@@ -1689,6 +1735,8 @@ class DeviceManager(Gtk.Box):
         else:
             self._pending_known[device.id] = active
         self._update_pending_ui()
+        if not self._master_syncing:
+            self._update_master_switch()
 
     def _hide_known(self, device: KnownDevice) -> None:
         if self._busy:
@@ -1745,6 +1793,8 @@ class DeviceManager(Gtk.Box):
         else:
             self._pending_unknown.pop(key, None)
         self._update_pending_ui()
+        if not self._master_syncing:
+            self._update_master_switch()
 
     def _on_steam_toggled(self, row: Adw.SwitchRow, _pspec) -> None:
         if self._updating or self._busy or not self._uinput_available:
@@ -1996,6 +2046,9 @@ class DeviceManager(Gtk.Box):
         )
         self.gdu_switch.set_sensitive(not busy)
         self.blacklist_switch.set_sensitive(not busy)
+        self.master_switch.set_sensitive(
+            not busy and bool(self._device_switches)
+        )
         self.apply_button.set_sensitive(
             not busy
             and bool(
@@ -2027,6 +2080,9 @@ class DeviceManager(Gtk.Box):
         )
         self.gdu_switch.set_sensitive(enabled)
         self.blacklist_switch.set_sensitive(enabled)
+        self.master_switch.set_sensitive(
+            enabled and bool(self._device_switches)
+        )
 
     def _show_error(self, heading: str, body: str) -> None:
         dialog = Adw.AlertDialog(heading=heading, body=body)
