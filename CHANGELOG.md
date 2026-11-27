@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.17.3 - 2026-11-27
+
+- Includes the three **External rules** switches (`steam-devices`,
+  `game-devices-udev`, and `udev-joystick-blacklist`) in the master switch.
+  Turning the master off now also stages their switches off, and the master is
+  ON only when they are all ON too.
+- Delays the first master reveal until both device detection and installed-rule
+  metadata have settled, so the external switches do not cause a new startup
+  animation.
+
 ## 1.17.2 - 2026-11-27
 
 - Hides the master switch until the first detection pass has finished building

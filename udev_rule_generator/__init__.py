@@ -7,7 +7,7 @@ El paquete no depende de bibliotecas externas: toda la detección se hace con
 
 from __future__ import annotations
 
-__version__ = "1.17.2"
+__version__ = "1.17.3"
 
 APP_ID = "io.github.nicobm.UdevRuleGenerator"
 APP_NAME = "udev-rule-generator"

@@ -51,7 +51,7 @@ class MainWindow(Adw.ApplicationWindow):
         self._emoji_dialog = None
         self._file_dialog = None
         self._backup_busy = False
-        self._master_reveal_scheduled = False
+        self._master_reveal_source = 0
 
         self.set_title(tr(APP_NAME))
         self.set_default_size(780, 760)
@@ -202,12 +202,7 @@ class MainWindow(Adw.ApplicationWindow):
         self.manager.set_connected_devices(devices)
         self.manager.set_hid_devices(detection.hid_devices)
         self.manager.set_usb_devices(detection.usb_devices)
-
-        if not self._master_reveal_scheduled:
-            self._master_reveal_scheduled = True
-            # Esperamos un instante a que se estabilicen todas las filas
-            # (incluidas las de Ignorados) antes de mostrar el switch maestro.
-            GLib.timeout_add(300, self._reveal_master_switch)
+        self._schedule_master_reveal()
 
         if notify and not self._first_detection and not steam:
             for device in added:
@@ -219,7 +214,19 @@ class MainWindow(Adw.ApplicationWindow):
         self._first_detection = False
         return False
 
+    def _schedule_master_reveal(self) -> None:
+        if self.manager.master_switch.get_visible():
+            return
+        if self._master_reveal_source:
+            GLib.source_remove(self._master_reveal_source)
+        # Se reprograma con cada detección/metadata inicial. Se muestra recién
+        # cuando pasan 300 ms sin cambios, con el estado final ya calculado.
+        self._master_reveal_source = GLib.timeout_add(
+            300, self._reveal_master_switch
+        )
+
     def _reveal_master_switch(self) -> bool:
+        self._master_reveal_source = 0
         if not self._closed:
             self.manager.reveal_master_switch()
         return False
@@ -708,6 +715,7 @@ class MainWindow(Adw.ApplicationWindow):
         self.manager.set_uinput_available(uinput_ready)
         self.manager.set_installed_rules(rules)
         self.manager.reload()
+        self._schedule_master_reveal()
         return False
 
     def _on_rule_installed(self, message: str) -> None:

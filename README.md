@@ -285,10 +285,11 @@ connected controllers that do not have a saved rule yet.
   installed rule file is no longer opened from the row; open it with a text
   editor if you need to inspect it.
 - A master switch in the **Gestionar dispositivos** header sets every visible
-  switch, including the **Ignorados** rows, to the same position. It is ON only
-  when all switches are ON. In the main list ON means enabled; in **Ignorados**
-  ON means ignored/disabled. It stages the same changes as the row switches,
-  and **Apply changes** sends them with one authentication.
+  switch to the same position: the main device rules, the **Ignorados** rows,
+  and the three **External rules** switches. It is ON only when all of them are
+  ON. In the main list ON means enabled; in **Ignorados** ON means
+  ignored/disabled. It stages the same changes as the individual switches, and
+  **Apply changes** sends them with one authentication.
 - Controllers detected as joysticks have a green **Connected** tag that includes
   the active `js` node, for example `Connected · js0`. Saved USB devices that
   are physically connected but not detected show a gray **Disconnected** tag.

@@ -407,6 +407,7 @@ class DeviceManager(Gtk.Box):
         )
         self._updating = False
         self._update_pending_ui()
+        self._update_master_switch()
 
     @staticmethod
     def _installed_files_text(count: int, total: int) -> str:
@@ -1963,13 +1964,21 @@ class DeviceManager(Gtk.Box):
         if not self._master_syncing:
             self._update_master_switch()
 
+    def _master_switch_widgets(self) -> list[Gtk.Widget]:
+        return [
+            *self._device_switches,
+            self.steam_switch,
+            self.gdu_switch,
+            self.blacklist_switch,
+        ]
+
     def _on_master_toggled(self, switch: Gtk.Switch, _pspec) -> None:
         if self._updating or self._busy or self._master_syncing:
             return
         active = switch.get_active()
         self._master_syncing = True
         try:
-            for device_switch in self._device_switches:
+            for device_switch in self._master_switch_widgets():
                 if device_switch.get_active() != active:
                     device_switch.set_active(active)
         finally:
@@ -1993,7 +2002,7 @@ class DeviceManager(Gtk.Box):
     def _update_master_switch(self) -> None:
         if not hasattr(self, "master_switch"):
             return
-        switches = self._device_switches
+        switches = self._master_switch_widgets()
         if not switches:
             self._updating = True
             self.master_switch.set_active(False)
@@ -2111,6 +2120,8 @@ class DeviceManager(Gtk.Box):
             None if active == self._steam_installed else active
         )
         self._update_pending_ui()
+        if not self._master_syncing:
+            self._update_master_switch()
 
     def _on_gdu_toggled(self, row: Adw.SwitchRow, _pspec) -> None:
         if self._updating or self._busy:
@@ -2120,6 +2131,8 @@ class DeviceManager(Gtk.Box):
             None if active == self._gdu_installed else active
         )
         self._update_pending_ui()
+        if not self._master_syncing:
+            self._update_master_switch()
 
     def _on_blacklist_toggled(self, row: Adw.SwitchRow, _pspec) -> None:
         if self._updating or self._busy:
@@ -2129,6 +2142,8 @@ class DeviceManager(Gtk.Box):
             None if active == self._blacklist_installed else active
         )
         self._update_pending_ui()
+        if not self._master_syncing:
+            self._update_master_switch()
 
     def reset_after_clear(self) -> None:
         """Descarta cambios pendientes y recarga tras borrar todos los datos."""
@@ -2353,9 +2368,7 @@ class DeviceManager(Gtk.Box):
         )
         self.gdu_switch.set_sensitive(not busy)
         self.blacklist_switch.set_sensitive(not busy)
-        self.master_switch.set_sensitive(
-            not busy and bool(self._device_switches)
-        )
+        self.master_switch.set_sensitive(not busy)
         self.apply_button.set_sensitive(
             not busy
             and bool(
@@ -2387,9 +2400,7 @@ class DeviceManager(Gtk.Box):
         )
         self.gdu_switch.set_sensitive(enabled)
         self.blacklist_switch.set_sensitive(enabled)
-        self.master_switch.set_sensitive(
-            enabled and bool(self._device_switches)
-        )
+        self.master_switch.set_sensitive(enabled)
 
     def _show_error(self, heading: str, body: str) -> None:
         dialog = Adw.AlertDialog(heading=heading, body=body)
