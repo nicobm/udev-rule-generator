@@ -383,6 +383,47 @@ class SetUsbPowerTests(unittest.TestCase):
         self.assertEqual(port_disable.read_text(encoding="ascii"), "0\n")
 
 
+class ConnectUsbTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temporary.cleanup)
+        self.directory = Path(self.temporary.name)
+        self.host = Host(in_flatpak=False)
+
+    def test_enables_authorized_device_in_one_operation(self) -> None:
+        device = self.directory / "1-2"
+        device.mkdir()
+        target = device / "authorized"
+        _write(target, "0\n")
+        with mock.patch.object(power.os, "geteuid", return_value=0):
+            power.connect_usb_device(
+                self.host,
+                "1-2",
+                directory=str(self.directory),
+            )
+        self.assertEqual(target.read_text(encoding="ascii"), "1\n")
+
+    def test_enables_disabled_port_when_needed(self) -> None:
+        port_disable = (
+            self.directory
+            / "usb1"
+            / "1-0:1.0"
+            / "usb1-port2"
+            / "disable"
+        )
+        _write(port_disable, "1\n")
+        device = self.directory / "1-2"
+        device.mkdir()
+        _write(device / "authorized", "1\n")
+        with mock.patch.object(power.os, "geteuid", return_value=0):
+            power.connect_usb_device(
+                self.host,
+                "1-2",
+                directory=str(self.directory),
+            )
+        self.assertEqual(port_disable.read_text(encoding="ascii"), "0\n")
+
+
 class KnownDeviceUsbPathTests(unittest.TestCase):
     def test_round_trips_usb_path(self) -> None:
         from udev_rule_generator.known import KnownDevice

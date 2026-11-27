@@ -1435,6 +1435,9 @@ _EN.update(
         "No se pudo escribir {path}: {error}": (
             "Could not write {path}: {error}"
         ),
+        "No se pudo reinicializar el dispositivo USB.": (
+            "Could not reinitialize the USB device."
+        ),
         "Autenticación cancelada. No se cambió el estado.": (
             "Authentication cancelled. The state was not changed."
         ),

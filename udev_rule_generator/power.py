@@ -427,6 +427,125 @@ def _write_sysfs(host: Host, target: str, value: str) -> None:
         raise HostError(_pkexec_error_detail(result))
 
 
+def _run_privileged_script(
+    host: Host,
+    script: str,
+    *args: str,
+    timeout: float = 120,
+) -> None:
+    if os.geteuid() == 0 and not host.in_flatpak:
+        result = host.run(
+            ["sh", "-c", script, "udev-rule-generator", *args],
+            timeout=timeout,
+        )
+        if result.ok:
+            return
+        detail = (result.stderr or result.stdout).strip()
+        raise HostError(
+            tr("No se pudo reinicializar el dispositivo USB.")
+            + (f"\n{detail}" if detail else "")
+        )
+
+    pkexec = host.which("pkexec")
+    if not pkexec:
+        raise HostError(
+            tr(
+                "No se encontró pkexec. Instalá polkit o ejecutá la "
+                "aplicación como root."
+            )
+        )
+    result = host.run(
+        [pkexec, "sh", "-c", script, "udev-rule-generator", *args],
+        timeout=timeout,
+    )
+    if not result.ok:
+        raise HostError(_pkexec_error_detail(result))
+
+
+_CONNECT_USB_SCRIPT = r"""
+root="$2"
+sysname="$1"
+target="$3"
+value="$4"
+printf "%s\n" "$value" > "$target" 2>/dev/null || true
+i=0
+auth=""
+while [ "$i" -lt 25 ]; do
+  auth=$(cat "$root/$sysname/authorized" 2>/dev/null || true)
+  [ "$auth" = "1" ] && break
+  sleep 0.2
+  i=$((i + 1))
+done
+[ "$auth" = "1" ] || exit 0
+bus=$(cat "$root/$sysname/busnum" 2>/dev/null || true)
+dev=$(cat "$root/$sysname/devnum" 2>/dev/null || true)
+[ -n "$bus" ] && [ -n "$dev" ] || exit 0
+node=$(printf "/dev/bus/usb/%03d/%03d" "$bus" "$dev")
+i=0
+while [ ! -e "$node" ] && [ "$i" -lt 10 ]; do
+  sleep 0.2
+  i=$((i + 1))
+done
+[ -e "$node" ] || exit 0
+if command -v python3 >/dev/null 2>&1; then
+  python3 - "$node" <<'PY'
+import fcntl
+import os
+import sys
+
+try:
+    fd = os.open(sys.argv[1], os.O_WRONLY)
+except OSError:
+    sys.exit(0)
+try:
+    fcntl.ioctl(fd, 0x5514)  # USBDEVFS_RESET
+except OSError:
+    pass
+finally:
+    os.close(fd)
+PY
+elif command -v usbreset >/dev/null 2>&1; then
+  usbreset "$bus/$dev" >/dev/null 2>&1 || true
+fi
+sleep 1
+"""
+
+
+def connect_usb_device(
+    host: Host,
+    sysname: str,
+    *,
+    directory: str = USB_DEVICES_DIR,
+) -> None:
+    """Reconecta el USB y fuerza un reset para que el mando encienda.
+
+    Varios mandos Xbox quedan enumerados pero apagados tras un corte lógico
+    del USB. Un ``USBDEVFS_RESET`` equivale a desenchufar y volver a enchufar
+    el cable: el firmware vuelve a arrancar y enciende el LED. Todo se hace en
+    una sola ejecución privilegiada.
+    """
+    if not _USB_SYSNAME.fullmatch(sysname):
+        raise ValueError(
+            tr("Dispositivo USB no válido: {value!r}", value=sysname)
+        )
+
+    port_path = usb_port_disable_path(sysname, directory=directory)
+    target = f"{directory}/{sysname}/authorized"
+    value = "1"
+    if port_path and _read_attr(host, Path(port_path)) == "1":
+        target = port_path
+        value = "0"
+
+    _run_privileged_script(
+        host,
+        _CONNECT_USB_SCRIPT,
+        sysname,
+        directory,
+        target,
+        value,
+    )
+
+
 def set_usb_power(
     host: Host,
     sysname: str,

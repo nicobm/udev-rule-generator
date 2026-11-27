@@ -90,8 +90,10 @@ hidden from the main list.
 - Per-device USB connect/disconnect button, shown on card hover to the left of
   the eye. It disconnects and reconnects the device through the kernel port
   interface when the hub supports per-port power switching, and through the
-  device's `authorized` attribute otherwise, after a confirmation prompt. It
-  only appears while the USB device is present or its port is turned off.
+  device's `authorized` attribute otherwise, after a confirmation prompt. On
+  connect it also performs a USB reset so controllers that enumerate while
+  powered off (notably Xbox pads) restart and turn on. It only appears while
+  the USB device is present or its port is turned off.
 - Hide saved devices with the eye button; restore them from the hidden-devices
   menu. Hiding also asks for confirmation.
 - Only controllers with a complete VID and PID are listed under **Manage
@@ -270,10 +272,13 @@ connected controllers that do not have a saved rule yet.
 - The connect/disconnect button asks the USB hub to disable or enable the port
   through the standard `port/disable` interface available since Linux 6.0, but
   only when the hub reports per-port power switching. On hubs without that
-  support it uses the device's `authorized` attribute instead. Both actions ask
-  for confirmation first and use polkit when the application is not running as
-  root. If the device is physically disconnected, or is not a USB device, the
-  button is not shown.
+  support it uses the device's `authorized` attribute instead. When connecting,
+  it then performs a `USBDEVFS_RESET` on the controller, which is what makes
+  an Xbox controller that enumerated while still powered off restart and turn
+  its LED on, equivalent to unplugging and replugging the cable. Both actions
+  ask for confirmation first and use a single polkit authentication when the
+  application is not running as root. If the device is physically
+  disconnected, or is not a USB device, the button is not shown.
 - Aliases persist per device, including connected devices that do not have a
   saved rule yet.
 - Clicking anywhere on a device card toggles its switch. The icon selector,

@@ -17,6 +17,7 @@ from udev_rule_generator.i18n import tr
 from udev_rule_generator.known import KnownDevice, KnownDevices
 from udev_rule_generator.power import (
     UsbPowerDevice,
+    connect_usb_device,
     find_usb_power,
     read_usb_port_disabled,
     read_usb_power,
@@ -1247,7 +1248,10 @@ class DeviceManager(Gtk.Box):
         name: str,
     ) -> None:
         try:
-            set_usb_power(self.host, sysname, turn_on)
+            if turn_on:
+                connect_usb_device(self.host, sysname)
+            else:
+                set_usb_power(self.host, sysname, False)
         except Exception as exc:  # noqa: BLE001 (se muestra al usuario)
             GLib.idle_add(self._power_failed, str(exc))
             return

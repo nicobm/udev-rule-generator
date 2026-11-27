@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.14.9 - 2026-11-27
+
+- Performs a `USBDEVFS_RESET` when connecting a controller, in the same single
+  polkit operation that enables USB. This restarts controllers that enumerate
+  while powered off, so Xbox pads turn on their LED and become usable again,
+  equivalent to unplugging and replugging the cable.
+
 ## 1.14.8 - 2026-11-27
 
 - Aligns the device state and power button with Steam's semantics: the badge
