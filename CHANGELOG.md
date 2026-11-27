@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.15.3 - 2026-11-27
+
+- Discovers the actual interrupt OUT endpoint of the controller instead of
+  hardcoding endpoint `0x01`. Xbox Series controllers (`045e:0b12`) use
+  endpoint `0x02`, so the GIP power-on and LED packets were being sent to the
+  wrong endpoint and silently failing.
+
 ## 1.15.2 - 2026-11-27
 
 - Sends the Xbox GIP power-on and LED packets directly through libusb when

@@ -585,6 +585,17 @@ except (OSError, ValueError):
 
 node = f"/dev/bus/usb/{bus:03d}/{address:03d}"
 
+endpoint = 0x02
+interface_path = Path(root) / f"{sysname}:1.0"
+for entry in sorted(interface_path.glob("ep_*")):
+    try:
+        endpoint_address = int(entry.name[3:], 16)
+    except ValueError:
+        continue
+    if not endpoint_address & 0x80:
+        endpoint = endpoint_address
+        break
+
 
 def send_gip():
     try:
@@ -701,7 +712,7 @@ def send_gip():
         transferred = ctypes.c_int()
         result = lib.libusb_interrupt_transfer(
             handle,
-            0x01,
+            endpoint,
             ctypes.cast(buffer, ctypes.POINTER(ctypes.c_ubyte)),
             len(packet),
             ctypes.byref(transferred),

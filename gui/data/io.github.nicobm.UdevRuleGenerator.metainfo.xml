@@ -69,6 +69,15 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="1.15.3" date="2026-11-27">
+      <description>
+        <p>
+          Detects the real interrupt OUT endpoint for GIP packets. Xbox Series
+          controllers use endpoint 0x02, so the previous hardcoded endpoint
+          prevented the power-on and LED commands from reaching the device.
+        </p>
+      </description>
+    </release>
     <release version="1.15.2" date="2026-11-27">
       <description>
         <p>
