@@ -188,10 +188,13 @@ class MainWindow(Adw.ApplicationWindow):
         self._devices = devices
         self.manager.set_connected_devices(devices)
         self.manager.set_hid_devices(detection.hid_devices)
+        self.manager.set_usb_power_devices(detection.usb_devices)
 
         if notify and not self._first_detection:
             for device in added:
                 if device.is_ignorable:
+                    continue
+                if not device.vendor_id or not device.product_id:
                     continue
                 self._notify_device(device)
         self._first_detection = False

@@ -1432,5 +1432,49 @@ _EN.update(
         "Activar o desactivar todos los dispositivos": (
             "Enable or disable all devices"
         ),
+        "No se pudo escribir {path}: {error}": (
+            "Could not write {path}: {error}"
+        ),
+        "Autenticación cancelada. No se cambió el estado.": (
+            "Authentication cancelled. The state was not changed."
+        ),
+        "polkit no autorizó el cambio de estado del dispositivo USB.": (
+            "polkit did not authorize the USB device state change."
+        ),
+        "No se pudo cambiar el estado del dispositivo USB "
+        "(código {code}).": (
+            "Could not change the USB device state (code {code})."
+        ),
+        "Dispositivo USB no válido: {value!r}": (
+            "Invalid USB device: {value!r}"
+        ),
+        "Prender este dispositivo": "Turn on this device",
+        "Apagar este dispositivo": "Turn off this device",
+        "¿Prender «{name}»?": "Turn on “{name}”?",
+        "El dispositivo se volverá a conectar y el sistema lo detectará de "
+        "nuevo.": (
+            "The device will reconnect and the system will detect it again."
+        ),
+        "Prender": "Turn on",
+        "¿Apagar «{name}»?": "Turn off “{name}”?",
+        "El dispositivo se desconectará del sistema hasta que lo prendas de "
+        "nuevo.": (
+            "The device will disconnect from the system until you turn it "
+            "on again."
+        ),
+        "Apagar": "Turn off",
+        "No se pudo cambiar el estado del dispositivo": (
+            "Could not change the device state"
+        ),
+        "Dispositivo encendido: {name}": "Device turned on: {name}",
+        "Dispositivo apagado: {name}": "Device turned off: {name}",
+        "¿Ocultar «{name}»?": "Hide “{name}”?",
+        "El dispositivo dejará de aparecer en la lista. Si su regla está "
+        "activa, también se eliminará. Podés restaurarlo desde "
+        "«Dispositivos ocultos».": (
+            "The device will no longer appear in the list. If its rule is "
+            "active, it will be removed too. You can restore it from "
+            "“Hidden devices”."
+        ),
     }
 )

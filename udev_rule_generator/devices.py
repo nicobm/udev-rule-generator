@@ -10,12 +10,13 @@ obtienen de ``/proc/bus/input/devices`` y, si eso falla, de
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable, Mapping
 
 from .host import CommandNotAvailable, Host, HostError
 from .i18n import tr
+from .power import UsbPowerDevice, scan_usb_power
 
 _HEX_RE = re.compile(r"^[0-9a-fA-F]{4}$")
 
@@ -629,6 +630,7 @@ class Detection:
 
     joysticks: list[Joystick]
     hid_devices: list[HidDevice]
+    usb_devices: list[UsbPowerDevice] = field(default_factory=list)
 
 
 def hid_devices_from_export_db(text: str) -> list[HidDevice]:
@@ -667,6 +669,7 @@ def hid_devices_from_export_db(text: str) -> list[HidDevice]:
 def detect_state(host: Host | None = None) -> Detection:
     """Detecta joysticks y dispositivos HID en una sola lectura de udev."""
     host = host or Host()
+    usb_devices = scan_usb_power(host)
     try:
         result = host.run(["udevadm", "info", "--export-db"], timeout=40)
     except CommandNotAvailable:
@@ -685,6 +688,7 @@ def detect_state(host: Host | None = None) -> Detection:
                     if not is_auxiliary_input(device)
                 ),
                 hid_devices=hid_devices,
+                usb_devices=usb_devices,
             )
         return Detection(
             joysticks=_drop_jsless_duplicates(
@@ -693,6 +697,7 @@ def detect_state(host: Host | None = None) -> Detection:
                 if not is_auxiliary_input(device)
             ),
             hid_devices=hid_devices,
+            usb_devices=usb_devices,
         )
 
     return Detection(
@@ -702,6 +707,7 @@ def detect_state(host: Host | None = None) -> Detection:
             if not is_auxiliary_input(device)
         ),
         hid_devices=[],
+        usb_devices=usb_devices,
     )
 
 

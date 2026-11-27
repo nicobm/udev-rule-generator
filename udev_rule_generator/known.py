@@ -20,6 +20,7 @@ from pathlib import Path
 from .devices import Joystick
 from .i18n import tr
 from .installed import InstalledRule
+from .power import usb_sysname_from_devpaths
 from .rules import RuleAction, RuleSpec, build_rule
 from .userconfig import bus_label, default_config_dir, device_identity
 
@@ -85,6 +86,7 @@ class KnownDevice:
     ignorable: bool = False
     ignored: bool = False
     hid_driver: str = ""
+    usb_path: str = ""
 
     @property
     def identifier(self) -> str:
@@ -178,6 +180,7 @@ class KnownDevice:
             "ignorable": self.ignorable,
             "ignored": self.ignored,
             "hid_driver": self.hid_driver,
+            "usb_path": self.usb_path,
         }
 
     @classmethod
@@ -205,6 +208,7 @@ class KnownDevice:
             ignorable=bool(data.get("ignorable", False)),
             ignored=bool(data.get("ignored", False)),
             hid_driver=str(data.get("hid_driver", "")),
+            usb_path=str(data.get("usb_path", "")),
         )
 
     @classmethod
@@ -227,6 +231,7 @@ class KnownDevice:
             active=True,
             updated_at=_now(),
             ignorable=device.is_ignorable,
+            usb_path=usb_sysname_from_devpaths(device.devpaths),
         )
 
     @classmethod
@@ -262,6 +267,7 @@ class KnownDevice:
             ignorable=True,
             ignored=ignored,
             hid_driver=driver,
+            usb_path=usb_sysname_from_devpaths(device.devpaths),
         )
 
     @classmethod
@@ -611,6 +617,19 @@ class KnownDevices:
             self._colors.clear()
             self._order.clear()
             self.save()
+
+    def set_usb_path(self, device_id: str, usb_path: str) -> KnownDevice | None:
+        """Guarda el nombre sysfs del USB para poder encenderlo después."""
+        if not usb_path:
+            return None
+        with self._lock:
+            record = self._devices.get(device_id)
+            if record is None or record.usb_path == usb_path:
+                return record
+            updated = replace(record, usb_path=usb_path)
+            self._devices[device_id] = updated
+            self.save()
+            return updated
 
     def set_hidden(self, device_id: str, hidden: bool) -> KnownDevice | None:
         with self._lock:

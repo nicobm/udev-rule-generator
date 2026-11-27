@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.14.0 - 2026-11-27
+
+- Adds a per-device USB power button to the left of the hide (eye) button. It
+  appears on card hover like the other controls, asks for confirmation, and
+  turns the controller off or on by toggling its USB `authorized` attribute.
+- Adds a confirmation dialog before hiding a saved device with the eye button.
+- Hides controllers without a reliable VID/PID from **Manage devices**. Missing,
+  malformed, or `0000` identifiers are treated as malfunctioning hardware.
+- Remembers each device's USB sysfs path so it can be turned back on after it
+  disappears from the bus.
+
 ## 1.13.10 - 2026-11-26
 
 - Nudges the master device switch a few pixels to the right so it aligns with

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import threading
 from typing import Callable
 
@@ -14,6 +15,12 @@ from udev_rule_generator.devices import HidDevice, Joystick
 from udev_rule_generator.host import Host
 from udev_rule_generator.i18n import tr
 from udev_rule_generator.known import KnownDevice, KnownDevices
+from udev_rule_generator.power import (
+    UsbPowerDevice,
+    find_usb_power,
+    set_usb_power,
+    usb_sysname_from_devpaths,
+)
 from udev_rule_generator.presets import (
     GAME_DEVICES,
     JOYSTICK_BLACKLIST,
@@ -76,6 +83,19 @@ _DEVICE_COLOR_ALIASES = {
     "bright-white": "white",
 }
 _DEFAULT_DEVICE_COLOR = "white"
+_HEX4 = re.compile(r"^[0-9a-f]{4}$")
+
+
+def _has_hardware_id(item: Joystick | KnownDevice) -> bool:
+    """Solo se gestionan dispositivos con VID y PID completos y reales."""
+    vendor_id = (item.vendor_id or "").lower()
+    product_id = (item.product_id or "").lower()
+    return bool(
+        _HEX4.fullmatch(vendor_id)
+        and _HEX4.fullmatch(product_id)
+        and vendor_id != "0000"
+        and product_id != "0000"
+    )
 
 
 def _normalize_device_color(color_id: str) -> str:
@@ -114,6 +134,8 @@ class DeviceManager(Gtk.Box):
         self._connected: list[Joystick] = []
         self._hid_devices: dict[str, HidDevice] = {}
         self._hid_fingerprint: tuple = ()
+        self._usb_power: list[UsbPowerDevice] = []
+        self._usb_power_fingerprint: tuple = ()
         self._device_switches: list[Gtk.Switch] = []
         self._master_syncing = False
         self._pending_known: dict[str, bool] = {}
@@ -295,6 +317,20 @@ class DeviceManager(Gtk.Box):
         self._hid_devices = by_id
         self.reload()
 
+    def set_usb_power_devices(self, devices: list[UsbPowerDevice]) -> None:
+        """Actualiza qué dispositivos USB están autorizados (encendidos)."""
+        fingerprint = tuple(
+            sorted(
+                (device.sysname, device.authorized)
+                for device in devices
+            )
+        )
+        if fingerprint == self._usb_power_fingerprint:
+            return
+        self._usb_power_fingerprint = fingerprint
+        self._usb_power = list(devices)
+        self.reload()
+
     def set_uinput_available(self, available: bool) -> None:
         self._uinput_available = available
         if not available:
@@ -445,6 +481,24 @@ class DeviceManager(Gtk.Box):
         self._device_switches.clear()
 
         known = self.store.devices()
+        known_by_id = {record.id: record for record in known}
+        changed_paths = False
+        for device in self._connected:
+            record = known_by_id.get(device_identity(device))
+            sysname = usb_sysname_from_devpaths(device.devpaths)
+            if (
+                record is not None
+                and sysname
+                and record.usb_path != sysname
+            ):
+                try:
+                    self.store.set_usb_path(record.id, sysname)
+                except OSError:
+                    pass
+                else:
+                    changed_paths = True
+        if changed_paths:
+            known = self.store.devices()
         known_ids = {device.id for device in known}
         for key in list(self._pending_known):
             record = next(
@@ -472,6 +526,7 @@ class DeviceManager(Gtk.Box):
             and not device.hidden
             and not device.ignorable
             and device.id not in ignorable_ids
+            and _has_hardware_id(device)
         ]
 
         regular_connected = [
@@ -479,6 +534,7 @@ class DeviceManager(Gtk.Box):
             for device in connected
             if not device.is_ignorable
             and device_identity(device) not in known_ids
+            and _has_hardware_id(device)
         ]
 
         entries: list[tuple[str, str, object]] = [
@@ -531,6 +587,7 @@ class DeviceManager(Gtk.Box):
             for record in known
             if (record.ignorable or record.id in ignorable_ids)
             and not record.hidden
+            and _has_hardware_id(record)
         ]
         ignored_known_ids = {record.id for record in ignored_known}
         ignored_entries: list[tuple[str, str, object]] = [
@@ -540,6 +597,7 @@ class DeviceManager(Gtk.Box):
             ("unknown", device_identity(device), device)
             for device in connected
             if device.is_ignorable
+            and _has_hardware_id(device)
             and device_identity(device) not in ignored_known_ids
             and device_identity(device) not in known_ids
         )
@@ -1021,6 +1079,157 @@ class DeviceManager(Gtk.Box):
         button.connect("clicked", on_clicked)
         update_state()
         return lambda: editing or suspended_activatable is not None
+
+    def _matching_usb_power(
+        self,
+        joystick: Joystick | None,
+        record: KnownDevice | None,
+    ) -> UsbPowerDevice | None:
+        sysname = (
+            usb_sysname_from_devpaths(joystick.devpaths)
+            if joystick is not None
+            else ""
+        )
+        if not sysname and record is not None:
+            sysname = record.usb_path
+        vendor_id = (
+            joystick.vendor_id
+            if joystick is not None
+            else record.vendor_id if record is not None else ""
+        )
+        product_id = (
+            joystick.product_id
+            if joystick is not None
+            else record.product_id if record is not None else ""
+        )
+        serial = (
+            joystick.serial
+            if joystick is not None
+            else record.serial if record is not None else ""
+        )
+        return find_usb_power(
+            self._usb_power,
+            vendor_id=vendor_id,
+            product_id=product_id,
+            serial=serial,
+            sysname=sysname,
+        )
+
+    def _add_power_control(
+        self,
+        row: Adw.ActionRow,
+        device_id: str,
+        joystick: Joystick | None,
+        record: KnownDevice | None,
+    ) -> None:
+        """Añade el botón de encendido/apagado, visible al pasar el puntero."""
+        usb = self._matching_usb_power(joystick, record)
+        if usb is None:
+            return
+        name = (
+            self.store.alias_for(device_id)
+            or (joystick.display_name if joystick is not None else "")
+            or (record.name if record is not None else "")
+        )
+        button = Gtk.Button(icon_name="device-power-symbolic")
+        button.add_css_class("flat")
+        button.set_valign(Gtk.Align.CENTER)
+        button.set_tooltip_text(
+            tr("Prender este dispositivo")
+            if not usb.authorized
+            else tr("Apagar este dispositivo")
+        )
+        button.connect(
+            "clicked",
+            lambda _button: self._confirm_power(usb, name),
+        )
+        row.add_suffix(button)
+        self._add_hover_button(row, button)
+
+    def _confirm_power(self, usb: UsbPowerDevice, name: str) -> None:
+        if self._busy:
+            return
+        turn_on = not usb.authorized
+        if turn_on:
+            heading = tr("¿Prender «{name}»?", name=name)
+            body = tr(
+                "El dispositivo se volverá a conectar y el sistema lo "
+                "detectará de nuevo."
+            )
+            accept = tr("Prender")
+        else:
+            heading = tr("¿Apagar «{name}»?", name=name)
+            body = tr(
+                "El dispositivo se desconectará del sistema hasta que lo "
+                "prendas de nuevo."
+            )
+            accept = tr("Apagar")
+
+        dialog = Adw.AlertDialog(heading=heading, body=body)
+        dialog.add_response("cancel", tr("Cancelar"))
+        dialog.add_response("power", accept)
+        if not turn_on:
+            dialog.set_response_appearance(
+                "power", Adw.ResponseAppearance.DESTRUCTIVE
+            )
+        dialog.set_default_response("cancel")
+        dialog.set_close_response("cancel")
+
+        def on_response(_dialog, response: str) -> None:
+            if response != "power":
+                return
+            self._start_power_toggle(usb.sysname, turn_on, name)
+
+        dialog.connect("response", on_response)
+        root = self.get_root()
+        dialog.present(root if root is not None else self.parent_window)
+
+    def _start_power_toggle(
+        self,
+        sysname: str,
+        turn_on: bool,
+        name: str,
+    ) -> None:
+        if self._busy:
+            return
+        self._set_busy(True)
+        threading.Thread(
+            target=self._power_worker,
+            args=(sysname, turn_on, name),
+            name="udev-rule-generator-power",
+            daemon=True,
+        ).start()
+
+    def _power_worker(
+        self,
+        sysname: str,
+        turn_on: bool,
+        name: str,
+    ) -> None:
+        try:
+            set_usb_power(self.host, sysname, turn_on)
+        except Exception as exc:  # noqa: BLE001 (se muestra al usuario)
+            GLib.idle_add(self._power_failed, str(exc))
+            return
+        GLib.idle_add(self._power_succeeded, turn_on, name)
+
+    def _power_succeeded(self, turn_on: bool, name: str) -> bool:
+        self._set_busy(False)
+        self.on_changed(
+            tr("Dispositivo encendido: {name}", name=name)
+            if turn_on
+            else tr("Dispositivo apagado: {name}", name=name)
+        )
+        return False
+
+    def _power_failed(self, message: str) -> bool:
+        self._set_busy(False)
+        self.reload()
+        self._show_error(
+            tr("No se pudo cambiar el estado del dispositivo"),
+            message,
+        )
+        return False
 
     def _add_hover_button(
         self,
@@ -1507,6 +1716,12 @@ class DeviceManager(Gtk.Box):
             device.id,
             device.name,
         )
+        self._add_power_control(
+            row,
+            device.id,
+            connected_device,
+            device,
+        )
 
         if removable:
             hide = Gtk.Button(
@@ -1566,6 +1781,7 @@ class DeviceManager(Gtk.Box):
             key,
             device.display_name,
         )
+        self._add_power_control(row, key, device, None)
         row.add_suffix(self._connected_badge(device))
 
         switch = Gtk.Switch(active=key in self._pending_unknown)
@@ -1741,6 +1957,34 @@ class DeviceManager(Gtk.Box):
             self._update_master_switch()
 
     def _hide_known(self, device: KnownDevice) -> None:
+        if self._busy:
+            return
+        name = self.store.alias_for(device.id) or device.name
+        dialog = Adw.AlertDialog(
+            heading=tr("¿Ocultar «{name}»?", name=name),
+            body=tr(
+                "El dispositivo dejará de aparecer en la lista. Si su regla "
+                "está activa, también se eliminará. Podés restaurarlo desde "
+                "«Dispositivos ocultos»."
+            ),
+        )
+        dialog.add_response("cancel", tr("Cancelar"))
+        dialog.add_response("hide", tr("Ocultar"))
+        dialog.set_response_appearance(
+            "hide", Adw.ResponseAppearance.DESTRUCTIVE
+        )
+        dialog.set_default_response("cancel")
+        dialog.set_close_response("cancel")
+
+        def on_response(_dialog, response: str) -> None:
+            if response == "hide":
+                self._perform_hide_known(device)
+
+        dialog.connect("response", on_response)
+        root = self.get_root()
+        dialog.present(root if root is not None else self.parent_window)
+
+    def _perform_hide_known(self, device: KnownDevice) -> None:
         if self._busy:
             return
         self._pending_known.pop(device.id, None)

@@ -62,6 +62,8 @@ _EMOJI_CANDIDATES = (
     "document-open-symbolic",
     "utilities-terminal-symbolic",
     "system-run-symbolic",
+    "system-shutdown-symbolic",
+    "device-power-symbolic",
     "preferences-system-symbolic",
     "view-grid-symbolic",
     "view-list-symbolic",
