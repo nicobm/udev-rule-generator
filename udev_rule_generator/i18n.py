@@ -1356,10 +1356,11 @@ _EN.update(
         # Dispositivos ignorados
         "Ignorados": "Ignored",
         "Dispositivos que el kernel expone como joystick pero udev no "
-        "reconoce como tales. Apagá su interruptor para liberar el "
-        "nodo js.": (
+        "reconoce como tales. Prendé su interruptor para "
+        "deshabilitarlos y liberar el nodo js.": (
             "Devices the kernel exposes as joysticks but udev does not "
-            "recognize as such. Turn off their switch to release the js node."
+            "recognize as such. Turn on their switch to disable them and "
+            "release the js node."
         ),
         "Deshabilitado": "Disabled",
         "El driver HID está desvinculado y el nodo js está liberado.": (
@@ -1431,8 +1432,8 @@ _EN.update(
         "{count} de {total} archivos instalados": (
             "{count} of {total} files installed"
         ),
-        "Activar o desactivar todos los dispositivos": (
-            "Enable or disable all devices"
+        "Poner todos los interruptores en ON o en OFF": (
+            "Set every switch to ON or OFF"
         ),
         "No se pudo escribir {path}: {error}": (
             "Could not write {path}: {error}"

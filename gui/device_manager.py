@@ -192,8 +192,8 @@ class DeviceManager(Gtk.Box):
             title=tr("Ignorados"),
             description=tr(
                 "Dispositivos que el kernel expone como joystick pero udev no "
-                "reconoce como tales. Apagá su interruptor para liberar el "
-                "nodo js."
+                "reconoce como tales. Prendé su interruptor para "
+                "deshabilitarlos y liberar el nodo js."
             ),
         )
         self.ignored_group.set_separate_rows(True)
@@ -283,7 +283,7 @@ class DeviceManager(Gtk.Box):
         self.master_switch.set_valign(Gtk.Align.CENTER)
         self.master_switch.set_margin_end(14)
         self.master_switch.set_tooltip_text(
-            tr("Activar o desactivar todos los dispositivos")
+            tr("Poner todos los interruptores en ON o en OFF")
         )
         self.master_switch.set_sensitive(False)
         self.master_switch.connect(
@@ -1909,22 +1909,22 @@ class DeviceManager(Gtk.Box):
         pending_ignored = self._pending_ignored.get(
             device_id, actual_ignored
         )
-        # En toda la interfaz, ON significa habilitado. Para un dispositivo
-        # ignorable, "habilitado" es lo contrario de "ignorado".
-        active = not pending_ignored
+        # En Ignorados, ON significa ignorado/deshabilitado y OFF significa
+        # habilitado, como en la sección original.
+        active = pending_ignored
         switch = Gtk.Switch(active=active)
         switch.set_valign(Gtk.Align.CENTER)
         switch.set_tooltip_text(
-            tr("Deshabilitar y liberar el nodo js")
+            tr("Volver a habilitar y recuperar el nodo js")
             if active
-            else tr("Volver a habilitar y recuperar el nodo js")
+            else tr("Deshabilitar y liberar el nodo js")
         )
         switch.connect(
             "notify::active",
             lambda selected_switch, _pspec, selected_id=device_id, selected_device=connected: (
                 self._set_ignored_pending(
                     selected_id,
-                    not selected_switch.get_active(),
+                    selected_switch.get_active(),
                     selected_device,
                 )
             ),

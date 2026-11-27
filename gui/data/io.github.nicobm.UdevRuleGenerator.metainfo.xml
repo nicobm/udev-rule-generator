@@ -69,6 +69,15 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="1.17.1" date="2026-11-27">
+      <description>
+        <p>
+          Restores the Ignorados switch semantics (ON=ignored, OFF=enabled)
+          while keeping those switches in the master switch. The master is ON
+          only when every visible switch is ON.
+        </p>
+      </description>
+    </release>
     <release version="1.17.0" date="2026-11-27">
       <description>
         <p>

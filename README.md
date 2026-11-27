@@ -284,22 +284,23 @@ connected controllers that do not have a saved rule yet.
   alias button, hide button, and drag handle keep their own actions. The
   installed rule file is no longer opened from the row; open it with a text
   editor if you need to inspect it.
-- A master switch in the **Gestionar dispositivos** header enables or disables
-  every device rule and every **Ignorados** switch at once. It stages the same
-  changes as the row switches, and **Apply changes** sends them with one
-  authentication.
+- A master switch in the **Gestionar dispositivos** header sets every visible
+  switch, including the **Ignorados** rows, to the same position. It is ON only
+  when all switches are ON. In the main list ON means enabled; in **Ignorados**
+  ON means ignored/disabled. It stages the same changes as the row switches,
+  and **Apply changes** sends them with one authentication.
 - Controllers detected as joysticks have a green **Connected** tag that includes
   the active `js` node, for example `Connected · js0`. Saved USB devices that
   are physically connected but not detected show a gray **Disconnected** tag.
   Devices with no USB connection show no state tag at all.
 - Devices that the kernel exposes with a `js` node but udev does not
-  classify as joysticks appear under **Ignorados**. Each row's switch enables
-  the device (ON, HID driver bound) or ignores it (OFF, HID driver unbound and
-  `js` node released). The remaining USB controllers are rebound in order to
-  compact to `js0`, `js1`, … While ignored, the device has no `hidraw` node, so
-  LED control through OpenRGB is not available. The state is stored in
+  classify as joysticks appear under **Ignorados**. Each row's switch ignores
+  the device when ON (HID driver unbound and `js` node released) and enables it
+  when OFF (HID driver bound). The remaining USB controllers are rebound in
+  order to compact to `js0`, `js1`, … While ignored, the device has no `hidraw`
+  node, so LED control through OpenRGB is not available. The state is stored in
   `devices.json`; after a reboot udev binds the device again, so the switch
-  starts enabled.
+  starts off.
 - A connected controller without a saved rule has a switch that stages its
   enable rule.
 - Switch changes are applied together with **Apply changes**, so several

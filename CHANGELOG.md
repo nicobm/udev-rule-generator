@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.17.1 - 2026-11-27
+
+- Restores the original **Ignorados** switch semantics: ON means ignored and
+  disabled (`js` node released), OFF means enabled.
+- The master switch still includes the **Ignorados** rows and mirrors their raw
+  position, so it is ON only when every switch is ON. An enabled ignored device
+  shows OFF and therefore also turns the master switch OFF.
+
 ## 1.17.0 - 2026-11-27
 
 - Makes the master switch include the **Ignorados** rows as well, so it is ON
