@@ -51,6 +51,7 @@ class MainWindow(Adw.ApplicationWindow):
         self._emoji_dialog = None
         self._file_dialog = None
         self._backup_busy = False
+        self._master_reveal_scheduled = False
 
         self.set_title(tr(APP_NAME))
         self.set_default_size(780, 760)
@@ -202,6 +203,12 @@ class MainWindow(Adw.ApplicationWindow):
         self.manager.set_hid_devices(detection.hid_devices)
         self.manager.set_usb_devices(detection.usb_devices)
 
+        if not self._master_reveal_scheduled:
+            self._master_reveal_scheduled = True
+            # Esperamos un instante a que se estabilicen todas las filas
+            # (incluidas las de Ignorados) antes de mostrar el switch maestro.
+            GLib.timeout_add(300, self._reveal_master_switch)
+
         if notify and not self._first_detection and not steam:
             for device in added:
                 if self._should_notify(device):
@@ -210,6 +217,11 @@ class MainWindow(Adw.ApplicationWindow):
                 if self._should_notify(device):
                     self._notify_device(device, connected=False)
         self._first_detection = False
+        return False
+
+    def _reveal_master_switch(self) -> bool:
+        if not self._closed:
+            self.manager.reveal_master_switch()
         return False
 
     @staticmethod

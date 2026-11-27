@@ -139,6 +139,7 @@ class DeviceManager(Gtk.Box):
         self._usb_power: list[UsbPowerDevice] = []
         self._usb_power_fingerprint: tuple = ()
         self._device_switches: list[Gtk.Switch] = []
+        self._master_ready = False
         self._master_syncing = False
         self._pending_known: dict[str, bool] = {}
         self._pending_unknown: dict[str, Joystick] = {}
@@ -281,6 +282,7 @@ class DeviceManager(Gtk.Box):
 
         self.master_switch = Gtk.Switch()
         self.master_switch.set_valign(Gtk.Align.CENTER)
+        self.master_switch.set_visible(False)
         self.master_switch.set_margin_end(14)
         self.master_switch.set_tooltip_text(
             tr("Poner todos los interruptores en ON o en OFF")
@@ -1974,6 +1976,19 @@ class DeviceManager(Gtk.Box):
             self._master_syncing = False
         self._update_master_switch()
         self._update_pending_ui()
+
+    def reveal_master_switch(self) -> None:
+        """Muestra el maestro recién cuando la primera detección terminó.
+
+        Así no se ve la animación desde un estado intermedio mientras se
+        construyen las filas (por ejemplo, cuando aparece una fila de
+        Ignorados con el switch en OFF).
+        """
+        if self._master_ready:
+            return
+        self._update_master_switch()
+        self.master_switch.set_visible(True)
+        self._master_ready = True
 
     def _update_master_switch(self) -> None:
         if not hasattr(self, "master_switch"):

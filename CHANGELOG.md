@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.17.2 - 2026-11-27
+
+- Hides the master switch until the first detection pass has finished building
+  every row, including **Ignorados**. This removes the startup animation where
+  the switch briefly appeared ON and then animated to its real state.
+
 ## 1.17.1 - 2026-11-27
 
 - Restores the original **Ignorados** switch semantics: ON means ignored and
