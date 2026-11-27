@@ -69,6 +69,15 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="1.17.0" date="2026-11-27">
+      <description>
+        <p>
+          Makes the master switch include the Ignorados rows and flips their
+          switches to the same ON=enabled semantics as the rest of the device
+          list.
+        </p>
+      </description>
+    </release>
     <release version="1.16.0" date="2026-11-27">
       <description>
         <p>

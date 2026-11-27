@@ -192,7 +192,8 @@ class DeviceManager(Gtk.Box):
             title=tr("Ignorados"),
             description=tr(
                 "Dispositivos que el kernel expone como joystick pero udev no "
-                "reconoce como tales. Deshabilitalos para liberar su nodo js."
+                "reconoce como tales. Apagá su interruptor para liberar el "
+                "nodo js."
             ),
         )
         self.ignored_group.set_separate_rows(True)
@@ -1905,26 +1906,32 @@ class DeviceManager(Gtk.Box):
         elif connected is not None:
             row.add_suffix(self._connected_badge(connected))
 
-        active = self._pending_ignored.get(device_id, actual_ignored)
+        pending_ignored = self._pending_ignored.get(
+            device_id, actual_ignored
+        )
+        # En toda la interfaz, ON significa habilitado. Para un dispositivo
+        # ignorable, "habilitado" es lo contrario de "ignorado".
+        active = not pending_ignored
         switch = Gtk.Switch(active=active)
         switch.set_valign(Gtk.Align.CENTER)
         switch.set_tooltip_text(
-            tr("Volver a habilitar y recuperar el nodo js")
+            tr("Deshabilitar y liberar el nodo js")
             if active
-            else tr("Deshabilitar y liberar el nodo js")
+            else tr("Volver a habilitar y recuperar el nodo js")
         )
         switch.connect(
             "notify::active",
             lambda selected_switch, _pspec, selected_id=device_id, selected_device=connected: (
                 self._set_ignored_pending(
                     selected_id,
-                    selected_switch.get_active(),
+                    not selected_switch.get_active(),
                     selected_device,
                 )
             ),
         )
         row.add_suffix(switch)
         self._controls.append(switch)
+        self._device_switches.append(switch)
 
         def toggle_row(_row) -> None:
             if self._busy or self._updating:
@@ -1937,20 +1944,22 @@ class DeviceManager(Gtk.Box):
     def _set_ignored_pending(
         self,
         device_id: str,
-        active: bool,
+        ignored: bool,
         device: Joystick | None,
     ) -> None:
         if self._updating or self._busy:
             return
         actual = self._ignored_actual.get(device_id, False)
-        if active == actual:
+        if ignored == actual:
             self._pending_ignored.pop(device_id, None)
             self._pending_ignored_joysticks.pop(device_id, None)
         else:
-            self._pending_ignored[device_id] = active
+            self._pending_ignored[device_id] = ignored
             if device is not None:
                 self._pending_ignored_joysticks[device_id] = device
         self._update_pending_ui()
+        if not self._master_syncing:
+            self._update_master_switch()
 
     def _on_master_toggled(self, switch: Gtk.Switch, _pspec) -> None:
         if self._updating or self._busy or self._master_syncing:

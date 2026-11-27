@@ -1356,9 +1356,10 @@ _EN.update(
         # Dispositivos ignorados
         "Ignorados": "Ignored",
         "Dispositivos que el kernel expone como joystick pero udev no "
-        "reconoce como tales. Deshabilitalos para liberar su nodo js.": (
+        "reconoce como tales. Apagá su interruptor para liberar el "
+        "nodo js.": (
             "Devices the kernel exposes as joysticks but udev does not "
-            "recognize as such. Disable them to release their js node."
+            "recognize as such. Turn off their switch to release the js node."
         ),
         "Deshabilitado": "Disabled",
         "El driver HID está desvinculado y el nodo js está liberado.": (

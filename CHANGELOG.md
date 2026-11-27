@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.17.0 - 2026-11-27
+
+- Makes the master switch include the **Ignorados** rows as well, so it is ON
+  only when every visible device switch is ON and toggles the whole list.
+- Flips the **Ignorados** switch semantics to match the rest of the interface:
+  ON means the device is enabled (HID driver bound) and OFF means it is
+  ignored (driver unbound and `js` node released).
+- Updates the group description and documentation to match the new switch
+  behavior.
+
 ## 1.16.0 - 2026-11-27
 
 - Finalizes the per-device **Connect/Disconnect** button with a single,
