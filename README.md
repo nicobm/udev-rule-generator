@@ -89,8 +89,8 @@ hidden from the main list.
   can be enabled or disabled without connecting the controller again.
 - Per-device USB power button, shown on card hover to the left of the eye. It
   turns the USB device off and on again through its `authorized` attribute
-  after a confirmation prompt. For non-USB or disconnected devices it is shown
-  disabled with an explanatory tooltip.
+  after a confirmation prompt. It only appears while the USB device is present,
+  either powered on or deauthorized.
 - Hide saved devices with the eye button; restore them from the hidden-devices
   menu. Hiding also asks for confirmation.
 - Only controllers with a complete VID and PID are listed under **Manage
@@ -269,9 +269,10 @@ connected controllers that do not have a saved rule yet.
 - The power button turns the USB device off by writing `0` to its
   `authorized` sysfs attribute, and turns it on again by writing `1`. Both
   actions ask for confirmation first and use polkit when the application is
-  not running as root. It stays visible but disabled when the saved USB device
-  is not connected. Bluetooth controllers show it disabled because power
-  control is only available over USB.
+  not running as root. A deauthorized device stays in sysfs with
+  `authorized=0`, so the button remains available to turn it back on. If the
+  device is physically disconnected, or is not a USB device, the button is not
+  shown.
 - Aliases persist per device, including connected devices that do not have a
   saved rule yet.
 - Clicking anywhere on a device card toggles its switch. The icon selector,

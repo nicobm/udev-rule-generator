@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.14.3 - 2026-11-27
+
+- Shows the USB power button only while the device is present. A deauthorized
+  controller (`authorized=0`) is still present in sysfs, so the button remains
+  available to turn it back on. Physically disconnected and non-USB devices no
+  longer show a disabled power button.
+
 ## 1.14.2 - 2026-11-27
 
 - Makes the USB power button more reliable: it reads the device's

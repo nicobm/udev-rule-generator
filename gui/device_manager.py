@@ -1136,28 +1136,15 @@ class DeviceManager(Gtk.Box):
         joystick: Joystick | None,
         record: KnownDevice | None,
     ) -> None:
-        """Añade el botón de encendido/apagado, visible al pasar el puntero."""
+        """Añade el botón de encendido/apagado, visible al pasar el puntero.
+
+        Solo se muestra si el dispositivo USB está presente en el sistema.
+        Un mando desautorizado (apagado) sigue existiendo con
+        ``authorized=0``, así que el botón aparece para poder prenderlo. Si el
+        mando está desconectado físicamente no hay nada que controlar.
+        """
         usb = self._matching_usb_power(joystick, record)
         if usb is None:
-            item = joystick if joystick is not None else record
-            if item is None:
-                return
-            button = Gtk.Button(icon_name="device-power-symbolic")
-            button.add_css_class("flat")
-            button.set_valign(Gtk.Align.CENTER)
-            button.set_sensitive(False)
-            button.set_tooltip_text(
-                tr(
-                    "Conectá este dispositivo USB para encenderlo o apagarlo"
-                )
-                if item.bus == "usb"
-                else tr(
-                    "El encendido y apagado solo está disponible para "
-                    "dispositivos USB"
-                )
-            )
-            row.add_suffix(button)
-            self._add_hover_button(row, button)
             return
         name = (
             self.store.alias_for(device_id)
