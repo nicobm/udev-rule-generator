@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.15.1 - 2026-11-27
+
+- Opens the controller's `event`/`js` node for a few seconds when a USB
+  joystick is detected. The `xpad` driver sends its GIP power-on and LED
+  initialization packets from the input-open callback, so this can turn on an
+  Xbox controller that was enumerated but still powered off.
+
 ## 1.15.0 - 2026-11-27
 
 - Detects Steam running natively or as a Flatpak. While Steam is running, the

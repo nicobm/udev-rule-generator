@@ -275,8 +275,11 @@ connected controllers that do not have a saved rule yet.
   support it uses the device's `authorized` attribute instead. When connecting,
   it then performs a `USBDEVFS_RESET` on the controller, which is what makes
   an Xbox controller that enumerated while still powered off restart and turn
-  its LED on, equivalent to unplugging and replugging the cable. Both actions
-  ask for confirmation first and use a single polkit authentication when the
+  its LED on, equivalent to unplugging and replugging the cable. The
+  application also opens the controller's `event`/`js` node for a few seconds
+  when a USB joystick is detected: the `xpad` driver sends its GIP power-on and
+  LED initialization packets from the input-open callback. Both actions ask for
+  confirmation first and use a single polkit authentication when the
   application is not running as root. If the device is physically
   disconnected, or is not a USB device, the button is not shown.
 - Aliases persist per device, including connected devices that do not have a

@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import os
 import threading
+import time
 from datetime import datetime
 
 from udev_rule_generator import APP_NAME
@@ -197,6 +199,9 @@ class MainWindow(Adw.ApplicationWindow):
             if device.key not in new_keys
         ]
 
+        for device in added:
+            self._wake_input_device(device)
+
         self._devices = devices
         self.manager.set_connected_devices(devices)
         self.manager.set_hid_devices(detection.hid_devices)
@@ -217,6 +222,44 @@ class MainWindow(Adw.ApplicationWindow):
         if device.is_ignorable:
             return False
         return bool(device.vendor_id and device.product_id)
+
+    def _wake_input_device(self, device: Joystick) -> None:
+        """Abre el nodo de entrada para que xpad envíe su inicialización.
+
+        El driver xpad manda los paquetes GIP de encendido y LED en su callback
+        de apertura del input.  Si nadie abre el nodo (por ejemplo, cuando
+        Steam usa su propio camino), el mando puede quedar enumerado pero
+        apagado.  Mantenerlo abierto unos segundos fuerza esa inicialización.
+        """
+        if device.bus != "usb":
+            return
+        paths = (*device.event_devices, *device.js_devices)
+        if not paths:
+            return
+
+        def worker() -> None:
+            descriptors: list[int] = []
+            for path in paths:
+                try:
+                    descriptors.append(
+                        os.open(path, os.O_RDONLY | os.O_NONBLOCK)
+                    )
+                except OSError:
+                    continue
+            if not descriptors:
+                return
+            time.sleep(3)
+            for descriptor in descriptors:
+                try:
+                    os.close(descriptor)
+                except OSError:
+                    pass
+
+        threading.Thread(
+            target=worker,
+            name="udev-rule-generator-input-wake",
+            daemon=True,
+        ).start()
 
     def _notify_device(self, device: Joystick, *, connected: bool) -> None:
         app = self.get_application()
