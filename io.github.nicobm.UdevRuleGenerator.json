@@ -16,14 +16,13 @@
             "name": "udev-rule-generator",
             "buildsystem": "simple",
             "build-commands": [
-                "install -d /app/lib/udev-rule-generator /app/bin /app/share/applications /app/share/metainfo /app/share/icons/hicolor/scalable/apps /app/share/icons/hicolor/scalable/actions /app/share/doc/udev-rule-generator",
+                "install -d /app/lib/udev-rule-generator /app/bin /app/share/applications /app/share/metainfo /app/share/icons/hicolor/scalable/apps /app/share/doc/udev-rule-generator",
                 "cp -a udev_rule_generator gui /app/lib/udev-rule-generator/",
                 "install -Dm755 flatpak/udev-rule-generator /app/bin/udev-rule-generator",
                 "install -Dm755 flatpak/udev-rule-generator-gui /app/bin/udev-rule-generator-gui",
                 "install -Dm644 gui/data/io.github.nicobm.UdevRuleGenerator.desktop /app/share/applications/io.github.nicobm.UdevRuleGenerator.desktop",
                 "install -Dm644 gui/data/io.github.nicobm.UdevRuleGenerator.metainfo.xml /app/share/metainfo/io.github.nicobm.UdevRuleGenerator.metainfo.xml",
                 "install -Dm644 gui/data/icons/hicolor/scalable/apps/io.github.nicobm.UdevRuleGenerator.svg /app/share/icons/hicolor/scalable/apps/io.github.nicobm.UdevRuleGenerator.svg",
-                "install -m644 gui/data/icons/hicolor/scalable/actions/*.svg /app/share/icons/hicolor/scalable/actions/",
                 "install -Dm644 LICENSE /app/share/doc/udev-rule-generator/LICENSE",
                 "install -Dm644 THIRD_PARTY_NOTICES.md /app/share/doc/udev-rule-generator/THIRD_PARTY_NOTICES.md",
                 "install -Dm644 README.md /app/share/doc/udev-rule-generator/README.md"

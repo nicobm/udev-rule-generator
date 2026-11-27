@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.14.1 - 2026-11-27
+
+- Stops installing the custom symbolic action icons in `share/icons` during
+  the Flatpak build. The application already loads them from its own package
+  data, and `flatpak-builder` does not export those files to the host. This
+  removes the `non-allowed export filename` warnings without changing how the
+  icons are displayed.
+
 ## 1.14.0 - 2026-11-27
 
 - Adds a per-device USB power button to the left of the hide (eye) button. It

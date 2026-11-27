@@ -69,6 +69,16 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="1.14.1" date="2026-11-27">
+      <description>
+        <p>
+          Stops installing the custom symbolic action icons in share/icons
+          during the Flatpak build. They are already loaded from the
+          application package, and this removes the non-allowed export
+          filename warnings.
+        </p>
+      </description>
+    </release>
     <release version="1.14.0" date="2026-11-27">
       <description>
         <p>
