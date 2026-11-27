@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.13.9 - 2026-11-26
+
+- Moves the master device switch from the window header to the **Gestionar
+  dispositivos** group header, above the first card and aligned with the row
+  switches.
+
 ## 1.13.8 - 2026-11-26
 
 - Adds a master switch in the header to enable or disable every device rule at

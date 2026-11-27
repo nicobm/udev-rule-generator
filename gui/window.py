@@ -107,7 +107,6 @@ class MainWindow(Adw.ApplicationWindow):
             parent=self,
             on_changed=self._on_known_changed,
         )
-        header.pack_end(self.manager.master_switch)
         toolbar.add_bottom_bar(self.manager.action_bar)
         content.append(self.manager)
 

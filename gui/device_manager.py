@@ -256,6 +256,7 @@ class DeviceManager(Gtk.Box):
 
         self.master_switch = Gtk.Switch()
         self.master_switch.set_valign(Gtk.Align.CENTER)
+        self.master_switch.set_margin_end(18)
         self.master_switch.set_tooltip_text(
             tr("Activar o desactivar todos los dispositivos")
         )
@@ -263,6 +264,7 @@ class DeviceManager(Gtk.Box):
         self.master_switch.connect(
             "notify::active", self._on_master_toggled
         )
+        self.devices_group.set_header_suffix(self.master_switch)
 
     def set_connected_devices(self, devices: list[Joystick]) -> None:
         fingerprint = tuple(
