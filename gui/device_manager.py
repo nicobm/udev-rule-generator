@@ -22,7 +22,6 @@ from udev_rule_generator.power import (
     read_usb_power,
     set_usb_power,
     usb_sysname_from_devpaths,
-    wake_usb_device,
 )
 from udev_rule_generator.presets import (
     GAME_DEVICES,
@@ -1167,12 +1166,12 @@ class DeviceManager(Gtk.Box):
         joystick: Joystick | None,
         record: KnownDevice | None,
     ) -> None:
-        """Añade el botón de encendido/apagado, visible al pasar el puntero.
+        """Añade el botón de conectar/desconectar, visible al pasar el puntero.
 
         Solo se muestra si el dispositivo USB está presente en el sistema.
-        Un mando desautorizado (apagado) sigue existiendo con
-        ``authorized=0``, así que el botón aparece para poder prenderlo. Si el
-        mando está desconectado físicamente no hay nada que controlar.
+        Un mando desautorizado sigue existiendo con ``authorized=0``, así que
+        el botón aparece para poder volver a conectarlo. Si el mando está
+        desconectado físicamente no hay nada que controlar.
         """
         usb = self._matching_usb_power(joystick, record)
         if usb is None:
@@ -1186,9 +1185,9 @@ class DeviceManager(Gtk.Box):
         button.add_css_class("flat")
         button.set_valign(Gtk.Align.CENTER)
         button.set_tooltip_text(
-            tr("Prender este dispositivo")
+            tr("Conectar este dispositivo")
             if not usb.authorized
-            else tr("Apagar este dispositivo")
+            else tr("Desconectar este dispositivo")
         )
         button.connect(
             "clicked",
@@ -1202,28 +1201,17 @@ class DeviceManager(Gtk.Box):
             return
         turn_on = not usb.authorized
         if turn_on:
-            heading = tr("¿Prender «{name}»?", name=name)
-            body = tr(
-                "Se encenderá el puerto USB y el sistema detectará el "
-                "dispositivo de nuevo."
-            )
-            accept = tr("Prender")
+            heading = tr("¿Conectar «{name}»?", name=name)
+            body = tr("El dispositivo se volverá a conectar al sistema.")
+            accept = tr("Conectar")
         else:
-            heading = tr("¿Apagar «{name}»?", name=name)
-            body = tr(
-                "Se apagará el puerto USB si el hub lo soporta; si no, el "
-                "dispositivo se desconectará lógicamente. Si el mando tiene "
-                "batería, su luz podría seguir encendida."
-            )
-            accept = tr("Apagar")
+            heading = tr("¿Desconectar «{name}»?", name=name)
+            body = tr("El dispositivo se desconectará del sistema.")
+            accept = tr("Desconectar")
 
         dialog = Adw.AlertDialog(heading=heading, body=body)
         dialog.add_response("cancel", tr("Cancelar"))
         dialog.add_response("power", accept)
-        if not turn_on:
-            dialog.set_response_appearance(
-                "power", Adw.ResponseAppearance.DESTRUCTIVE
-            )
         dialog.set_default_response("cancel")
         dialog.set_close_response("cancel")
 
@@ -1260,8 +1248,6 @@ class DeviceManager(Gtk.Box):
     ) -> None:
         try:
             set_usb_power(self.host, sysname, turn_on)
-            if turn_on:
-                wake_usb_device(self.host, sysname)
         except Exception as exc:  # noqa: BLE001 (se muestra al usuario)
             GLib.idle_add(self._power_failed, str(exc))
             return
@@ -1270,9 +1256,9 @@ class DeviceManager(Gtk.Box):
     def _power_succeeded(self, turn_on: bool, name: str) -> bool:
         self._set_busy(False)
         self.on_changed(
-            tr("Dispositivo encendido: {name}", name=name)
+            tr("Dispositivo conectado: {name}", name=name)
             if turn_on
-            else tr("Dispositivo apagado: {name}", name=name)
+            else tr("Dispositivo desconectado: {name}", name=name)
         )
         return False
 
@@ -1280,7 +1266,7 @@ class DeviceManager(Gtk.Box):
         self._set_busy(False)
         self.reload()
         self._show_error(
-            tr("No se pudo cambiar el estado del dispositivo"),
+            tr("No se pudo cambiar la conexión del dispositivo"),
             message,
         )
         return False
@@ -1796,7 +1782,9 @@ class DeviceManager(Gtk.Box):
         if connected_device is not None:
             row.add_suffix(self._connected_badge(connected_device))
         else:
-            row.add_suffix(self._known_state_badge(device))
+            state_badge = self._known_state_badge(device)
+            if state_badge is not None:
+                row.add_suffix(state_badge)
 
         switch = Gtk.Switch(
             active=self._pending_known.get(device.id, device.active)
@@ -1861,7 +1849,7 @@ class DeviceManager(Gtk.Box):
         return row
 
     def _connected_badge(self, device: Joystick | None = None) -> Gtk.Label:
-        label = tr("Prendido")
+        label = tr("Conectado")
         js_label = _js_nodes_label(device)
         if js_label:
             label = f"{label} · {js_label}"
@@ -1871,29 +1859,19 @@ class DeviceManager(Gtk.Box):
         badge.set_valign(Gtk.Align.CENTER)
         return badge
 
-    def _known_state_badge(self, device: KnownDevice) -> Gtk.Label:
+    def _known_state_badge(self, device: KnownDevice) -> Gtk.Label | None:
+        # Solo mostramos el tag si el USB está físicamente presente pero el
+        # mando no está disponible. Si el cable no está conectado, no hay tag.
         usb = self._matching_usb_power(None, device)
-        if usb is not None:
-            label = tr("Apagado")
-            css_class = "device-badge-powered-off"
-            tooltip = tr(
-                "El dispositivo está conectado por USB pero apagado"
-            )
-        else:
-            label = tr("Desconectado")
-            css_class = "device-badge-disconnected"
-            js_label = _js_names_label(device.js_devices)
-            if js_label:
-                label = f"{label} · {js_label}"
-                tooltip = tr("Último nodo js conocido")
-            else:
-                tooltip = ""
-        badge = Gtk.Label(label=label)
+        if usb is None:
+            return None
+        badge = Gtk.Label(label=tr("Desconectado"))
         badge.add_css_class("device-badge")
-        badge.add_css_class(css_class)
+        badge.add_css_class("device-badge-disconnected")
         badge.set_valign(Gtk.Align.CENTER)
-        if tooltip:
-            badge.set_tooltip_text(tooltip)
+        badge.set_tooltip_text(
+            tr("Conectado por USB, pero sin un nodo js activo")
+        )
         return badge
 
     def _actual_ignored(

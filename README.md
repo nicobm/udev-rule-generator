@@ -87,14 +87,11 @@ hidden from the main list.
 - List and remove rules managed by the application.
 - Saved devices registry with the latest rule for each controller, so the rule
   can be enabled or disabled without connecting the controller again.
-- Per-device USB power button, shown on card hover to the left of the eye. It
-  turns the USB port off and on again through the kernel port interface when
-  the hub supports per-port power switching, and through the device's
-  `authorized` attribute otherwise, after a confirmation prompt. On power-on,
-  the application reinitializes the `xpad`/`xone` driver so Xbox controllers
-  receive the GIP power-on packet again; this is what actually turns the
-  controller and its LED back on, rather than only re-enumerating USB. It only
-  appears while the USB device is present or its port is turned off.
+- Per-device USB connect/disconnect button, shown on card hover to the left of
+  the eye. It disconnects and reconnects the device through the kernel port
+  interface when the hub supports per-port power switching, and through the
+  device's `authorized` attribute otherwise, after a confirmation prompt. It
+  only appears while the USB device is present or its port is turned off.
 - Hide saved devices with the eye button; restore them from the hidden-devices
   menu. Hiding also asks for confirmation.
 - Only controllers with a complete VID and PID are listed under **Manage
@@ -268,17 +265,15 @@ connected controllers that do not have a saved rule yet.
   Escape cancels editing without saving.
 - The pencil/X and hide buttons appear only while hovering a device card;
   the drag handle stays visible. They keep their space, so the title,
-  connected badge, and switch do not move. USB device cards also show a power
-  button to the left of the eye while hovering.
-- The power button asks the USB hub to turn the port off and on again through
-  the standard `port/disable` interface available since Linux 6.0, but only
-  when the hub reports per-port power switching. On hubs without that support
-  (including this common case) it uses the device's `authorized` attribute
-  instead, which is reversible even though it does not cut physical power.
-  Both actions ask for confirmation first and use polkit when the application
-  is not running as root. Controllers with their own battery may keep their LED
-  on even when the port is off. If the device is physically disconnected, or is
-  not a USB device, the button is not shown.
+  connected badge, and switch do not move. USB device cards also show a
+  connect/disconnect button to the left of the eye while hovering.
+- The connect/disconnect button asks the USB hub to disable or enable the port
+  through the standard `port/disable` interface available since Linux 6.0, but
+  only when the hub reports per-port power switching. On hubs without that
+  support it uses the device's `authorized` attribute instead. Both actions ask
+  for confirmation first and use polkit when the application is not running as
+  root. If the device is physically disconnected, or is not a USB device, the
+  button is not shown.
 - Aliases persist per device, including connected devices that do not have a
   saved rule yet.
 - Clicking anywhere on a device card toggles its switch. The icon selector,
@@ -288,11 +283,10 @@ connected controllers that do not have a saved rule yet.
 - A master switch in the **Gestionar dispositivos** header enables or disables
   every device rule at once. It stages the same changes as the row switches,
   and **Apply changes** sends them with one authentication.
-- Powered-on controllers have a green **On** tag that includes the active `js`
-  node, for example `On · js0`. Saved devices connected over USB but powered
-  off show an orange **Off** tag. Devices with no USB connection show a gray
-  **Disconnected** tag; when a previous `js` node was recorded it is shown as
-  `Disconnected · js0`, otherwise only **Disconnected**.
+- Controllers detected as joysticks have a green **Connected** tag that includes
+  the active `js` node, for example `Connected · js0`. Saved USB devices that
+  are physically connected but not detected show a gray **Disconnected** tag.
+  Devices with no USB connection show no state tag at all.
 - Devices that the kernel exposes with a `js` node but udev does not
   classify as joysticks appear under **Ignorados**. The switch unbinds the
   device's HID driver and releases its `js` node; the remaining USB

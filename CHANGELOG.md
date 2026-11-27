@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.14.8 - 2026-11-27
+
+- Aligns the device state and power button with Steam's semantics: the badge
+  is now **Connected** or **Disconnected**, and the hover button and dialogs
+  say **Connect** / **Disconnect**.
+- Removes the state tag entirely for devices that are not physically connected
+  over USB. **Disconnected** is only shown when the USB device is present but
+  no active `js` node is available.
+- Removes the driver reinitialization on connect, which caused a second polkit
+  prompt and did not reliably turn on battery-powered Xbox controllers. A
+  single authentication is used again.
+
 ## 1.14.7 - 2026-11-27
 
 - Renames the green device badge to **On** and adds an orange **Off** badge

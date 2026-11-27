@@ -1221,11 +1221,6 @@ _EN.update(
         "Activa": "Active",
         "Desactivada": "Disabled",
         "Conectado": "Connected",
-        "Prendido": "On",
-        "Apagado": "Off",
-        "El dispositivo está conectado por USB pero apagado": (
-            "The device is connected over USB but powered off"
-        ),
         "No conectado": "Not connected",
         "No hay una regla guardada para activar.": (
             "There is no saved rule to enable."
@@ -1453,31 +1448,27 @@ _EN.update(
         "Dispositivo USB no válido: {value!r}": (
             "Invalid USB device: {value!r}"
         ),
-        "Prender este dispositivo": "Turn on this device",
-        "Apagar este dispositivo": "Turn off this device",
+        "Conectar este dispositivo": "Connect this device",
+        "Desconectar este dispositivo": "Disconnect this device",
         "Desconectado": "Disconnected",
-        "Último nodo js conocido": "Last known js node",
-        "¿Prender «{name}»?": "Turn on “{name}”?",
-        "Se encenderá el puerto USB y el sistema detectará el "
-        "dispositivo de nuevo.": (
-            "The USB port will be turned on and the system will detect the "
-            "device again."
+        "Conectado por USB, pero sin un nodo js activo": (
+            "Connected over USB, but without an active js node"
         ),
-        "Prender": "Turn on",
-        "¿Apagar «{name}»?": "Turn off “{name}”?",
-        "Se apagará el puerto USB si el hub lo soporta; si no, el "
-        "dispositivo se desconectará lógicamente. Si el mando tiene "
-        "batería, su luz podría seguir encendida.": (
-            "The USB port will be turned off if the hub supports it; "
-            "otherwise the device will be disconnected logically. If the "
-            "controller has a battery, its light may stay on."
+        "¿Conectar «{name}»?": "Connect “{name}”?",
+        "El dispositivo se volverá a conectar al sistema.": (
+            "The device will be connected to the system again."
         ),
-        "Apagar": "Turn off",
-        "No se pudo cambiar el estado del dispositivo": (
-            "Could not change the device state"
+        "Conectar": "Connect",
+        "¿Desconectar «{name}»?": "Disconnect “{name}”?",
+        "El dispositivo se desconectará del sistema.": (
+            "The device will be disconnected from the system."
         ),
-        "Dispositivo encendido: {name}": "Device turned on: {name}",
-        "Dispositivo apagado: {name}": "Device turned off: {name}",
+        "Desconectar": "Disconnect",
+        "No se pudo cambiar la conexión del dispositivo": (
+            "Could not change the device connection"
+        ),
+        "Dispositivo conectado: {name}": "Device connected: {name}",
+        "Dispositivo desconectado: {name}": "Device disconnected: {name}",
         "¿Ocultar «{name}»?": "Hide “{name}”?",
         "El dispositivo dejará de aparecer en la lista. Si su regla está "
         "activa, también se eliminará. Podés restaurarlo desde "

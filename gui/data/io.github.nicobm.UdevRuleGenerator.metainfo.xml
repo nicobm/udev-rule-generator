@@ -24,7 +24,7 @@
       <li>Reglas de permiso con MODE 0660 y TAG uaccess.</li>
       <li>Detección automática al conectar un mando y notificaciones de GNOME.</li>
       <li>Dispositivos guardados para activar o desactivar sus reglas sin conectarlos.</li>
-      <li>Botón de encendido/apagado USB por dispositivo, con confirmación.</li>
+      <li>Botón de conectar/desconectar USB por dispositivo, con confirmación.</li>
       <li>Solo se listan los mandos con VID y PID válidos.</li>
       <li>Ocultar dispositivos guardados y recuperarlos desde el menú Dispositivos ocultos.</li>
       <li>Paquetes opcionales steam-devices y game-devices-udev.</li>
@@ -69,6 +69,15 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="1.14.8" date="2026-11-27">
+      <description>
+        <p>
+          Uses Connect/Disconnect semantics for the device badge, button, and
+          dialogs. Devices that are not physically connected show no state tag,
+          and the second authentication prompt was removed.
+        </p>
+      </description>
+    </release>
     <release version="1.14.7" date="2026-11-27">
       <description>
         <p>

@@ -18,7 +18,6 @@ from .host import CommandResult, Host, HostError
 from .i18n import tr
 
 USB_DEVICES_DIR = "/sys/bus/usb/devices"
-USB_DRIVERS_DIR = "/sys/bus/usb/drivers"
 
 _USB_SYSNAME = re.compile(r"^[0-9]+-[0-9.]+$")
 _USB_DEVICE_IN_DEVPATH = re.compile(
@@ -470,92 +469,3 @@ def set_usb_power(
     # anterior, o ya estaba encendido: asegurar authorized=1.
     target = f"{directory}/{sysname}/authorized"
     _write_sysfs(host, target, "1")
-
-
-_WAKE_USB_SCRIPT = r"""
-root="$2"
-drivers="$3"
-i=0
-while [ ! -e "$root/$1" ] && [ "$i" -lt 20 ]; do
-  sleep 0.2
-  i=$((i + 1))
-done
-[ -e "$root/$1" ] || exit 0
-for dev in "$root/$1":*; do
-  [ -e "$dev/driver" ] || continue
-  name=${dev##*/}
-  driver=$(basename "$(readlink -f "$dev/driver")")
-  case "$driver" in
-    xpad|xone*) ;;
-    *) continue ;;
-  esac
-  echo "$name" > "$drivers/$driver/unbind" 2>/dev/null || true
-  sleep 0.2
-  echo "$name" > "$drivers/$driver/bind" 2>/dev/null || true
-done
-"""
-
-
-def wake_usb_device(
-    host: Host,
-    sysname: str,
-    *,
-    directory: str = USB_DEVICES_DIR,
-    driver_directory: str = USB_DRIVERS_DIR,
-) -> None:
-    """Reinicializa el driver del mando para que vuelva a encenderse.
-
-    Los mandos Xbox en modo USB reciben el paquete GIP de encendido cuando el
-    driver ``xpad``/``xone`` hace probe. Desconectar y volver a conectar el
-    ``authorized`` solo enumera el USB: no siempre enciende el mando. Rebinding
-    la interfaz fuerza ese probe y vuelve a enviar el encendido.
-    """
-    if not _USB_SYSNAME.fullmatch(sysname):
-        raise ValueError(
-            tr("Dispositivo USB no válido: {value!r}", value=sysname)
-        )
-
-    if os.geteuid() == 0 and not host.in_flatpak:
-        result = host.run(
-            [
-                "sh",
-                "-c",
-                _WAKE_USB_SCRIPT,
-                "udev-rule-generator",
-                sysname,
-                directory,
-                driver_directory,
-            ],
-            timeout=120,
-        )
-        if result.ok:
-            return
-        detail = (result.stderr or result.stdout).strip()
-        raise HostError(
-            tr("No se pudo reinicializar el controlador USB.")
-            + (f"\n{detail}" if detail else "")
-        )
-
-    pkexec = host.which("pkexec")
-    if not pkexec:
-        raise HostError(
-            tr(
-                "No se encontró pkexec. Instalá polkit o ejecutá la "
-                "aplicación como root."
-            )
-        )
-    result = host.run(
-        [
-            pkexec,
-            "sh",
-            "-c",
-            _WAKE_USB_SCRIPT,
-            "udev-rule-generator",
-            sysname,
-            directory,
-            driver_directory,
-        ],
-        timeout=120,
-    )
-    if not result.ok:
-        raise HostError(_pkexec_error_detail(result))
