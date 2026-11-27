@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.14.7 - 2026-11-27
+
+- Renames the green device badge to **On** and adds an orange **Off** badge
+  for saved devices that are connected over USB but powered off. Devices with
+  no USB connection keep the gray **Disconnected** badge.
+- Reinitializes the `xpad`/`xone` driver when turning a controller on, so Xbox
+  controllers receive the GIP power-on packet again and actually turn on
+  instead of only re-enumerating over USB.
+
 ## 1.14.6 - 2026-11-27
 
 - Adds a gray **Disconnected** badge to saved devices that are not currently

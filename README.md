@@ -90,7 +90,10 @@ hidden from the main list.
 - Per-device USB power button, shown on card hover to the left of the eye. It
   turns the USB port off and on again through the kernel port interface when
   the hub supports per-port power switching, and through the device's
-  `authorized` attribute otherwise, after a confirmation prompt. It only
+  `authorized` attribute otherwise, after a confirmation prompt. On power-on,
+  the application reinitializes the `xpad`/`xone` driver so Xbox controllers
+  receive the GIP power-on packet again; this is what actually turns the
+  controller and its LED back on, rather than only re-enumerating USB. It only
   appears while the USB device is present or its port is turned off.
 - Hide saved devices with the eye button; restore them from the hidden-devices
   menu. Hiding also asks for confirmation.
@@ -285,11 +288,11 @@ connected controllers that do not have a saved rule yet.
 - A master switch in the **Gestionar dispositivos** header enables or disables
   every device rule at once. It stages the same changes as the row switches,
   and **Apply changes** sends them with one authentication.
-- Connected controllers have a green **Connected** tag that includes the
-  active `js` node, for example `Connected · js0`. Saved devices that are not
-  connected show a gray **Disconnected** tag; when a previous `js` node was
-  recorded it is shown as `Disconnected · js0`, otherwise only
-  **Disconnected**.
+- Powered-on controllers have a green **On** tag that includes the active `js`
+  node, for example `On · js0`. Saved devices connected over USB but powered
+  off show an orange **Off** tag. Devices with no USB connection show a gray
+  **Disconnected** tag; when a previous `js` node was recorded it is shown as
+  `Disconnected · js0`, otherwise only **Disconnected**.
 - Devices that the kernel exposes with a `js` node but udev does not
   classify as joysticks appear under **Ignorados**. The switch unbinds the
   device's HID driver and releases its `js` node; the remaining USB

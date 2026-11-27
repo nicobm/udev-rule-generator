@@ -383,6 +383,43 @@ class SetUsbPowerTests(unittest.TestCase):
         self.assertEqual(port_disable.read_text(encoding="ascii"), "0\n")
 
 
+class WakeUsbTests(unittest.TestCase):
+    def test_rebinds_xpad_interface(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "devices"
+            drivers = Path(directory) / "drivers"
+            (root / "1-2").mkdir(parents=True)
+            interface = root / "1-2:1.0"
+            interface.mkdir()
+            driver_dir = drivers / "xpad"
+            driver_dir.mkdir(parents=True)
+            (driver_dir / "unbind").write_text("", encoding="utf-8")
+            (driver_dir / "bind").write_text("", encoding="utf-8")
+            (interface / "driver").symlink_to(driver_dir)
+            with mock.patch.object(power.os, "geteuid", return_value=0):
+                power.wake_usb_device(
+                    Host(in_flatpak=False),
+                    "1-2",
+                    directory=str(root),
+                    driver_directory=str(drivers),
+                )
+            self.assertEqual(
+                (driver_dir / "unbind").read_text(encoding="utf-8").strip(),
+                "1-2:1.0",
+            )
+            self.assertEqual(
+                (driver_dir / "bind").read_text(encoding="utf-8").strip(),
+                "1-2:1.0",
+            )
+
+    def test_rejects_unsafe_sysname(self) -> None:
+        with self.assertRaises(ValueError):
+            power.wake_usb_device(
+                Host(in_flatpak=False),
+                "../1-2",
+            )
+
+
 class KnownDeviceUsbPathTests(unittest.TestCase):
     def test_round_trips_usb_path(self) -> None:
         from udev_rule_generator.known import KnownDevice

@@ -22,6 +22,7 @@ from udev_rule_generator.power import (
     read_usb_power,
     set_usb_power,
     usb_sysname_from_devpaths,
+    wake_usb_device,
 )
 from udev_rule_generator.presets import (
     GAME_DEVICES,
@@ -1259,6 +1260,8 @@ class DeviceManager(Gtk.Box):
     ) -> None:
         try:
             set_usb_power(self.host, sysname, turn_on)
+            if turn_on:
+                wake_usb_device(self.host, sysname)
         except Exception as exc:  # noqa: BLE001 (se muestra al usuario)
             GLib.idle_add(self._power_failed, str(exc))
             return
@@ -1793,7 +1796,7 @@ class DeviceManager(Gtk.Box):
         if connected_device is not None:
             row.add_suffix(self._connected_badge(connected_device))
         else:
-            row.add_suffix(self._disconnected_badge(device))
+            row.add_suffix(self._known_state_badge(device))
 
         switch = Gtk.Switch(
             active=self._pending_known.get(device.id, device.active)
@@ -1858,7 +1861,7 @@ class DeviceManager(Gtk.Box):
         return row
 
     def _connected_badge(self, device: Joystick | None = None) -> Gtk.Label:
-        label = tr("Conectado")
+        label = tr("Prendido")
         js_label = _js_nodes_label(device)
         if js_label:
             label = f"{label} · {js_label}"
@@ -1868,17 +1871,29 @@ class DeviceManager(Gtk.Box):
         badge.set_valign(Gtk.Align.CENTER)
         return badge
 
-    def _disconnected_badge(self, device: KnownDevice) -> Gtk.Label:
-        label = tr("Desconectado")
-        js_label = _js_names_label(device.js_devices)
-        if js_label:
-            label = f"{label} · {js_label}"
+    def _known_state_badge(self, device: KnownDevice) -> Gtk.Label:
+        usb = self._matching_usb_power(None, device)
+        if usb is not None:
+            label = tr("Apagado")
+            css_class = "device-badge-powered-off"
+            tooltip = tr(
+                "El dispositivo está conectado por USB pero apagado"
+            )
+        else:
+            label = tr("Desconectado")
+            css_class = "device-badge-disconnected"
+            js_label = _js_names_label(device.js_devices)
+            if js_label:
+                label = f"{label} · {js_label}"
+                tooltip = tr("Último nodo js conocido")
+            else:
+                tooltip = ""
         badge = Gtk.Label(label=label)
         badge.add_css_class("device-badge")
-        badge.add_css_class("device-badge-disconnected")
+        badge.add_css_class(css_class)
         badge.set_valign(Gtk.Align.CENTER)
-        if js_label:
-            badge.set_tooltip_text(tr("Último nodo js conocido"))
+        if tooltip:
+            badge.set_tooltip_text(tooltip)
         return badge
 
     def _actual_ignored(

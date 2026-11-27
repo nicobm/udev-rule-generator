@@ -69,6 +69,15 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="1.14.7" date="2026-11-27">
+      <description>
+        <p>
+          Shows On, Off, and Disconnected device states, and reinitializes the
+          Xbox driver on power-on so the controller receives the GIP power-on
+          packet and its LED turns back on.
+        </p>
+      </description>
+    </release>
     <release version="1.14.6" date="2026-11-27">
       <description>
         <p>

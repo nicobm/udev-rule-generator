@@ -1221,6 +1221,11 @@ _EN.update(
         "Activa": "Active",
         "Desactivada": "Disabled",
         "Conectado": "Connected",
+        "Prendido": "On",
+        "Apagado": "Off",
+        "El dispositivo está conectado por USB pero apagado": (
+            "The device is connected over USB but powered off"
+        ),
         "No conectado": "Not connected",
         "No hay una regla guardada para activar.": (
             "There is no saved rule to enable."
