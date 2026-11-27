@@ -277,6 +277,11 @@ class PresetTests(unittest.TestCase):
         self.assertIn("denilsonsa/udev-joystick-blacklist", blacklist)
         self.assertIn("Public domain", blacklist)
 
+    def test_blacklist_covers_the_asrock_led_controller(self) -> None:
+        content = build_preset_content(get_preset("joystick-blacklist"))
+        self.assertIn('ATTRS{idVendor}=="26ce"', content)
+        self.assertIn('ATTRS{idProduct}=="01a2"', content)
+
     def test_preset_files(self) -> None:
         files = preset_files(PRESETS)
         self.assertEqual(len(files), len(PRESETS))

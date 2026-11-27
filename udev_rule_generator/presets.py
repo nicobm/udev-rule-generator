@@ -167,7 +167,7 @@ JOYSTICK_BLACKLIST: tuple[Preset, ...] = (
             "Evita que teclados, ratones, tabletas y controladores de LED "
             "que el kernel expone como joysticks aparezcan como mandos."
         ),
-        source="51-these-are-not-joysticks.rules",
+        source="51-these-are-not-joysticks-after-kernel-4.9.rules",
         install_name="65-these-are-not-joysticks.rules",
         category="joystick-blacklist",
         trigger="change",

@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.13.6 - 2026-11-26
+
+- Uses the `after_kernel_4_9` 0000 variant of udev-joystick-blacklist, which is
+  the recommended one for kernels 4.9 and newer. The pre-4.9 file and the
+  `-rm` variants are not installed.
+
 ## 1.13.5 - 2026-11-26
 
 - Removes the extra snapshot note from the udev-joystick-blacklist tooltip; it

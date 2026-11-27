@@ -25,7 +25,7 @@ They are included as an optional source; they are not installed by default.
 
 ## udev-joystick-blacklist
 
-The `51-these-are-not-joysticks.rules` file comes from
+The `after_kernel_4_9/51-these-are-not-joysticks.rules` file comes from
 **udev-joystick-blacklist** by Denilson Figueiredo de Sá (denilsonsa):
 
 - GitHub: https://github.com/denilsonsa/udev-joystick-blacklist
