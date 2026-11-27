@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.14.2 - 2026-11-27
+
+- Makes the USB power button more reliable: it reads the device's
+  `authorized` attribute directly when the bulk USB scan misses it, trusts the
+  live USB path of a connected controller, and keeps the button visible but
+  disabled for saved USB devices that are not connected.
+- Makes the power icon follow the theme foreground color so it stays visible
+  in dark themes.
+
 ## 1.14.1 - 2026-11-27
 
 - Stops installing the custom symbolic action icons in `share/icons` during

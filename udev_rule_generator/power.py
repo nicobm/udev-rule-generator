@@ -194,12 +194,14 @@ def find_usb_power(
     product_id: str,
     serial: str = "",
     sysname: str = "",
+    trust_sysname: bool = False,
 ) -> UsbPowerDevice | None:
     """Busca el dispositivo USB que corresponde a un mando.
 
-    El ``sysname`` recordado es la forma más fiable. Si no existe, se comparan
-    VID, PID y serial. Si hay varios candidatos idénticos no se elige ninguno:
-    apagar el mando equivocado sería peor que no mostrar el botón.
+    El ``sysname`` de un mando conectado es la forma más fiable. Si no existe,
+    se comparan VID, PID y serial. Si hay varios candidatos idénticos no se
+    elige ninguno: apagar el mando equivocado sería peor que no mostrar el
+    botón.
     """
     if sysname:
         for device in devices:
@@ -209,7 +211,11 @@ def find_usb_power(
                 continue
             if product_id and device.product_id != product_id.lower():
                 continue
-            if serial and device.serial != serial:
+            if (
+                not trust_sysname
+                and serial
+                and device.serial != serial
+            ):
                 continue
             return device
     vendor_id = (vendor_id or "").lower()
@@ -227,6 +233,46 @@ def find_usb_power(
         if with_serial:
             candidates = with_serial
     return candidates[0] if len(candidates) == 1 else None
+
+
+def read_usb_power(
+    host: Host,
+    sysname: str,
+    *,
+    vendor_id: str = "",
+    product_id: str = "",
+    serial: str = "",
+    directory: str = USB_DEVICES_DIR,
+) -> UsbPowerDevice | None:
+    """Lee un dispositivo USB puntual, sin depender del escaneo por lotes."""
+    if not _USB_SYSNAME.fullmatch(sysname):
+        return None
+    base = Path(directory) / sysname
+    found_vendor = _read_attr(host, base / "idVendor").lower()
+    found_product = _read_attr(host, base / "idProduct").lower()
+    authorized = _read_attr(host, base / "authorized")
+    if not (
+        _HEX4.fullmatch(found_vendor)
+        and _HEX4.fullmatch(found_product)
+    ):
+        return None
+    if authorized not in {"0", "1"}:
+        return None
+    if vendor_id and found_vendor != vendor_id.lower():
+        return None
+    if product_id and found_product != product_id.lower():
+        return None
+    found_serial = _read_attr(host, base / "serial")
+    if serial and found_serial != serial:
+        return None
+    return UsbPowerDevice(
+        sysname=sysname,
+        vendor_id=found_vendor,
+        product_id=found_product,
+        serial=found_serial,
+        product=_read_attr(host, base / "product"),
+        authorized=authorized == "1",
+    )
 
 
 def _pkexec_error_detail(result: CommandResult) -> str:

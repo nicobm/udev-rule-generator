@@ -142,6 +142,53 @@ class ScanUsbPowerTests(unittest.TestCase):
             )
         )
 
+    def test_trusted_sysname_does_not_require_serial(self) -> None:
+        self._device("1-2", serial="SYSFS")
+        self._device("1-3", serial="OTHER")
+        devices = power.scan_usb_power(
+            self.host, directory=str(self.directory)
+        )
+        self.assertIsNone(
+            power.find_usb_power(
+                devices,
+                vendor_id="045e",
+                product_id="02fd",
+                serial="UDEV",
+                sysname="1-2",
+            )
+        )
+        found = power.find_usb_power(
+            devices,
+            vendor_id="045e",
+            product_id="02fd",
+            serial="UDEV",
+            sysname="1-2",
+            trust_sysname=True,
+        )
+        self.assertIsNotNone(found)
+        self.assertEqual(found.sysname, "1-2")
+
+    def test_reads_one_usb_device_directly(self) -> None:
+        self._device("1-2", serial="ABC", authorized="0")
+        found = power.read_usb_power(
+            self.host,
+            "1-2",
+            vendor_id="045e",
+            product_id="02fd",
+            directory=str(self.directory),
+        )
+        self.assertIsNotNone(found)
+        self.assertFalse(found.authorized)
+        self.assertEqual(found.serial, "ABC")
+        self.assertIsNone(
+            power.read_usb_power(
+                self.host,
+                "1-2",
+                vendor_id="9999",
+                directory=str(self.directory),
+            )
+        )
+
 
 class SetUsbPowerTests(unittest.TestCase):
     def setUp(self) -> None:

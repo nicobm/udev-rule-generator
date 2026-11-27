@@ -69,6 +69,16 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="1.14.2" date="2026-11-27">
+      <description>
+        <p>
+          Makes the USB power button more reliable by reading the device state
+          directly when needed, and keeps the button visible but disabled for
+          saved USB devices that are not connected. The power icon now follows
+          the theme foreground color.
+        </p>
+      </description>
+    </release>
     <release version="1.14.1" date="2026-11-27">
       <description>
         <p>

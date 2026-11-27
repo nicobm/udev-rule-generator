@@ -1450,6 +1450,13 @@ _EN.update(
         ),
         "Prender este dispositivo": "Turn on this device",
         "Apagar este dispositivo": "Turn off this device",
+        "Conectá este dispositivo USB para encenderlo o apagarlo": (
+            "Connect this USB device to turn it on or off"
+        ),
+        "El encendido y apagado solo está disponible para "
+        "dispositivos USB": (
+            "Power on and off is only available for USB devices"
+        ),
         "¿Prender «{name}»?": "Turn on “{name}”?",
         "El dispositivo se volverá a conectar y el sistema lo detectará de "
         "nuevo.": (

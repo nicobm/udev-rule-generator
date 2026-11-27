@@ -18,6 +18,7 @@ from udev_rule_generator.known import KnownDevice, KnownDevices
 from udev_rule_generator.power import (
     UsbPowerDevice,
     find_usb_power,
+    read_usb_power,
     set_usb_power,
     usb_sysname_from_devpaths,
 )
@@ -1107,12 +1108,25 @@ class DeviceManager(Gtk.Box):
             if joystick is not None
             else record.serial if record is not None else ""
         )
-        return find_usb_power(
+        trust_sysname = joystick is not None
+        usb = find_usb_power(
             self._usb_power,
             vendor_id=vendor_id,
             product_id=product_id,
             serial=serial,
             sysname=sysname,
+            trust_sysname=trust_sysname,
+        )
+        if usb is not None or not sysname:
+            return usb
+        # El escaneo pudo fallar o no incluir este dispositivo; leer su
+        # atributo authorized directamente es barato y evita falsos negativos.
+        return read_usb_power(
+            self.host,
+            sysname,
+            vendor_id=vendor_id,
+            product_id=product_id,
+            serial="" if trust_sysname else serial,
         )
 
     def _add_power_control(
@@ -1125,6 +1139,25 @@ class DeviceManager(Gtk.Box):
         """Añade el botón de encendido/apagado, visible al pasar el puntero."""
         usb = self._matching_usb_power(joystick, record)
         if usb is None:
+            item = joystick if joystick is not None else record
+            if item is None:
+                return
+            button = Gtk.Button(icon_name="device-power-symbolic")
+            button.add_css_class("flat")
+            button.set_valign(Gtk.Align.CENTER)
+            button.set_sensitive(False)
+            button.set_tooltip_text(
+                tr(
+                    "Conectá este dispositivo USB para encenderlo o apagarlo"
+                )
+                if item.bus == "usb"
+                else tr(
+                    "El encendido y apagado solo está disponible para "
+                    "dispositivos USB"
+                )
+            )
+            row.add_suffix(button)
+            self._add_hover_button(row, button)
             return
         name = (
             self.store.alias_for(device_id)
