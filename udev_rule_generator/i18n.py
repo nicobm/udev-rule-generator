@@ -1429,8 +1429,5 @@ _EN.update(
         "{count} de {total} archivos instalados": (
             "{count} of {total} files installed"
         ),
-        "Se instala el snapshot 0000 (un solo archivo).": (
-            "The 0000 snapshot is installed as a single file."
-        ),
     }
 )

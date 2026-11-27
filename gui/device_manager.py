@@ -381,14 +381,10 @@ class DeviceManager(Gtk.Box):
                 self._gdu_rule_count, self._gdu_rule_total
             )
         )
-        blacklist_lines = [
+        self.blacklist_switch.set_tooltip_text(
             self._installed_files_text(
                 self._blacklist_rule_count, self._blacklist_rule_total
-            ),
-            tr("Se instala el snapshot 0000 (un solo archivo)."),
-        ]
-        self.blacklist_switch.set_tooltip_text(
-            "\n".join(blacklist_lines)
+            )
         )
 
     @staticmethod

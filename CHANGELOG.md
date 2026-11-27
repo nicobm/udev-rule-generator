@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.13.5 - 2026-11-26
+
+- Removes the extra snapshot note from the udev-joystick-blacklist tooltip; it
+  now only shows the installed-file count.
+
 ## 1.13.4 - 2026-11-26
 
 - Gives every device, ignored, hidden, and external-rule card the same minimum
