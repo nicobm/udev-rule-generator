@@ -820,6 +820,7 @@ class DeviceManager(Gtk.Box):
 
         entry: Gtk.Entry | None = None
         editing = False
+        hovered = False
         visible_opacity = 0.55
         suspended_activatable: bool | None = None
 
@@ -836,9 +837,10 @@ class DeviceManager(Gtk.Box):
                 suspended_activatable = None
 
         def refresh_visibility() -> None:
-            button.set_opacity(visible_opacity)
-            button.set_can_target(True)
-            button.set_focusable(True)
+            visible = hovered or editing
+            button.set_opacity(visible_opacity if visible else 0.0)
+            button.set_can_target(visible)
+            button.set_focusable(visible)
 
         def update_state() -> None:
             nonlocal visible_opacity
@@ -985,9 +987,48 @@ class DeviceManager(Gtk.Box):
             else:
                 start_edit()
 
+        def on_enter(*_args) -> None:
+            nonlocal hovered
+            hovered = True
+            refresh_visibility()
+
+        def on_leave(*_args) -> None:
+            nonlocal hovered
+            hovered = False
+            refresh_visibility()
+
+        motion = Gtk.EventControllerMotion()
+        motion.connect("enter", on_enter)
+        motion.connect("leave", on_leave)
+        row.add_controller(motion)
+
         button.connect("clicked", on_clicked)
         update_state()
         return lambda: editing or suspended_activatable is not None
+
+    def _add_hover_button(
+        self,
+        row: Adw.ActionRow,
+        button: Gtk.Button,
+    ) -> None:
+        """Muestra un botón solo mientras el puntero está sobre la fila."""
+
+        def update(visible: bool) -> None:
+            button.set_opacity(1.0 if visible else 0.0)
+            button.set_can_target(visible)
+            button.set_focusable(visible)
+
+        def on_enter(*_args) -> None:
+            update(True)
+
+        def on_leave(*_args) -> None:
+            update(False)
+
+        motion = Gtk.EventControllerMotion()
+        motion.connect("enter", on_enter)
+        motion.connect("leave", on_leave)
+        row.add_controller(motion)
+        update(False)
 
     def _add_drag_handle(
         self,
@@ -1465,6 +1506,7 @@ class DeviceManager(Gtk.Box):
                 ),
             )
             row.add_suffix(hide)
+            self._add_hover_button(row, hide)
 
         if connected_device is not None:
             row.add_suffix(self._connected_badge(connected_device))

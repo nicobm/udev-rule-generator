@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.13.7 - 2026-11-26
+
+- Shows the alias pencil/X and hide buttons only while hovering a device
+  card; the drag handle remains visible. The card hover background stays off.
+
 ## 1.13.6 - 2026-11-26
 
 - Uses the `after_kernel_4_9` 0000 variant of udev-joystick-blacklist, which is

@@ -65,6 +65,14 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="1.13.7" date="2026-11-26">
+      <description>
+        <p>
+          Shows the alias and hide controls only while hovering a device
+          card.
+        </p>
+      </description>
+    </release>
     <release version="1.13.6" date="2026-11-26">
       <description>
         <p>
