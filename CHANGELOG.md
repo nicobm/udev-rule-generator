@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.14.6 - 2026-11-27
+
+- Adds a gray **Disconnected** badge to saved devices that are not currently
+  detected. When a previous `js` node is known it shows
+  `Disconnected · js0`; otherwise it shows only **Disconnected**. The last
+  known node is stored in `devices.json`.
+
 ## 1.14.5 - 2026-11-27
 
 - Checks whether the parent hub reports per-port power switching before using

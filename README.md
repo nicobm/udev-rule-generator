@@ -286,8 +286,10 @@ connected controllers that do not have a saved rule yet.
   every device rule at once. It stages the same changes as the row switches,
   and **Apply changes** sends them with one authentication.
 - Connected controllers have a green **Connected** tag that includes the
-  active `js` node, for example `Connected · js0`. The subtitle keeps only
-  bus and VID:PID.
+  active `js` node, for example `Connected · js0`. Saved devices that are not
+  connected show a gray **Disconnected** tag; when a previous `js` node was
+  recorded it is shown as `Disconnected · js0`, otherwise only
+  **Disconnected**.
 - Devices that the kernel exposes with a `js` node but udev does not
   classify as joysticks appear under **Ignorados**. The switch unbinds the
   device's HID driver and releases its `js` node; the remaining USB

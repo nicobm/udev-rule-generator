@@ -1450,6 +1450,8 @@ _EN.update(
         ),
         "Prender este dispositivo": "Turn on this device",
         "Apagar este dispositivo": "Turn off this device",
+        "Desconectado": "Disconnected",
+        "Último nodo js conocido": "Last known js node",
         "¿Prender «{name}»?": "Turn on “{name}”?",
         "Se encenderá el puerto USB y el sistema detectará el "
         "dispositivo de nuevo.": (

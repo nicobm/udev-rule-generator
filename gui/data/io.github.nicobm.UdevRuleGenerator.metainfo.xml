@@ -69,6 +69,14 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="1.14.6" date="2026-11-27">
+      <description>
+        <p>
+          Adds a gray Disconnected badge to saved devices that are not
+          currently detected, including the last known js node when available.
+        </p>
+      </description>
+    </release>
     <release version="1.14.5" date="2026-11-27">
       <description>
         <p>

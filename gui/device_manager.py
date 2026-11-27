@@ -105,16 +105,21 @@ def _normalize_device_color(color_id: str) -> str:
     return color_id if color_id in _DEVICE_COLOR_IDS else _DEFAULT_DEVICE_COLOR
 
 
-def _js_nodes_label(device: Joystick | None) -> str:
+def _js_names_label(paths: tuple[str, ...]) -> str:
     """Devuelve los nombres cortos de los nodos js, por ejemplo ``js0``."""
-    if device is None:
-        return ""
     names: list[str] = []
-    for node in device.js_devices:
+    for node in paths:
         name = node.rsplit("/", 1)[-1]
         if name and name not in names:
             names.append(name)
     return ", ".join(names)
+
+
+def _js_nodes_label(device: Joystick | None) -> str:
+    """Devuelve los nombres cortos de los nodos js, por ejemplo ``js0``."""
+    if device is None:
+        return ""
+    return _js_names_label(device.js_devices)
 
 
 class DeviceManager(Gtk.Box):
@@ -484,22 +489,32 @@ class DeviceManager(Gtk.Box):
 
         known = self.store.devices()
         known_by_id = {record.id: record for record in known}
-        changed_paths = False
+        changed_connection = False
         for device in self._connected:
             record = known_by_id.get(device_identity(device))
+            if record is None:
+                continue
             sysname = usb_sysname_from_devpaths(device.devpaths)
-            if (
-                record is not None
-                and sysname
-                and record.usb_path != sysname
-            ):
-                try:
-                    self.store.set_usb_path(record.id, sysname)
-                except OSError:
-                    pass
-                else:
-                    changed_paths = True
-        if changed_paths:
+            path_changed = bool(
+                sysname and record.usb_path != sysname
+            )
+            js_changed = bool(
+                device.js_devices
+                and record.js_devices != device.js_devices
+            )
+            if not path_changed and not js_changed:
+                continue
+            try:
+                self.store.set_connection_info(
+                    record.id,
+                    usb_path=sysname,
+                    js_devices=device.js_devices,
+                )
+            except OSError:
+                pass
+            else:
+                changed_connection = True
+        if changed_connection:
             known = self.store.devices()
         known_ids = {device.id for device in known}
         for key in list(self._pending_known):
@@ -1777,6 +1792,8 @@ class DeviceManager(Gtk.Box):
 
         if connected_device is not None:
             row.add_suffix(self._connected_badge(connected_device))
+        else:
+            row.add_suffix(self._disconnected_badge(device))
 
         switch = Gtk.Switch(
             active=self._pending_known.get(device.id, device.active)
@@ -1849,6 +1866,19 @@ class DeviceManager(Gtk.Box):
         badge.add_css_class("device-badge")
         badge.add_css_class("device-badge-connected")
         badge.set_valign(Gtk.Align.CENTER)
+        return badge
+
+    def _disconnected_badge(self, device: KnownDevice) -> Gtk.Label:
+        label = tr("Desconectado")
+        js_label = _js_names_label(device.js_devices)
+        if js_label:
+            label = f"{label} · {js_label}"
+        badge = Gtk.Label(label=label)
+        badge.add_css_class("device-badge")
+        badge.add_css_class("device-badge-disconnected")
+        badge.set_valign(Gtk.Align.CENTER)
+        if js_label:
+            badge.set_tooltip_text(tr("Último nodo js conocido"))
         return badge
 
     def _actual_ignored(

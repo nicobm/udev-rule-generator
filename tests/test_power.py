@@ -394,10 +394,16 @@ class KnownDeviceUsbPathTests(unittest.TestCase):
                 "vendor_id": "045e",
                 "product_id": "02fd",
                 "usb_path": "1-2",
+                "js_devices": ["/dev/input/js0"],
             }
         )
         self.assertEqual(record.usb_path, "1-2")
+        self.assertEqual(record.js_devices, ("/dev/input/js0",))
         self.assertEqual(record.to_dict()["usb_path"], "1-2")
+        self.assertEqual(
+            record.to_dict()["js_devices"],
+            ["/dev/input/js0"],
+        )
 
 
 if __name__ == "__main__":
