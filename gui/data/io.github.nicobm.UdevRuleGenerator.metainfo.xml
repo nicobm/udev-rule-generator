@@ -22,7 +22,7 @@
     <ul>
       <li>Detección de mandos USB y Bluetooth con udevadm.</li>
       <li>Reglas de permiso con MODE 0660 y TAG uaccess.</li>
-      <li>Detección automática al conectar un mando y notificaciones de GNOME.</li>
+      <li>Detección automática al conectar un mando y notificaciones de GNOME; se omiten si Steam está corriendo.</li>
       <li>Dispositivos guardados para activar o desactivar sus reglas sin conectarlos.</li>
       <li>Botón de conectar/desconectar USB por dispositivo, con confirmación.</li>
       <li>Solo se listan los mandos con VID y PID válidos.</li>
@@ -69,6 +69,15 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="1.15.0" date="2026-11-27">
+      <description>
+        <p>
+          Detects Steam native and Flatpak. While Steam is running, connection
+          messages are left to Steam; otherwise a single GNOME notification is
+          shown for controller connections and disconnections.
+        </p>
+      </description>
+    </release>
     <release version="1.14.9" date="2026-11-27">
       <description>
         <p>

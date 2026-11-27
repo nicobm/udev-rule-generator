@@ -23,6 +23,7 @@ from udev_rule_generator.privileged import (
     HidBindingChange,
     apply_rule_changes,
 )
+from udev_rule_generator.steam import steam_running
 from udev_rule_generator.uinput import uinput_available
 
 from .device_manager import DeviceManager
@@ -139,8 +140,10 @@ class MainWindow(Adw.ApplicationWindow):
         def worker() -> None:
             error: Exception | None = None
             detection = Detection(joysticks=[], hid_devices=[])
+            steam = False
             try:
                 detection = detect_state(self.host)
+                steam = steam_running(self.host)
             except Exception as exc:  # noqa: BLE001 (se muestra al usuario)
                 error = exc
             GLib.idle_add(
@@ -150,6 +153,7 @@ class MainWindow(Adw.ApplicationWindow):
                 generation,
                 silent,
                 notify,
+                steam,
             )
 
         threading.Thread(
@@ -165,6 +169,7 @@ class MainWindow(Adw.ApplicationWindow):
         generation: int,
         silent: bool,
         notify: bool = True,
+        steam: bool = False,
     ) -> bool:
         if self._closed or generation != self._refresh_generation:
             return False
@@ -182,38 +187,57 @@ class MainWindow(Adw.ApplicationWindow):
             return False
 
         devices = detection.joysticks
-        previous_keys = {device.key for device in self._devices}
+        previous_devices = list(self._devices)
+        previous_keys = {device.key for device in previous_devices}
+        new_keys = {device.key for device in devices}
         added = [device for device in devices if device.key not in previous_keys]
+        removed = [
+            device
+            for device in previous_devices
+            if device.key not in new_keys
+        ]
 
         self._devices = devices
         self.manager.set_connected_devices(devices)
         self.manager.set_hid_devices(detection.hid_devices)
         self.manager.set_usb_power_devices(detection.usb_devices)
 
-        if notify and not self._first_detection:
+        if notify and not self._first_detection and not steam:
             for device in added:
-                if device.is_ignorable:
-                    continue
-                if not device.vendor_id or not device.product_id:
-                    continue
-                self._notify_device(device)
+                if self._should_notify(device):
+                    self._notify_device(device, connected=True)
+            for device in removed:
+                if self._should_notify(device):
+                    self._notify_device(device, connected=False)
         self._first_detection = False
         return False
 
-    def _notify_device(self, device: Joystick) -> None:
+    @staticmethod
+    def _should_notify(device: Joystick) -> bool:
+        if device.is_ignorable:
+            return False
+        return bool(device.vendor_id and device.product_id)
+
+    def _notify_device(self, device: Joystick, *, connected: bool) -> None:
         app = self.get_application()
         if app is None:
             return
         display_name = " ".join(device.display_name.split())
-        notification = Gio.Notification.new(tr("Joystick conectado"))
+        title = (
+            tr("Joystick conectado")
+            if connected
+            else tr("Joystick desconectado")
+        )
+        notification = Gio.Notification.new(title)
         notification.set_body(
             f"{display_name} · {device.bus_label} · {device.identifier}"
         )
         notification.set_icon(Gio.ThemedIcon.new("input-gaming-symbolic"))
         notification.set_priority(Gio.NotificationPriority.NORMAL)
         notification.set_default_action("app.show")
+        state = "connected" if connected else "disconnected"
         app.send_notification(
-            f"joystick-connected-{abs(hash(device.key))}",
+            f"joystick-{state}-{abs(hash(device.key))}",
             notification,
         )
 
@@ -341,9 +365,19 @@ class MainWindow(Adw.ApplicationWindow):
         self.manager.reload()
 
     def _on_known_changed(self, message: str) -> None:
-        self.add_toast(message)
+        if message:
+            self.add_toast(message)
         self._refresh_rule_metadata()
-        GLib.timeout_add(1200, self._refresh_after_change)
+        if message:
+            GLib.timeout_add(1200, self._refresh_after_change)
+        else:
+            # Cambio de conexión desde el botón Conectar/Desconectar:
+            # permitimos que el diff de detección anuncie por GNOME.
+            GLib.timeout_add(1200, self._refresh_after_connection_change)
+
+    def _refresh_after_connection_change(self) -> bool:
+        self.refresh(silent=True)
+        return False
 
     def _backup_filters(self) -> Gio.ListStore:
         filters = Gio.ListStore.new(Gtk.FileFilter)

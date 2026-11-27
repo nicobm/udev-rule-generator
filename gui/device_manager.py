@@ -1258,12 +1258,11 @@ class DeviceManager(Gtk.Box):
         GLib.idle_add(self._power_succeeded, turn_on, name)
 
     def _power_succeeded(self, turn_on: bool, name: str) -> bool:
+        del turn_on, name
         self._set_busy(False)
-        self.on_changed(
-            tr("Dispositivo conectado: {name}", name=name)
-            if turn_on
-            else tr("Dispositivo desconectado: {name}", name=name)
-        )
+        # Sin toast: el cambio de conexión se anuncia por GNOME (si Steam no
+        # está corriendo) o lo anuncia Steam. Solo pedimos el refresco.
+        self.on_changed("")
         return False
 
     def _power_failed(self, message: str) -> bool:

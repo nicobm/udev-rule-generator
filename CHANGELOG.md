@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.15.0 - 2026-11-27
+
+- Detects Steam running natively or as a Flatpak. While Steam is running, the
+  application suppresses its own connection toasts and GNOME notifications so
+  Steam is the only source of controller connection messages.
+- When Steam is not running, controller connections and disconnections produce
+  a single GNOME notification. Connection events no longer generate an in-app
+  toast.
+
 ## 1.14.9 - 2026-11-27
 
 - Performs a `USBDEVFS_RESET` when connecting a controller, in the same single

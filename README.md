@@ -103,7 +103,7 @@ hidden from the main list.
   [game-devices-udev](https://codeberg.org/fabiscafe/game-devices-udev), and
   [udev-joystick-blacklist](https://github.com/denilsonsa/udev-joystick-blacklist)
   in the main window.
-- GTK4/libadwaita GUI with automatic connection detection, GNOME
+- GTK4/libadwaita GUI with automatic connection detection, Steam-aware GNOME
   notifications, and centered Pika Backup-style cards.
 - Automatic language detection for English (US/UK) and Spanish.
 - Flatpak manifest for GNOME 51 and a `build-flatpak.sh` toolbox wrapper.
@@ -332,9 +332,18 @@ The main window also has **External rules** with independent switches for
 Hovering over a switch shows how many of its rule files are installed.
 
 The GUI monitors `udevadm monitor` while open and also polls every 5 seconds as
-a fallback. When a controller connects, the list updates automatically and a
-**GNOME notification** is shown. Clicking the notification opens the window.
-The header menu contains **Hidden devices**, **Rules test**, and About.
+a fallback. When a controller connects or disconnects, the list updates
+automatically. Connection notifications depend on Steam:
+
+- If Steam is running, either natively or as a Flatpak, the application does
+  not show its own connection toasts or GNOME notifications. Steam already
+  reports controller connection changes.
+- If Steam is not running, the application shows a single **GNOME
+  notification** for the connection or disconnection. It does not show an
+  in-app toast for these events.
+
+Clicking a GNOME notification opens the window. The header menu contains
+**Hidden devices**, **Rules test**, and About.
 
 ### Rules test
 

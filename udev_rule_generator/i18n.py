@@ -267,6 +267,7 @@ _EN.update(
         "No hay joysticks visibles": "No visible joysticks",
         "No hay joysticks conectados": "No joysticks connected",
         "Joystick conectado": "Joystick connected",
+        "Joystick desconectado": "Joystick disconnected",
         "No se pudieron detectar joysticks": "Could not detect joysticks",
         "{error}\n\nRevisá que udev esté funcionando y que la aplicación tenga "
         "acceso al host.": (
@@ -1470,8 +1471,6 @@ _EN.update(
         "No se pudo cambiar la conexión del dispositivo": (
             "Could not change the device connection"
         ),
-        "Dispositivo conectado: {name}": "Device connected: {name}",
-        "Dispositivo desconectado: {name}": "Device disconnected: {name}",
         "¿Ocultar «{name}»?": "Hide “{name}”?",
         "El dispositivo dejará de aparecer en la lista. Si su regla está "
         "activa, también se eliminará. Podés restaurarlo desde "
