@@ -69,6 +69,15 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="1.16.0" date="2026-11-27">
+      <description>
+        <p>
+          Finalizes the per-device Connect/Disconnect button with a single
+          reversible USB operation, and removes the experimental attempts to
+          wake battery-powered Xbox controllers that enumerate while off.
+        </p>
+      </description>
+    </release>
     <release version="1.15.3" date="2026-11-27">
       <description>
         <p>

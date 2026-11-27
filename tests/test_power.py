@@ -260,7 +260,7 @@ class ScanUsbPowerTests(unittest.TestCase):
         )
 
 
-class SetUsbPowerTests(unittest.TestCase):
+class SetUsbConnectionTests(unittest.TestCase):
     def setUp(self) -> None:
         self.temporary = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)
@@ -271,14 +271,14 @@ class SetUsbPowerTests(unittest.TestCase):
 
     def test_writes_one_or_zero_as_root(self) -> None:
         with mock.patch.object(power.os, "geteuid", return_value=0):
-            power.set_usb_power(
+            power.set_usb_connection(
                 self.host,
                 "1-2",
                 False,
                 directory=str(self.directory),
             )
             self.assertEqual(self.target.read_text(encoding="ascii"), "0")
-            power.set_usb_power(
+            power.set_usb_connection(
                 self.host,
                 "1-2",
                 True,
@@ -288,14 +288,14 @@ class SetUsbPowerTests(unittest.TestCase):
 
     def test_rejects_unsafe_sysname(self) -> None:
         with self.assertRaises(ValueError):
-            power.set_usb_power(
+            power.set_usb_connection(
                 self.host,
                 "../1-2",
                 False,
                 directory=str(self.directory),
             )
 
-    def test_power_on_restores_authorized_device(self) -> None:
+    def test_connect_restores_authorized_device(self) -> None:
         port_disable = (
             self.directory
             / "usb1"
@@ -306,7 +306,7 @@ class SetUsbPowerTests(unittest.TestCase):
         _write(port_disable, "0\n")
         _write(self.target, "0\n")
         with mock.patch.object(power.os, "geteuid", return_value=0):
-            power.set_usb_power(
+            power.set_usb_connection(
                 self.host,
                 "1-2",
                 True,
@@ -315,7 +315,7 @@ class SetUsbPowerTests(unittest.TestCase):
         self.assertEqual(self.target.read_text(encoding="ascii"), "1")
         self.assertEqual(port_disable.read_text(encoding="ascii"), "0\n")
 
-    def test_prefers_power_off_on_the_usb_port(self) -> None:
+    def test_disconnect_prefers_usb_port(self) -> None:
         port_disable = (
             self.directory
             / "usb1"
@@ -332,7 +332,7 @@ class SetUsbPowerTests(unittest.TestCase):
                 return_value=True,
             ),
         ):
-            power.set_usb_power(
+            power.set_usb_connection(
                 self.host,
                 "1-2",
                 False,
@@ -348,7 +348,7 @@ class SetUsbPowerTests(unittest.TestCase):
             )
         )
         with mock.patch.object(power.os, "geteuid", return_value=0):
-            power.set_usb_power(
+            power.set_usb_connection(
                 self.host,
                 "1-2",
                 True,
@@ -373,7 +373,7 @@ class SetUsbPowerTests(unittest.TestCase):
                 return_value=False,
             ),
         ):
-            power.set_usb_power(
+            power.set_usb_connection(
                 self.host,
                 "1-2",
                 False,
@@ -381,47 +381,6 @@ class SetUsbPowerTests(unittest.TestCase):
             )
         self.assertEqual(self.target.read_text(encoding="ascii"), "0")
         self.assertEqual(port_disable.read_text(encoding="ascii"), "0\n")
-
-
-class ConnectUsbTests(unittest.TestCase):
-    def setUp(self) -> None:
-        self.temporary = tempfile.TemporaryDirectory()
-        self.addCleanup(self.temporary.cleanup)
-        self.directory = Path(self.temporary.name)
-        self.host = Host(in_flatpak=False)
-
-    def test_enables_authorized_device_in_one_operation(self) -> None:
-        device = self.directory / "1-2"
-        device.mkdir()
-        target = device / "authorized"
-        _write(target, "0\n")
-        with mock.patch.object(power.os, "geteuid", return_value=0):
-            power.connect_usb_device(
-                self.host,
-                "1-2",
-                directory=str(self.directory),
-            )
-        self.assertEqual(target.read_text(encoding="ascii"), "1")
-
-    def test_enables_disabled_port_when_needed(self) -> None:
-        port_disable = (
-            self.directory
-            / "usb1"
-            / "1-0:1.0"
-            / "usb1-port2"
-            / "disable"
-        )
-        _write(port_disable, "1\n")
-        device = self.directory / "1-2"
-        device.mkdir()
-        _write(device / "authorized", "1\n")
-        with mock.patch.object(power.os, "geteuid", return_value=0):
-            power.connect_usb_device(
-                self.host,
-                "1-2",
-                directory=str(self.directory),
-            )
-        self.assertEqual(port_disable.read_text(encoding="ascii"), "0")
 
 
 class KnownDeviceUsbPathTests(unittest.TestCase):
@@ -435,16 +394,10 @@ class KnownDeviceUsbPathTests(unittest.TestCase):
                 "vendor_id": "045e",
                 "product_id": "02fd",
                 "usb_path": "1-2",
-                "js_devices": ["/dev/input/js0"],
             }
         )
         self.assertEqual(record.usb_path, "1-2")
-        self.assertEqual(record.js_devices, ("/dev/input/js0",))
         self.assertEqual(record.to_dict()["usb_path"], "1-2")
-        self.assertEqual(
-            record.to_dict()["js_devices"],
-            ["/dev/input/js0"],
-        )
 
 
 if __name__ == "__main__":

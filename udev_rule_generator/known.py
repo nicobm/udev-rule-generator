@@ -87,7 +87,6 @@ class KnownDevice:
     ignored: bool = False
     hid_driver: str = ""
     usb_path: str = ""
-    js_devices: tuple[str, ...] = ()
 
     @property
     def identifier(self) -> str:
@@ -182,7 +181,6 @@ class KnownDevice:
             "ignored": self.ignored,
             "hid_driver": self.hid_driver,
             "usb_path": self.usb_path,
-            "js_devices": list(self.js_devices),
         }
 
     @classmethod
@@ -190,9 +188,6 @@ class KnownDevice:
         raw_names = data.get("input_names", [])
         if not isinstance(raw_names, (list, tuple)):
             raw_names = []
-        raw_js = data.get("js_devices", [])
-        if not isinstance(raw_js, (list, tuple)):
-            raw_js = []
         return cls(
             id=str(data.get("id", "")),
             name=str(data.get("name", tr("Dispositivo"))),
@@ -214,7 +209,6 @@ class KnownDevice:
             ignored=bool(data.get("ignored", False)),
             hid_driver=str(data.get("hid_driver", "")),
             usb_path=str(data.get("usb_path", "")),
-            js_devices=tuple(str(name) for name in raw_js),
         )
 
     @classmethod
@@ -238,7 +232,6 @@ class KnownDevice:
             updated_at=_now(),
             ignorable=device.is_ignorable,
             usb_path=usb_sysname_from_devpaths(device.devpaths),
-            js_devices=device.js_devices,
         )
 
     @classmethod
@@ -275,7 +268,6 @@ class KnownDevice:
             ignored=ignored,
             hid_driver=driver,
             usb_path=usb_sysname_from_devpaths(device.devpaths),
-            js_devices=device.js_devices,
         )
 
     @classmethod
@@ -626,33 +618,18 @@ class KnownDevices:
             self._order.clear()
             self.save()
 
-    def set_connection_info(
-        self,
-        device_id: str,
-        *,
-        usb_path: str = "",
-        js_devices: tuple[str, ...] = (),
-    ) -> KnownDevice | None:
-        """Guarda el último path USB y los nodos js vistos para el badge."""
+    def set_usb_path(self, device_id: str, usb_path: str) -> KnownDevice | None:
+        """Guarda el nombre sysfs del USB para poder reconectarlo después."""
+        if not usb_path:
+            return None
         with self._lock:
             record = self._devices.get(device_id)
-            if record is None:
-                return None
-            changes: dict[str, object] = {}
-            if usb_path and record.usb_path != usb_path:
-                changes["usb_path"] = usb_path
-            if js_devices and record.js_devices != js_devices:
-                changes["js_devices"] = js_devices
-            if not changes:
+            if record is None or record.usb_path == usb_path:
                 return record
-            updated = replace(record, **changes)
+            updated = replace(record, usb_path=usb_path)
             self._devices[device_id] = updated
             self.save()
             return updated
-
-    def set_usb_path(self, device_id: str, usb_path: str) -> KnownDevice | None:
-        """Guarda el nombre sysfs del USB para poder encenderlo después."""
-        return self.set_connection_info(device_id, usb_path=usb_path)
 
     def set_hidden(self, device_id: str, hidden: bool) -> KnownDevice | None:
         with self._lock:

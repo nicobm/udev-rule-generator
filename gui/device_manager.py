@@ -17,11 +17,10 @@ from udev_rule_generator.i18n import tr
 from udev_rule_generator.known import KnownDevice, KnownDevices
 from udev_rule_generator.power import (
     UsbPowerDevice,
-    connect_usb_device,
     find_usb_power,
     read_usb_port_disabled,
     read_usb_power,
-    set_usb_power,
+    set_usb_connection,
     usb_sysname_from_devpaths,
 )
 from udev_rule_generator.presets import (
@@ -106,21 +105,16 @@ def _normalize_device_color(color_id: str) -> str:
     return color_id if color_id in _DEVICE_COLOR_IDS else _DEFAULT_DEVICE_COLOR
 
 
-def _js_names_label(paths: tuple[str, ...]) -> str:
-    """Devuelve los nombres cortos de los nodos js, por ejemplo ``js0``."""
-    names: list[str] = []
-    for node in paths:
-        name = node.rsplit("/", 1)[-1]
-        if name and name not in names:
-            names.append(name)
-    return ", ".join(names)
-
-
 def _js_nodes_label(device: Joystick | None) -> str:
     """Devuelve los nombres cortos de los nodos js, por ejemplo ``js0``."""
     if device is None:
         return ""
-    return _js_names_label(device.js_devices)
+    names: list[str] = []
+    for node in device.js_devices:
+        name = node.rsplit("/", 1)[-1]
+        if name and name not in names:
+            names.append(name)
+    return ", ".join(names)
 
 
 class DeviceManager(Gtk.Box):
@@ -325,8 +319,8 @@ class DeviceManager(Gtk.Box):
         self._hid_devices = by_id
         self.reload()
 
-    def set_usb_power_devices(self, devices: list[UsbPowerDevice]) -> None:
-        """Actualiza qué dispositivos USB están autorizados (encendidos)."""
+    def set_usb_devices(self, devices: list[UsbPowerDevice]) -> None:
+        """Actualiza qué dispositivos USB están autorizados (conectados)."""
         fingerprint = tuple(
             sorted(
                 (device.sysname, device.authorized)
@@ -490,32 +484,19 @@ class DeviceManager(Gtk.Box):
 
         known = self.store.devices()
         known_by_id = {record.id: record for record in known}
-        changed_connection = False
+        changed_paths = False
         for device in self._connected:
             record = known_by_id.get(device_identity(device))
-            if record is None:
-                continue
             sysname = usb_sysname_from_devpaths(device.devpaths)
-            path_changed = bool(
-                sysname and record.usb_path != sysname
-            )
-            js_changed = bool(
-                device.js_devices
-                and record.js_devices != device.js_devices
-            )
-            if not path_changed and not js_changed:
+            if record is None or not sysname or record.usb_path == sysname:
                 continue
             try:
-                self.store.set_connection_info(
-                    record.id,
-                    usb_path=sysname,
-                    js_devices=device.js_devices,
-                )
+                self.store.set_usb_path(record.id, sysname)
             except OSError:
                 pass
             else:
-                changed_connection = True
-        if changed_connection:
+                changed_paths = True
+        if changed_paths:
             known = self.store.devices()
         known_ids = {device.id for device in known}
         for key in list(self._pending_known):
@@ -1148,7 +1129,7 @@ class DeviceManager(Gtk.Box):
         if direct is not None:
             return direct
         # Si el dispositivo no está en el bus pero su puerto USB sigue
-        # apagado por nosotros, está apagado y se puede volver a prender.
+        # desconectado por nosotros, se puede volver a conectar.
         if read_usb_port_disabled(self.host, sysname):
             return UsbPowerDevice(
                 sysname=sysname,
@@ -1160,7 +1141,7 @@ class DeviceManager(Gtk.Box):
             )
         return None
 
-    def _add_power_control(
+    def _add_connection_control(
         self,
         row: Adw.ActionRow,
         device_id: str,
@@ -1192,16 +1173,16 @@ class DeviceManager(Gtk.Box):
         )
         button.connect(
             "clicked",
-            lambda _button: self._confirm_power(usb, name),
+            lambda _button: self._confirm_connection(usb, name),
         )
         row.add_suffix(button)
         self._add_hover_button(row, button)
 
-    def _confirm_power(self, usb: UsbPowerDevice, name: str) -> None:
+    def _confirm_connection(self, usb: UsbPowerDevice, name: str) -> None:
         if self._busy:
             return
-        turn_on = not usb.authorized
-        if turn_on:
+        connect = not usb.authorized
+        if connect:
             heading = tr("¿Conectar «{name}»?", name=name)
             body = tr("El dispositivo se volverá a conectar al sistema.")
             accept = tr("Conectar")
@@ -1212,60 +1193,54 @@ class DeviceManager(Gtk.Box):
 
         dialog = Adw.AlertDialog(heading=heading, body=body)
         dialog.add_response("cancel", tr("Cancelar"))
-        dialog.add_response("power", accept)
+        dialog.add_response("connection", accept)
         dialog.set_default_response("cancel")
         dialog.set_close_response("cancel")
 
         def on_response(_dialog, response: str) -> None:
-            if response != "power":
+            if response != "connection":
                 return
-            self._start_power_toggle(usb.sysname, turn_on, name)
+            self._start_connection_toggle(usb.sysname, connect)
 
         dialog.connect("response", on_response)
         root = self.get_root()
         dialog.present(root if root is not None else self.parent_window)
 
-    def _start_power_toggle(
+    def _start_connection_toggle(
         self,
         sysname: str,
-        turn_on: bool,
-        name: str,
+        connect: bool,
     ) -> None:
         if self._busy:
             return
         self._set_busy(True)
         threading.Thread(
-            target=self._power_worker,
-            args=(sysname, turn_on, name),
-            name="udev-rule-generator-power",
+            target=self._connection_worker,
+            args=(sysname, connect),
+            name="udev-rule-generator-connection",
             daemon=True,
         ).start()
 
-    def _power_worker(
+    def _connection_worker(
         self,
         sysname: str,
-        turn_on: bool,
-        name: str,
+        connect: bool,
     ) -> None:
         try:
-            if turn_on:
-                connect_usb_device(self.host, sysname)
-            else:
-                set_usb_power(self.host, sysname, False)
+            set_usb_connection(self.host, sysname, connect)
         except Exception as exc:  # noqa: BLE001 (se muestra al usuario)
-            GLib.idle_add(self._power_failed, str(exc))
+            GLib.idle_add(self._connection_failed, str(exc))
             return
-        GLib.idle_add(self._power_succeeded, turn_on, name)
+        GLib.idle_add(self._connection_succeeded)
 
-    def _power_succeeded(self, turn_on: bool, name: str) -> bool:
-        del turn_on, name
+    def _connection_succeeded(self) -> bool:
         self._set_busy(False)
         # Sin toast: el cambio de conexión se anuncia por GNOME (si Steam no
         # está corriendo) o lo anuncia Steam. Solo pedimos el refresco.
         self.on_changed("")
         return False
 
-    def _power_failed(self, message: str) -> bool:
+    def _connection_failed(self, message: str) -> bool:
         self._set_busy(False)
         self.reload()
         self._show_error(
@@ -1759,7 +1734,7 @@ class DeviceManager(Gtk.Box):
             device.id,
             device.name,
         )
-        self._add_power_control(
+        self._add_connection_control(
             row,
             device.id,
             connected_device,
@@ -1828,7 +1803,7 @@ class DeviceManager(Gtk.Box):
             key,
             device.display_name,
         )
-        self._add_power_control(row, key, device, None)
+        self._add_connection_control(row, key, device, None)
         row.add_suffix(self._connected_badge(device))
 
         switch = Gtk.Switch(active=key in self._pending_unknown)

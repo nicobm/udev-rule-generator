@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.16.0 - 2026-11-27
+
+- Finalizes the per-device **Connect/Disconnect** button with a single,
+  reversible USB operation and one polkit authentication per action.
+- Removes the experimental GIP, USB reset, and input-open attempts used to try
+  to wake an Xbox controller whose firmware is already off. Those operations
+  could not fix controllers on hubs without VBUS switching and made the
+  connect flow unnecessarily complex.
+- Keeps `port/disable` only for hubs that report per-port power switching and
+  falls back to `authorized` everywhere else, so the device can always be
+  reconnected.
+- Documents the hardware limitation: a battery-powered Xbox controller whose
+  firmware is off may require `xone`, the physical Xbox button, or a real VBUS
+  power cycle to turn on its LED.
+
 ## 1.15.3 - 2026-11-27
 
 - Discovers the actual interrupt OUT endpoint of the controller instead of
