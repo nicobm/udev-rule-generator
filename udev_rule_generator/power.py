@@ -511,18 +511,258 @@ sleep 1
 """
 
 
+def _run_privileged_python(
+    host: Host,
+    script: str,
+    *args: str,
+    timeout: float = 120,
+) -> None:
+    python3 = host.which("python3")
+    if not python3:
+        raise HostError(
+            tr("No se encontró python3 en el host.")
+        )
+    if os.geteuid() == 0 and not host.in_flatpak:
+        result = host.run(
+            [python3, "-c", script, *args],
+            timeout=timeout,
+        )
+    else:
+        pkexec = host.which("pkexec")
+        if not pkexec:
+            raise HostError(
+                tr(
+                    "No se encontró pkexec. Instalá polkit o ejecutá la "
+                    "aplicación como root."
+                )
+            )
+        result = host.run(
+            [pkexec, python3, "-c", script, *args],
+            timeout=timeout,
+        )
+    if result.ok:
+        return
+    detail = (result.stderr or result.stdout).strip()
+    raise HostError(
+        tr("No se pudo reinicializar el dispositivo USB.")
+        + (f"\n{detail}" if detail else "")
+    )
+
+
+_CONNECT_GIP_SCRIPT = r"""
+import ctypes
+import ctypes.util
+import fcntl
+import os
+import sys
+import time
+from pathlib import Path
+
+sysname, root, target, value = sys.argv[1:5]
+
+try:
+    Path(target).write_text(value, encoding="ascii")
+except OSError:
+    pass
+
+auth = ""
+for _ in range(25):
+    try:
+        auth = (Path(root) / sysname / "authorized").read_text().strip()
+    except OSError:
+        auth = ""
+    if auth == "1":
+        break
+    time.sleep(0.2)
+if auth != "1":
+    sys.exit(0)
+
+try:
+    bus = int((Path(root) / sysname / "busnum").read_text().strip())
+    address = int((Path(root) / sysname / "devnum").read_text().strip())
+except (OSError, ValueError):
+    sys.exit(0)
+
+node = f"/dev/bus/usb/{bus:03d}/{address:03d}"
+
+
+def send_gip():
+    try:
+        name = ctypes.util.find_library("usb-1.0") or "libusb-1.0.so.0"
+        lib = ctypes.CDLL(name)
+    except OSError:
+        return False
+
+    c_void_p = ctypes.c_void_p
+    lib.libusb_init.argtypes = [ctypes.POINTER(c_void_p)]
+    lib.libusb_init.restype = ctypes.c_int
+    lib.libusb_get_device_list.argtypes = [
+        c_void_p,
+        ctypes.POINTER(ctypes.POINTER(c_void_p)),
+    ]
+    lib.libusb_get_device_list.restype = ctypes.c_ssize_t
+    lib.libusb_get_bus_number.argtypes = [c_void_p]
+    lib.libusb_get_bus_number.restype = ctypes.c_uint8
+    lib.libusb_get_device_address.argtypes = [c_void_p]
+    lib.libusb_get_device_address.restype = ctypes.c_uint8
+    lib.libusb_open.argtypes = [c_void_p, ctypes.POINTER(c_void_p)]
+    lib.libusb_open.restype = ctypes.c_int
+    lib.libusb_close.argtypes = [c_void_p]
+    lib.libusb_detach_kernel_driver.argtypes = [c_void_p, ctypes.c_int]
+    lib.libusb_detach_kernel_driver.restype = ctypes.c_int
+    lib.libusb_attach_kernel_driver.argtypes = [c_void_p, ctypes.c_int]
+    lib.libusb_attach_kernel_driver.restype = ctypes.c_int
+    lib.libusb_claim_interface.argtypes = [c_void_p, ctypes.c_int]
+    lib.libusb_claim_interface.restype = ctypes.c_int
+    lib.libusb_release_interface.argtypes = [c_void_p, ctypes.c_int]
+    lib.libusb_release_interface.restype = ctypes.c_int
+    lib.libusb_interrupt_transfer.argtypes = [
+        c_void_p,
+        ctypes.c_ubyte,
+        ctypes.POINTER(ctypes.c_ubyte),
+        ctypes.c_int,
+        ctypes.POINTER(ctypes.c_int),
+        ctypes.c_uint,
+    ]
+    lib.libusb_interrupt_transfer.restype = ctypes.c_int
+    lib.libusb_free_device_list.argtypes = [
+        ctypes.POINTER(c_void_p),
+        ctypes.c_int,
+    ]
+    lib.libusb_exit.argtypes = [c_void_p]
+
+    context = c_void_p()
+    if lib.libusb_init(ctypes.byref(context)) != 0:
+        return False
+    devices = ctypes.POINTER(c_void_p)()
+    count = lib.libusb_get_device_list(context, ctypes.byref(devices))
+    target_device = None
+    for index in range(count):
+        device = devices[index]
+        if (
+            lib.libusb_get_bus_number(device) == bus
+            and lib.libusb_get_device_address(device) == address
+        ):
+            target_device = device
+            break
+    if target_device is None:
+        lib.libusb_free_device_list(devices, 1)
+        lib.libusb_exit(context)
+        return False
+
+    handle = c_void_p()
+    if lib.libusb_open(target_device, ctypes.byref(handle)) != 0:
+        lib.libusb_free_device_list(devices, 1)
+        lib.libusb_exit(context)
+        return False
+
+    detached = False
+    auto_detached = False
+    auto_detach = getattr(
+        lib, "libusb_set_auto_detach_kernel_driver", None
+    )
+    if auto_detach is not None:
+        auto_detach.argtypes = [c_void_p, ctypes.c_int]
+        auto_detach.restype = ctypes.c_int
+        try:
+            if auto_detach(handle, 1) == 0:
+                detached = True
+                auto_detached = True
+        except Exception:
+            pass
+    if not detached:
+        try:
+            if lib.libusb_detach_kernel_driver(handle, 0) == 0:
+                detached = True
+        except Exception:
+            pass
+
+    if lib.libusb_claim_interface(handle, 0) != 0:
+        if detached and not auto_detached:
+            try:
+                lib.libusb_attach_kernel_driver(handle, 0)
+            except Exception:
+                pass
+        lib.libusb_close(handle)
+        lib.libusb_free_device_list(devices, 1)
+        lib.libusb_exit(context)
+        return False
+
+    packets = [
+        bytearray(b"\x05\x20\x00\x01\x00"),
+        bytearray(b"\x0a\x20\x00\x03\x00\x01\x14"),
+        bytearray(b"\x06\x20\x00\x02\x01\x00"),
+    ]
+    sent_power = False
+    sent_led = False
+    for sequence, packet in enumerate(packets):
+        packet[2] = sequence
+        buffer = ctypes.create_string_buffer(bytes(packet), len(packet))
+        transferred = ctypes.c_int()
+        result = lib.libusb_interrupt_transfer(
+            handle,
+            0x01,
+            ctypes.cast(buffer, ctypes.POINTER(ctypes.c_ubyte)),
+            len(packet),
+            ctypes.byref(transferred),
+            1000,
+        )
+        if result != 0:
+            break
+        if sequence == 0:
+            sent_power = True
+        elif sequence == 1:
+            sent_led = True
+        time.sleep(0.05)
+
+    lib.libusb_release_interface(handle, 0)
+    if detached and not auto_detached:
+        try:
+            lib.libusb_attach_kernel_driver(handle, 0)
+        except Exception:
+            pass
+    lib.libusb_close(handle)
+    lib.libusb_free_device_list(devices, 1)
+    lib.libusb_exit(context)
+    return sent_power and sent_led
+
+
+gip_ok = False
+try:
+    gip_ok = send_gip()
+except Exception:
+    gip_ok = False
+
+if not gip_ok:
+    try:
+        descriptor = os.open(node, os.O_WRONLY)
+    except OSError:
+        descriptor = -1
+    if descriptor >= 0:
+        try:
+            fcntl.ioctl(descriptor, 0x5514)  # USBDEVFS_RESET
+        except OSError:
+            pass
+        finally:
+            os.close(descriptor)
+
+time.sleep(1)
+"""
+
+
 def connect_usb_device(
     host: Host,
     sysname: str,
     *,
     directory: str = USB_DEVICES_DIR,
 ) -> None:
-    """Reconecta el USB y fuerza un reset para que el mando encienda.
+    """Reconecta el USB y envía el encendido GIP al mando.
 
     Varios mandos Xbox quedan enumerados pero apagados tras un corte lógico
-    del USB. Un ``USBDEVFS_RESET`` equivale a desenchufar y volver a enchufar
-    el cable: el firmware vuelve a arrancar y enciende el LED. Todo se hace en
-    una sola ejecución privilegiada.
+    del USB.  Se envían los paquetes GIP de power-on y LED por libusb; si eso
+    no está disponible, se hace un ``USBDEVFS_RESET`` equivalente a
+    desenchufar y volver a enchufar el cable.  Todo ocurre en una sola
+    ejecución privilegiada.
     """
     if not _USB_SYSNAME.fullmatch(sysname):
         raise ValueError(
@@ -535,6 +775,17 @@ def connect_usb_device(
     if port_path and _read_attr(host, Path(port_path)) == "1":
         target = port_path
         value = "0"
+
+    if host.which("python3"):
+        _run_privileged_python(
+            host,
+            _CONNECT_GIP_SCRIPT,
+            sysname,
+            directory,
+            target,
+            value,
+        )
+        return
 
     _run_privileged_script(
         host,

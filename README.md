@@ -275,7 +275,10 @@ connected controllers that do not have a saved rule yet.
   support it uses the device's `authorized` attribute instead. When connecting,
   it then performs a `USBDEVFS_RESET` on the controller, which is what makes
   an Xbox controller that enumerated while still powered off restart and turn
-  its LED on, equivalent to unplugging and replugging the cable. The
+  its LED on, equivalent to unplugging and replugging the cable. The connect
+  operation also sends the Xbox GIP power-on and LED packets through libusb,
+  which is the same initialization the kernel driver uses; if libusb is not
+  available or the transfer fails, it falls back to the USB reset. The
   application also opens the controller's `event`/`js` node for a few seconds
   when a USB joystick is detected: the `xpad` driver sends its GIP power-on and
   LED initialization packets from the input-open callback. Both actions ask for

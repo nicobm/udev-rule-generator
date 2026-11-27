@@ -401,7 +401,7 @@ class ConnectUsbTests(unittest.TestCase):
                 "1-2",
                 directory=str(self.directory),
             )
-        self.assertEqual(target.read_text(encoding="ascii"), "1\n")
+        self.assertEqual(target.read_text(encoding="ascii"), "1")
 
     def test_enables_disabled_port_when_needed(self) -> None:
         port_disable = (
@@ -421,7 +421,7 @@ class ConnectUsbTests(unittest.TestCase):
                 "1-2",
                 directory=str(self.directory),
             )
-        self.assertEqual(port_disable.read_text(encoding="ascii"), "0\n")
+        self.assertEqual(port_disable.read_text(encoding="ascii"), "0")
 
 
 class KnownDeviceUsbPathTests(unittest.TestCase):

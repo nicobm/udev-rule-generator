@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.15.2 - 2026-11-27
+
+- Sends the Xbox GIP power-on and LED packets directly through libusb when
+  connecting a controller, in the same single polkit operation. If libusb is
+  unavailable or the transfer fails, it falls back to `USBDEVFS_RESET`.
+- This targets the known xpad state where the controller is enumerated but its
+  firmware stays off and the LED does not light up.
+
 ## 1.15.1 - 2026-11-27
 
 - Opens the controller's `event`/`js` node for a few seconds when a USB
