@@ -27,6 +27,24 @@ class UsbPathTests(unittest.TestCase):
             "1-2",
         )
 
+    def test_port_disable_path_for_root_and_nested_hubs(self) -> None:
+        self.assertEqual(
+            power.usb_port_disable_path(
+                "1-2", directory="/sys/bus/usb/devices"
+            ),
+            "/sys/bus/usb/devices/usb1/1-0:1.0/usb1-port2/disable",
+        )
+        self.assertEqual(
+            power.usb_port_disable_path(
+                "1-1.2", directory="/sys/bus/usb/devices"
+            ),
+            "/sys/bus/usb/devices/1-1/1-1:1.0/1-1-port2/disable",
+        )
+        self.assertEqual(
+            power.usb_port_disable_path("../1-2"),
+            "",
+        )
+
     def test_nested_hub_uses_last_usb_device(self) -> None:
         devpaths = (
             "/devices/pci0000:00/0000:00:14.0/usb1/1-1/1-1.2/1-1.2:1.0/"
@@ -224,6 +242,60 @@ class SetUsbPowerTests(unittest.TestCase):
                 False,
                 directory=str(self.directory),
             )
+
+    def test_power_on_restores_authorized_device(self) -> None:
+        port_disable = (
+            self.directory
+            / "usb1"
+            / "1-0:1.0"
+            / "usb1-port2"
+            / "disable"
+        )
+        _write(port_disable, "0\n")
+        _write(self.target, "0\n")
+        with mock.patch.object(power.os, "geteuid", return_value=0):
+            power.set_usb_power(
+                self.host,
+                "1-2",
+                True,
+                directory=str(self.directory),
+            )
+        self.assertEqual(self.target.read_text(encoding="ascii"), "1")
+        self.assertEqual(port_disable.read_text(encoding="ascii"), "0\n")
+
+    def test_prefers_power_off_on_the_usb_port(self) -> None:
+        port_disable = (
+            self.directory
+            / "usb1"
+            / "1-0:1.0"
+            / "usb1-port2"
+            / "disable"
+        )
+        _write(port_disable, "0\n")
+        with mock.patch.object(power.os, "geteuid", return_value=0):
+            power.set_usb_power(
+                self.host,
+                "1-2",
+                False,
+                directory=str(self.directory),
+            )
+        self.assertEqual(port_disable.read_text(encoding="ascii"), "1")
+        self.assertEqual(self.target.read_text(encoding="ascii"), "1\n")
+        self.assertTrue(
+            power.read_usb_port_disabled(
+                self.host,
+                "1-2",
+                directory=str(self.directory),
+            )
+        )
+        with mock.patch.object(power.os, "geteuid", return_value=0):
+            power.set_usb_power(
+                self.host,
+                "1-2",
+                True,
+                directory=str(self.directory),
+            )
+        self.assertEqual(port_disable.read_text(encoding="ascii"), "0")
 
 
 class KnownDeviceUsbPathTests(unittest.TestCase):

@@ -69,6 +69,17 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="1.14.4" date="2026-11-27">
+      <description>
+        <p>
+          Turns the USB port off and on through the kernel port interface
+          instead of only deauthorizing the device. This prevents other
+          programs from reconnecting the controller immediately and cuts VBUS
+          when the hub supports per-port power switching. Battery-powered
+          controllers may keep their LED on.
+        </p>
+      </description>
+    </release>
     <release version="1.14.3" date="2026-11-27">
       <description>
         <p>

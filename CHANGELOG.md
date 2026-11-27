@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.14.4 - 2026-11-27
+
+- Uses the kernel's `port/disable` interface (Linux 6.0+) to turn the USB port
+  off and on instead of only deauthorizing the device. This prevents another
+  program such as Steam from reconnecting the controller immediately and cuts
+  VBUS when the hub supports per-port power switching. Falls back to
+  `authorized` on older kernels.
+- Explains in the confirmation dialog that battery-powered controllers may keep
+  their LED on even when the USB port is off.
+
 ## 1.14.3 - 2026-11-27
 
 - Shows the USB power button only while the device is present. A deauthorized

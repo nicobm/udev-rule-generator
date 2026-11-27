@@ -1451,16 +1451,19 @@ _EN.update(
         "Prender este dispositivo": "Turn on this device",
         "Apagar este dispositivo": "Turn off this device",
         "¿Prender «{name}»?": "Turn on “{name}”?",
-        "El dispositivo se volverá a conectar y el sistema lo detectará de "
-        "nuevo.": (
-            "The device will reconnect and the system will detect it again."
+        "Se encenderá el puerto USB y el sistema detectará el "
+        "dispositivo de nuevo.": (
+            "The USB port will be turned on and the system will detect the "
+            "device again."
         ),
         "Prender": "Turn on",
         "¿Apagar «{name}»?": "Turn off “{name}”?",
-        "El dispositivo se desconectará del sistema hasta que lo prendas de "
-        "nuevo.": (
-            "The device will disconnect from the system until you turn it "
-            "on again."
+        "Se apagará el puerto USB si el hardware lo permite y el "
+        "dispositivo se desconectará. Si el mando tiene batería, su luz "
+        "podría seguir encendida.": (
+            "The USB port will be turned off if the hardware supports it and "
+            "the device will disconnect. If the controller has a battery, its "
+            "light may stay on."
         ),
         "Apagar": "Turn off",
         "No se pudo cambiar el estado del dispositivo": (

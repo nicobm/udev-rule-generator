@@ -18,6 +18,7 @@ from udev_rule_generator.known import KnownDevice, KnownDevices
 from udev_rule_generator.power import (
     UsbPowerDevice,
     find_usb_power,
+    read_usb_port_disabled,
     read_usb_power,
     set_usb_power,
     usb_sysname_from_devpaths,
@@ -1121,13 +1122,27 @@ class DeviceManager(Gtk.Box):
             return usb
         # El escaneo pudo fallar o no incluir este dispositivo; leer su
         # atributo authorized directamente es barato y evita falsos negativos.
-        return read_usb_power(
+        direct = read_usb_power(
             self.host,
             sysname,
             vendor_id=vendor_id,
             product_id=product_id,
             serial="" if trust_sysname else serial,
         )
+        if direct is not None:
+            return direct
+        # Si el dispositivo no está en el bus pero su puerto USB sigue
+        # apagado por nosotros, está apagado y se puede volver a prender.
+        if read_usb_port_disabled(self.host, sysname):
+            return UsbPowerDevice(
+                sysname=sysname,
+                vendor_id=vendor_id,
+                product_id=product_id,
+                serial=serial,
+                product="",
+                authorized=False,
+            )
+        return None
 
     def _add_power_control(
         self,
@@ -1173,15 +1188,16 @@ class DeviceManager(Gtk.Box):
         if turn_on:
             heading = tr("¿Prender «{name}»?", name=name)
             body = tr(
-                "El dispositivo se volverá a conectar y el sistema lo "
-                "detectará de nuevo."
+                "Se encenderá el puerto USB y el sistema detectará el "
+                "dispositivo de nuevo."
             )
             accept = tr("Prender")
         else:
             heading = tr("¿Apagar «{name}»?", name=name)
             body = tr(
-                "El dispositivo se desconectará del sistema hasta que lo "
-                "prendas de nuevo."
+                "Se apagará el puerto USB si el hardware lo permite y el "
+                "dispositivo se desconectará. Si el mando tiene batería, su "
+                "luz podría seguir encendida."
             )
             accept = tr("Apagar")
 

@@ -235,6 +235,50 @@ def find_usb_power(
     return candidates[0] if len(candidates) == 1 else None
 
 
+def usb_port_disable_path(
+    sysname: str,
+    *,
+    directory: str = USB_DEVICES_DIR,
+) -> str:
+    """Devuelve el ``disable`` del puerto USB que contiene al dispositivo.
+
+    Linux 6.0 y posteriores exponen un atributo ``disable`` por puerto. Al
+    escribir ``1`` se desconecta el hijo y se apaga el puerto (si el hub
+    soporta conmutación de alimentación); al escribir ``0`` se vuelve a
+    encender y el dispositivo se reenumera.
+    """
+    if not _USB_SYSNAME.fullmatch(sysname):
+        return ""
+    if "." in sysname:
+        parent, port = sysname.rsplit(".", 1)
+        interface = f"{parent}:1.0"
+        port_name = f"{parent}-port{port}"
+    else:
+        bus, port = sysname.split("-", 1)
+        parent = f"usb{bus}"
+        interface = f"{bus}-0:1.0"
+        port_name = f"{parent}-port{port}"
+    if not port.isdigit():
+        return ""
+    return f"{directory}/{parent}/{interface}/{port_name}/disable"
+
+
+def read_usb_port_disabled(
+    host: Host,
+    sysname: str,
+    *,
+    directory: str = USB_DEVICES_DIR,
+) -> bool | None:
+    """Indica si el puerto está apagado, o ``None`` si no se puede consultar."""
+    path = usb_port_disable_path(sysname, directory=directory)
+    if not path:
+        return None
+    value = _read_attr(host, Path(path))
+    if value not in {"0", "1"}:
+        return None
+    return value == "1"
+
+
 def read_usb_power(
     host: Host,
     sysname: str,
@@ -294,21 +338,7 @@ def _pkexec_error_detail(result: CommandResult) -> str:
     return f"{message}\n{detail}" if detail else message
 
 
-def set_usb_power(
-    host: Host,
-    sysname: str,
-    powered: bool,
-    *,
-    directory: str = USB_DEVICES_DIR,
-) -> None:
-    """Autoriza o desautoriza un dispositivo USB concreto."""
-    if not _USB_SYSNAME.fullmatch(sysname):
-        raise ValueError(
-            tr("Dispositivo USB no válido: {value!r}", value=sysname)
-        )
-    target = f"{directory}/{sysname}/authorized"
-    value = "1" if powered else "0"
-
+def _write_sysfs(host: Host, target: str, value: str) -> None:
     if os.geteuid() == 0 and not host.in_flatpak:
         try:
             Path(target).write_text(value, encoding="ascii")
@@ -344,3 +374,45 @@ def set_usb_power(
     )
     if not result.ok:
         raise HostError(_pkexec_error_detail(result))
+
+
+def set_usb_power(
+    host: Host,
+    sysname: str,
+    powered: bool,
+    *,
+    directory: str = USB_DEVICES_DIR,
+) -> None:
+    """Apaga o enciende el puerto USB que contiene al dispositivo.
+
+    Se prefiere el ``disable`` del puerto, que desconecta el hijo y apaga la
+    alimentación si el hub lo soporta. Si el kernel no expone esa interfaz, se
+    cae al ``authorized`` del dispositivo.
+    """
+    if not _USB_SYSNAME.fullmatch(sysname):
+        raise ValueError(
+            tr("Dispositivo USB no válido: {value!r}", value=sysname)
+        )
+
+    port_path = usb_port_disable_path(sysname, directory=directory)
+    port_disabled: bool | None = None
+    if port_path:
+        value = _read_attr(host, Path(port_path))
+        if value in {"0", "1"}:
+            port_disabled = value == "1"
+
+    if not powered:
+        if port_disabled is not None:
+            _write_sysfs(host, port_path, "1")
+            return
+        target = f"{directory}/{sysname}/authorized"
+        _write_sysfs(host, target, "0")
+        return
+
+    if port_disabled:
+        _write_sysfs(host, port_path, "0")
+        return
+    # El dispositivo está presente pero fue desautorizado con el método
+    # anterior, o ya estaba encendido: asegurar authorized=1.
+    target = f"{directory}/{sysname}/authorized"
+    _write_sysfs(host, target, "1")

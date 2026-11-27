@@ -88,9 +88,10 @@ hidden from the main list.
 - Saved devices registry with the latest rule for each controller, so the rule
   can be enabled or disabled without connecting the controller again.
 - Per-device USB power button, shown on card hover to the left of the eye. It
-  turns the USB device off and on again through its `authorized` attribute
-  after a confirmation prompt. It only appears while the USB device is present,
-  either powered on or deauthorized.
+  turns the USB port off and on again through the kernel port interface, or
+  through the device's `authorized` attribute on older kernels, after a
+  confirmation prompt. It only appears while the USB device is present or its
+  port is turned off.
 - Hide saved devices with the eye button; restore them from the hidden-devices
   menu. Hiding also asks for confirmation.
 - Only controllers with a complete VID and PID are listed under **Manage
@@ -266,13 +267,16 @@ connected controllers that do not have a saved rule yet.
   the drag handle stays visible. They keep their space, so the title,
   connected badge, and switch do not move. USB device cards also show a power
   button to the left of the eye while hovering.
-- The power button turns the USB device off by writing `0` to its
-  `authorized` sysfs attribute, and turns it on again by writing `1`. Both
-  actions ask for confirmation first and use polkit when the application is
-  not running as root. A deauthorized device stays in sysfs with
-  `authorized=0`, so the button remains available to turn it back on. If the
-  device is physically disconnected, or is not a USB device, the button is not
-  shown.
+- The power button asks the USB hub to turn the port off and on again through
+  the standard `port/disable` interface available since Linux 6.0. This
+  disconnects the device and cuts VBUS if the hub supports per-port power
+  switching; on kernels without that interface it falls back to the device's
+  `authorized` attribute. Both actions ask for confirmation first and use
+  polkit when the application is not running as root. A port turned off this
+  way stays off, so the controller cannot be reconnected by another program
+  until you press the button again. Controllers with their own battery may
+  keep their LED on even when the port is off. If the device is physically
+  disconnected, or is not a USB device, the button is not shown.
 - Aliases persist per device, including connected devices that do not have a
   saved rule yet.
 - Clicking anywhere on a device card toggles its switch. The icon selector,
