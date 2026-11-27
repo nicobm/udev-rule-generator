@@ -235,6 +235,57 @@ def find_usb_power(
     return candidates[0] if len(candidates) == 1 else None
 
 
+def _parent_hub_sysname(sysname: str) -> str:
+    if not _USB_SYSNAME.fullmatch(sysname):
+        return ""
+    if "." in sysname:
+        parent, _port = sysname.rsplit(".", 1)
+        return parent
+    bus, _port = sysname.split("-", 1)
+    return f"usb{bus}"
+
+
+def hub_port_power_switching(
+    host: Host,
+    sysname: str,
+    *,
+    directory: str = USB_DEVICES_DIR,
+) -> bool | None:
+    """Indica si el hub del dispositivo soporta apagado por puerto.
+
+    ``lsusb -v`` muestra ``Per-port power switching`` en los hubs que pueden
+    cortar VBUS por puerto. En los que no lo soportan, ``port/disable`` puede
+    desconectar el dispositivo pero no volver a enumerarlo, así que no se debe
+    usar como apagado normal.
+    """
+    parent = _parent_hub_sysname(sysname)
+    if not parent:
+        return None
+    base = Path(directory) / parent
+    bus = _read_attr(host, base / "busnum")
+    address = _read_attr(host, base / "devnum")
+    if not bus.isdigit() or not address.isdigit():
+        return None
+    try:
+        result = host.run(
+            ["lsusb", "-v", "-s", f"{bus}:{address}"],
+            timeout=20,
+        )
+    except HostError:
+        return None
+    if not result.ok:
+        return None
+    output = result.stdout
+    if "Per-port power switching" in output:
+        return True
+    if (
+        "No power switching" in output
+        or "Ganged power switching" in output
+    ):
+        return False
+    return None
+
+
 def usb_port_disable_path(
     sysname: str,
     *,
@@ -402,7 +453,9 @@ def set_usb_power(
             port_disabled = value == "1"
 
     if not powered:
-        if port_disabled is not None:
+        if port_path and hub_port_power_switching(
+            host, sysname, directory=directory
+        ):
             _write_sysfs(host, port_path, "1")
             return
         target = f"{directory}/{sysname}/authorized"

@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.14.5 - 2026-11-27
+
+- Checks whether the parent hub reports per-port power switching before using
+  `port/disable`. On hubs that do not support it, turning the port off can
+  disconnect the device but cannot re-enumerate it, so the power button now
+  falls back to the reversible `authorized` attribute instead.
+- Adds a test for the hub capability check and keeps `port/disable` only for
+  hubs that can actually power the port back on.
+
 ## 1.14.4 - 2026-11-27
 
 - Uses the kernel's `port/disable` interface (Linux 6.0+) to turn the USB port

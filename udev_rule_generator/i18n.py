@@ -1458,12 +1458,12 @@ _EN.update(
         ),
         "Prender": "Turn on",
         "¿Apagar «{name}»?": "Turn off “{name}”?",
-        "Se apagará el puerto USB si el hardware lo permite y el "
-        "dispositivo se desconectará. Si el mando tiene batería, su luz "
-        "podría seguir encendida.": (
-            "The USB port will be turned off if the hardware supports it and "
-            "the device will disconnect. If the controller has a battery, its "
-            "light may stay on."
+        "Se apagará el puerto USB si el hub lo soporta; si no, el "
+        "dispositivo se desconectará lógicamente. Si el mando tiene "
+        "batería, su luz podría seguir encendida.": (
+            "The USB port will be turned off if the hub supports it; "
+            "otherwise the device will be disconnected logically. If the "
+            "controller has a battery, its light may stay on."
         ),
         "Apagar": "Turn off",
         "No se pudo cambiar el estado del dispositivo": (

@@ -1195,9 +1195,9 @@ class DeviceManager(Gtk.Box):
         else:
             heading = tr("¿Apagar «{name}»?", name=name)
             body = tr(
-                "Se apagará el puerto USB si el hardware lo permite y el "
-                "dispositivo se desconectará. Si el mando tiene batería, su "
-                "luz podría seguir encendida."
+                "Se apagará el puerto USB si el hub lo soporta; si no, el "
+                "dispositivo se desconectará lógicamente. Si el mando tiene "
+                "batería, su luz podría seguir encendida."
             )
             accept = tr("Apagar")
 

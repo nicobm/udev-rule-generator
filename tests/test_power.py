@@ -8,7 +8,24 @@ from pathlib import Path
 from unittest import mock
 
 from udev_rule_generator import power
-from udev_rule_generator.host import Host
+from udev_rule_generator.host import CommandResult, Host
+
+
+class FakeLsusbHost:
+    def __init__(self, files: dict[str, str], output: str) -> None:
+        self.files = files
+        self.output = output
+
+    def read_text(self, path: str | Path) -> str:
+        return self.files[str(path)]
+
+    def run(self, argv, **_kwargs) -> CommandResult:
+        return CommandResult(
+            argv=tuple(argv),
+            returncode=0,
+            stdout=self.output,
+            stderr="",
+        )
 
 
 def _write(path: Path, value: str) -> None:
@@ -61,6 +78,41 @@ class UsbPathTests(unittest.TestCase):
                 ("/devices/platform/i8042/serio0/input/input3/event3",)
             ),
             "",
+        )
+
+
+class HubPowerTests(unittest.TestCase):
+    def _host(self, output: str) -> FakeLsusbHost:
+        return FakeLsusbHost(
+            {
+                "/sys/bus/usb/devices/usb1/busnum": "1\n",
+                "/sys/bus/usb/devices/usb1/devnum": "1\n",
+            },
+            output,
+        )
+
+    def test_detects_per_port_switching(self) -> None:
+        host = self._host(
+            "wHubCharacteristic 0x0009\n"
+            "  Per-port power switching\n"
+        )
+        self.assertTrue(
+            power.hub_port_power_switching(host, "1-7")
+        )
+
+    def test_detects_unsupported_hub(self) -> None:
+        host = self._host(
+            "wHubCharacteristic 0x000a\n"
+            "  No power switching (usb 1.0)\n"
+        )
+        self.assertFalse(
+            power.hub_port_power_switching(host, "1-7")
+        )
+
+    def test_unknown_output_is_undetected(self) -> None:
+        host = self._host("unrelated output\n")
+        self.assertIsNone(
+            power.hub_port_power_switching(host, "1-7")
         )
 
 
@@ -272,7 +324,14 @@ class SetUsbPowerTests(unittest.TestCase):
             / "disable"
         )
         _write(port_disable, "0\n")
-        with mock.patch.object(power.os, "geteuid", return_value=0):
+        with (
+            mock.patch.object(power.os, "geteuid", return_value=0),
+            mock.patch.object(
+                power,
+                "hub_port_power_switching",
+                return_value=True,
+            ),
+        ):
             power.set_usb_power(
                 self.host,
                 "1-2",
@@ -296,6 +355,32 @@ class SetUsbPowerTests(unittest.TestCase):
                 directory=str(self.directory),
             )
         self.assertEqual(port_disable.read_text(encoding="ascii"), "0")
+
+    def test_unsupported_hub_uses_authorized(self) -> None:
+        port_disable = (
+            self.directory
+            / "usb1"
+            / "1-0:1.0"
+            / "usb1-port2"
+            / "disable"
+        )
+        _write(port_disable, "0\n")
+        with (
+            mock.patch.object(power.os, "geteuid", return_value=0),
+            mock.patch.object(
+                power,
+                "hub_port_power_switching",
+                return_value=False,
+            ),
+        ):
+            power.set_usb_power(
+                self.host,
+                "1-2",
+                False,
+                directory=str(self.directory),
+            )
+        self.assertEqual(self.target.read_text(encoding="ascii"), "0")
+        self.assertEqual(port_disable.read_text(encoding="ascii"), "0\n")
 
 
 class KnownDeviceUsbPathTests(unittest.TestCase):

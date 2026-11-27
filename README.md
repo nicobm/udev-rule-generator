@@ -88,10 +88,10 @@ hidden from the main list.
 - Saved devices registry with the latest rule for each controller, so the rule
   can be enabled or disabled without connecting the controller again.
 - Per-device USB power button, shown on card hover to the left of the eye. It
-  turns the USB port off and on again through the kernel port interface, or
-  through the device's `authorized` attribute on older kernels, after a
-  confirmation prompt. It only appears while the USB device is present or its
-  port is turned off.
+  turns the USB port off and on again through the kernel port interface when
+  the hub supports per-port power switching, and through the device's
+  `authorized` attribute otherwise, after a confirmation prompt. It only
+  appears while the USB device is present or its port is turned off.
 - Hide saved devices with the eye button; restore them from the hidden-devices
   menu. Hiding also asks for confirmation.
 - Only controllers with a complete VID and PID are listed under **Manage
@@ -268,15 +268,14 @@ connected controllers that do not have a saved rule yet.
   connected badge, and switch do not move. USB device cards also show a power
   button to the left of the eye while hovering.
 - The power button asks the USB hub to turn the port off and on again through
-  the standard `port/disable` interface available since Linux 6.0. This
-  disconnects the device and cuts VBUS if the hub supports per-port power
-  switching; on kernels without that interface it falls back to the device's
-  `authorized` attribute. Both actions ask for confirmation first and use
-  polkit when the application is not running as root. A port turned off this
-  way stays off, so the controller cannot be reconnected by another program
-  until you press the button again. Controllers with their own battery may
-  keep their LED on even when the port is off. If the device is physically
-  disconnected, or is not a USB device, the button is not shown.
+  the standard `port/disable` interface available since Linux 6.0, but only
+  when the hub reports per-port power switching. On hubs without that support
+  (including this common case) it uses the device's `authorized` attribute
+  instead, which is reversible even though it does not cut physical power.
+  Both actions ask for confirmation first and use polkit when the application
+  is not running as root. Controllers with their own battery may keep their LED
+  on even when the port is off. If the device is physically disconnected, or is
+  not a USB device, the button is not shown.
 - Aliases persist per device, including connected devices that do not have a
   saved rule yet.
 - Clicking anywhere on a device card toggles its switch. The icon selector,

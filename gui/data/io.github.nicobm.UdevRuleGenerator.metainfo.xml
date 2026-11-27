@@ -69,6 +69,15 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="1.14.5" date="2026-11-27">
+      <description>
+        <p>
+          Checks for per-port power switching before turning a USB port off.
+          On hubs without that support the port may not turn back on, so the
+          power button now falls back to the reversible authorized attribute.
+        </p>
+      </description>
+    </release>
     <release version="1.14.4" date="2026-11-27">
       <description>
         <p>
