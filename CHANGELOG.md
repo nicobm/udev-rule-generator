@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.13.10 - 2026-11-26
+
+- Nudges the master device switch a few pixels to the right so it aligns with
+  the row switches.
+
 ## 1.13.9 - 2026-11-26
 
 - Moves the master device switch from the window header to the **Gestionar

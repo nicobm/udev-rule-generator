@@ -256,7 +256,7 @@ class DeviceManager(Gtk.Box):
 
         self.master_switch = Gtk.Switch()
         self.master_switch.set_valign(Gtk.Align.CENTER)
-        self.master_switch.set_margin_end(18)
+        self.master_switch.set_margin_end(14)
         self.master_switch.set_tooltip_text(
             tr("Activar o desactivar todos los dispositivos")
         )
